@@ -1,0 +1,46 @@
+This is a collection of some (hopefully) useful PAM modules.
+
+* pam_fshadow: Authentication against an alternative shadow
+file (or passwd/shadow pair). Options are
+
+** debug[=level]
+	Change debugging level (0 <= level <= 100)
+
+** shadow=<path-to-shadow-file>
+	Set alternative path to shadow file. Default is
+	${sysconfdir}/etc/shadow.
+
+** use_authtok	
+	don't prompt the user for passwords, take them from PAM_ 
+	items instead.
+
+** nopasswd
+	Do not require passwd file to be present.
+
+* pam_regex: Check if the username matches certain regular expression
+Options are:
+
+** debug[=level]
+	Change debugging level (0 <= level <= 100)
+** audit
+	Enable audit mode
+** waitdebug
+	Enter a dead loop. Useful for attaching with
+	a debugger.
+
+** regex=STRING
+	Match the given regular expression
+
+** sense={allow|deny}
+	What to do if user name matches the regexp.
+	Default is "allow".
+
+** use_authtok	
+	don't prompt the user for passwords, take them from PAM_ 
+	items instead.
+
+
+Local variables:
+mode: outline
+paragraph-separate: "[  ]*$"
+end:

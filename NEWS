@@ -1,0 +1,32 @@
+pam-modules -- history of user-visible changes. 2004-03-09
+Copyright (C) 2001,2004 Sergey Poznyakoff
+See the end of file for copying conditions.
+
+Please send radius bug reports to <gray@mirddin.farlep.net>
+
+Version 0.1
+
+	Initial release. See README for short description.
+
+^L
+=========================================================================
+Copyright information:
+
+Copyright (C) 2001,2004 Sergey Poznyakoff
+
+   Permission is granted to anyone to make or distribute verbatim copies
+   of this document as received, in any medium, provided that the
+   copyright notice and this permission notice are preserved,
+   thus giving the recipient permission to redistribute in turn.
+
+   Permission is granted to distribute modified versions
+   of this document, or of portions of it,
+   under the above conditions, provided also that they
+   carry prominent notices stating who last changed them.
+
+Local variables:
+mode: outline
+paragraph-separate: "[  ]*$"
+end:
+
+
