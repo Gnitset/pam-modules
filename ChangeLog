@@ -1,3 +1,15 @@
+2004-05-27  Sergey Poznyakoff  <gray@Mirddin.farlep.net>
+
+	* INSTALL: Removed
+	* Makefile.in: Removed
+	* pam_fshadow/Makefile.in: Removed
+	* pam_regex/Makefile.in: Removed
+	* .cvsignore: New file
+	* pam_fshadow/.cvsignore: New file
+	* pam_regex/.cvsignore: New file
+	* pam_fshadow/pam_fshadow.c: Minor fixes.
+	* README: Updated
+	
 2004-02-09  Sergey Poznyakoff  <gray@Mirddin.farlep.net>
 
 	* Put the two modules in a single packet and imported them
@@ -6,3 +18,9 @@
 2001-09-22  Sergey Poznyakoff <gray@mirddin.farlep.net>
 	
 	First release. 
+        
+
+Local Variables:
+mode: change-log
+version-control: never
+End:

@@ -6,9 +6,9 @@ file (or passwd/shadow pair). Options are
 ** debug[=level]
 	Change debugging level (0 <= level <= 100)
 
-** shadow=<path-to-shadow-file>
-	Set alternative path to shadow file. Default is
-	${sysconfdir}/etc/shadow.
+** sysconfdir=<path-to-config-directory>
+	Set path to the system configuration directory. Default is
+	${sysconfdir}.
 
 ** use_authtok	
 	don't prompt the user for passwords, take them from PAM_ 
