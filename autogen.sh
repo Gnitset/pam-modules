@@ -1,4 +1,4 @@
 #! /bin/sh
 
-test -d scripts ] || mkdir scripts
+test -d scripts || mkdir scripts
 autoreconf -f -i -s 
