@@ -1,3 +1,8 @@
+2004-02-09  Sergey Poznyakoff  <gray@Mirddin.farlep.net>
+
+	* Put the two modules in a single packet and imported them
+	to CVS.
+
 2001-09-22  Sergey Poznyakoff <gray@mirddin.farlep.net>
 	
 	First release. 
