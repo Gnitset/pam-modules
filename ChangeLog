@@ -9,6 +9,7 @@
 	* pam_regex/.cvsignore: New file
 	* pam_fshadow/pam_fshadow.c: Minor fixes.
 	* README: Updated
+	* autogen.sh: Updated
 	
 2004-02-09  Sergey Poznyakoff  <gray@Mirddin.farlep.net>
 
