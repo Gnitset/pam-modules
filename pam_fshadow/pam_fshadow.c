@@ -3,6 +3,7 @@
 #include <security/_pam_aconf.h>
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 #include <syslog.h>
@@ -70,7 +71,7 @@ _pam_parse(int argc, const char **argv)
 		} else if (!strcmp(*argv,"use_authtok"))
 			cntl_flags |= CNTL_AUTHTOK;
 		else if (!strncmp(*argv, "sysconfdir=",11))
-			sysconfdir = *argv+11;
+			sysconfdir = (char*) (*argv+11);
 		else if (!strcmp(*argv, "nopasswd"))
 			cntl_flags |= CNTL_NOPASSWD;
 		else 
@@ -344,7 +345,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 		    int argc, const char **argv)
 {
 	const char *username;
-	const char *password;
+	char *password;
 	int retval = PAM_AUTH_ERR;
 
 	/* parse arguments */
