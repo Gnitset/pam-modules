@@ -1,3 +1,17 @@
+2005-08-18  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* doc: New directory
+	* doc/Makefile.am: New file
+	* doc/pam-modules.texi: New file
+	* doc/gendocs_template: New file
+	* doc/fdl.texi: New file
+	* doc/.cvsignore: New file
+
+	* configure.ac: Add doc/
+	* Makefile.am: Likewise
+	* pam_fshadow/pam_fshadow.c: Updated copyright statement
+	* pam_regex/pam_regex.c: Likewise
+
 2004-05-27  Sergey Poznyakoff  <gray@Mirddin.farlep.net>
 
 	* INSTALL: Removed
