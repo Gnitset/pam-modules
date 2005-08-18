@@ -13,8 +13,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
- *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301 USA  
  */
 
 #if defined(HAVE_CONFIG_H)
@@ -122,12 +122,14 @@ _pam_debug(format, va_alist)
 #define CNTL_AUTHTOK      0x0004
 #define CNTL_WAITDEBUG    0x0008
 #define CNTL_SENSE_DENY   0x0010
+#define CNTL_REGEX_FLAGS  0x0020
 
 #define CNTL_DEBUG_LEV() (cntl_flags>>16)
 #define CNTL_SET_DEBUG_LEV(cntl,n) (cntl |= ((n)<<16))
 
 static int cntl_flags;
 static char *regex = NULL;
+static int regex_flags = REG_NOSUB;
 
 #define DEBUG(m,c) if (CNTL_DEBUG_LEV()>=(m)) _pam_debug c
 #define AUDIT(c) if (cntl_flags&CNTL_AUDIT) _pam_debug c
@@ -186,12 +188,26 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 					 *argv+6);
 		} else if (!strncmp(*argv,"regex=",6))
 			regex = *argv + 6;
-		else {
+		else if (!strcmp(*argv,"extended")) {
+			regex_flags |= REG_EXTENDED;
+			ctrl |= CNTL_REGEX_FLAGS;
+		} else if (!strcmp(*argv,"basic")) {
+			regex_flags &= ~REG_EXTENDED;
+			ctrl |= CNTL_REGEX_FLAGS;
+		} else if (!strcmp(*argv,"icase")) {
+			regex_flags |= REG_ICASE;
+			ctrl |= CNTL_REGEX_FLAGS;
+		} else if (!strcmp(*argv,"case")) {
+			regex_flags &= ~REG_ICASE;
+			ctrl |= CNTL_REGEX_FLAGS;
+		} else {
 			_pam_log(LOG_ERR,"pam_parse: unknown option; %s",*argv);
 		}
 	}
 	if (!regex)
 		_pam_log(LOG_ERR,"pam_parse: regex not sepcified");
+	if (!ctrl & CNTL_REGEX_FLAGS)
+		regex_flags |= REG_EXTENDED;
 	cntl_flags = ctrl;
 }
 
@@ -219,7 +235,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
 	
 	_pam_parse(pamh, argc, argv);
 	
-#ifdef MAINTAINER_MODE
+#ifdef DEBUG_MODE
 	if (cntl_flags & CNTL_WAITDEBUG) {
 		_pam_log(LOG_CRIT, "WAITING FOR DEBUG AT %s:%d",
 			 __FILE__, __LINE__);
@@ -246,7 +262,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
 			break;
 		}
 
-		if (regcomp(&rx, regex, REG_EXTENDED)) {
+		if (regcomp(&rx, regex, regex_flags)) {
 			_pam_log(LOG_NOTICE, "can't compile regex: %s", regex);
 			retval = PAM_AUTHINFO_UNAVAIL;
 			break;
