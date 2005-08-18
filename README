@@ -1,44 +1,62 @@
-This is a collection of some (hopefully) useful PAM modules.
+PAM-modules README
+Copyright 2005 Sergey Poznyakoff
+See the end of file for copying conditions.
 
-* pam_fshadow: Authentication against an alternative shadow
-file (or passwd/shadow pair). Options are
+* Introduction
 
-** debug[=level]
-	Change debugging level (0 <= level <= 100)
+PAM-modules is a collection of some (hopefully) useful PAM
+modules. This file contains brief information about configuring and
+using them. It is *not* intended as a replacement for the
+documentation, it is provided as a brief reference only. The complete 
+documentation for PAM-modules is available in doc/ subdirectory. To
+read it without installing the package run `info -f
+doc/pam-modules'. After installation the documentation can be accessed
+running `info pam-modules'. 
 
-** sysconfdir=<path-to-config-directory>
-	Set path to the system configuration directory. Default is
-	${sysconfdir}.
+The online copy of the documentation in various formats is available
+at http://puszcza.gnu.org.ua/software/pam-modules/manual.
 
-** use_authtok	
-	don't prompt the user for passwords, take them from PAM_ 
-	items instead.
+* Installation
 
-** nopasswd
-	Do not require passwd file to be present.
+To install the package, do
 
-* pam_regex: Check if the username matches certain regular expression
-Options are:
+**  ./configure [options]
 
-** debug[=level]
-	Change debugging level (0 <= level <= 100)
-** audit
-	Enable audit mode
-** waitdebug
-	Enter a dead loop. Useful for attaching with
-	a debugger.
+For the list of available options consult file INSTALL.
+The only applications-specific option is:
 
-** regex=STRING
-	Match the given regular expression
+*** --with-pamdir=DIR
+	Set installation directory for PAM loadable files.
+	Default is PREFIX/lib/security
 
-** sense={allow|deny}
-	What to do if user name matches the regexp.
-	Default is "allow".
+** Run make
 
-** use_authtok	
-	don't prompt the user for passwords, take them from PAM_ 
-	items instead.
+** Run make install
 
+* Usage
+
+See accompanying documentation for the detailed	discussion. 
+
+* Bug reporting
+
+Send bug reports to <gray@gnu.org.ua>. Take a look at chapter
+"Reporting Bugs" in the accompanying documentation, it can contain
+some useful hints.
+
+
+* Copyright information:
+
+Copyright (C) 2001,2004,2005 Sergey Poznyakoff
+
+   Permission is granted to anyone to make or distribute verbatim copies
+   of this document as received, in any medium, provided that the
+   copyright notice and this permission notice are preserved,
+   thus giving the recipient permission to redistribute in turn.
+
+   Permission is granted to distribute modified versions
+   of this document, or of portions of it,
+   under the above conditions, provided also that they
+   carry prominent notices stating who last changed them.
 
 Local variables:
 mode: outline

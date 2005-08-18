@@ -1,5 +1,10 @@
 2005-08-18  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	* NEWS: Updated
+	* README: Updated
+	* configure.ac: Change auxiliary directory to build-aux, change
+	version number to 1.0, change bug report address.
+
 	* doc: New directory
 	* doc/Makefile.am: New file
 	* doc/pam-modules.texi: New file

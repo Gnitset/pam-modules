@@ -9,5 +9,5 @@ config.status
 configure
 libtool
 *.tar.gz
-scripts
+build-aux
 stamp-h1

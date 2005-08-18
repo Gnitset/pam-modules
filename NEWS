@@ -1,8 +1,13 @@
-pam-modules -- history of user-visible changes. 2004-03-09
-Copyright (C) 2001,2004 Sergey Poznyakoff
+pam-modules -- history of user-visible changes. 2005-08-18
+Copyright (C) 2001,2004,2005 Sergey Poznyakoff
 See the end of file for copying conditions.
 
-Please send radius bug reports to <gray@mirddin.farlep.net>
+Please send radius bug reports to <gray@gnu.org.ua>
+
+Version 1.0
+
+	Added documentation, improved configuration suite.
+
 
 Version 0.1
 
@@ -12,7 +17,7 @@ Version 0.1
 =========================================================================
 Copyright information:
 
-Copyright (C) 2001,2004 Sergey Poznyakoff
+Copyright (C) 2001,2004,2005 Sergey Poznyakoff
 
    Permission is granted to anyone to make or distribute verbatim copies
    of this document as received, in any medium, provided that the
