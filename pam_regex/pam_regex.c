@@ -26,7 +26,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <varargs.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -93,26 +93,21 @@ _pam_vlog(int err, const char *format, va_list args)
 }
 
 static void
-_pam_log(err, format, va_alist)
-	int err;
-	const char *format;
-	va_dcl
+_pam_log(int err, const char *format, ...)
 {
 	va_list args;
 
-	va_start(args);
+	va_start(args, format);
 	_pam_vlog(err, format, args);
 	va_end(args);
 }
 
 static void
-_pam_debug(format, va_alist)
-	char *format;
-	va_dcl
+_pam_debug(char *format, ...)
 {
 	va_list args;
 
-	va_start(args);
+	va_start(args, format);
 	_pam_vlog(LOG_DEBUG, format, args);
 	va_end(args);
 }
@@ -128,7 +123,7 @@ _pam_debug(format, va_alist)
 #define CNTL_SET_DEBUG_LEV(cntl,n) (cntl |= ((n)<<16))
 
 static int cntl_flags;
-static char *regex = NULL;
+static const char *regex = NULL;
 static int regex_flags = REG_NOSUB;
 
 #define DEBUG(m,c) if (CNTL_DEBUG_LEV()>=(m)) _pam_debug c
