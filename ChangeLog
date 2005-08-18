@@ -1,5 +1,9 @@
 2005-08-18  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	* autogen.sh: Updated
+	* pam_regex/pam_regex.c: Use stdarg.h
+	(regex): Made const
+
 	* NEWS: Updated
 	* README: Updated
 	* configure.ac: Change auxiliary directory to build-aux, change
