@@ -1,0 +1,237 @@
+\input texinfo @c -*-texinfo-*-
+@smallbook
+@c %**start of header
+@setfilename pam-modules.info
+@settitle pam-modules
+@c %**end of header
+@setchapternewpage odd
+
+@include version.texi
+
+@ifinfo
+@dircategory System Utilities
+@direntry
+* PAM-modules: (pam-modules).       A collection of PAM modules.
+@end direntry
+@end ifinfo
+
+@copying
+Published by the Free Software Foundation,
+51 Franklin Street, Fifth Floor
+Boston, MA 02110-1301, USA
+
+Copyright @copyright{} 2005 Sergey Poznyakoff
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, with the Front-Cover texts being ``PAM-modules Manual'',
+and with the Back-Cover Texts as in (a) below.  A copy of the license
+is included in the section entitled ``GNU Free Documentation License''.
+
+(a) The FSF's Back-Cover Text is: ``You have freedom to copy and modify
+this GNU Manual, like GNU software.  Copies published by the Free
+Software Foundation raise funds for GNU development.''
+@end copying
+
+@titlepage
+@title PAM-modules
+@subtitle version @value{VERSION}, @value{UPDATED}
+@author Sergey Poznyakoff.
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@page
+@summarycontents
+@page
+@contents
+
+@node Top, Intro, (dir), (dir)
+
+@ifinfo
+@chapter PAM-modules
+This edition of the @cite{PAM-modules Manual}, last updated @value{UPDATED},
+documents PAM-modules Version @value{VERSION}.
+@end ifinfo
+
+@menu
+* Intro::               Introduction to PAM-modules
+
+Individual modules
+
+* fshadow::             Authentication against an alternative shadow
+                        file.
+* regex::               Check if the username matches certain regular
+                        expression.
+                        
+* Reporting Bugs::      How to Report a Bug.
+
+Appendices
+
+* Copying This Manual:: The GNU Free Documentation License.
+* Concept Index::       Index of Concepts.
+
+@end menu
+
+@node Intro, fshadow, Top, Top
+@chapter Introduction to PAM-modules
+
+     PAM-modules is a collection of useful @acronym{PAM
+modules}. Currently it includes two modules: @code{pam_fshadow}, for
+authentication against an alternative @file{shadow} file, and
+@code{pam_regex}, allowing to control the login names of the logging
+in users. 
+
+     Following chapters discuss each module in detail. The reader is
+expected to be sufficiently proficient with general @acronym{UNIX}
+administration issues and with Pluggable Authentication Modules
+(@acronym{PAM}) in particular.
+
+@node fshadow, regex, Intro, Top
+@chapter pam_fshadow
+
+@cindex pam_fshadow
+     This module provides authentication against an alternative
+@file{shadow} file (or @file{passwd} / @file{shadow} pair). It takes
+following options:
+
+@table @code
+@item debug[=@var{level}]
+     Change debugging level (0 <= @var{level} <= 100). The debugging
+information will be logged via @code{syslog} channel
+@code{auth.debug}. Notice, that debugging output reveals
+authentication credentials (user password, in particular).
+
+@item nopasswd
+     Do not require passwd file to be present.
+     
+@item sysconfdir=@var{dir}
+     Set full name of the directory where @file{shadow} and
+@file{passwd} are located. By default the system configuration
+directory will be used. It is set when configuring the package and
+defaults to @file{@var{prefix}/etc}.
+
+@item use_authtok	
+     Do not prompt the user for password, take it from the saved
+authentication tokens. This option is useful when @command{pam_fshadow}
+is used as a non-first module in a stack of authentication modules.
+@end table
+
+     The following example illustrates the use of
+@command{pam_fshadow} in @file{pam.conf} file:
+
+@smallexample
+tuhs auth  requisite  pam_radius.so
+tuhs auth  required   pam_fshadow.so \
+                      sysconfdir=/home/tuhs/tuhs/etc nopasswd use_authtok
+@end smallexample
+
+
+@node regex, Reporting Bugs, fshadow, Top
+@chapter pam_regex
+
+@cindex pam_regex
+     The module @command{pam_regex} allows to control logging in users by
+matching their login name against a regular expression. This module is
+useful in authentication stacks for such services as @acronym{FTP} or
+@acronym{HTTP}. 
+     
+@table @code
+@item debug[=@var{level}]
+     Change debugging level (0 <= @var{level} <= 100). The debugging
+information will be logged via @code{syslog} channel
+@code{auth.debug}. Notice, that debugging output reveals
+authentication credentials (user password, in particular). 
+
+@item basic
+     Use basic regular expression.
+     
+@item case
+     Use case-insensitive regular expression.
+
+@item extended
+     Use extended regular expression.
+            
+@item icase
+     Use case-insensitive regular expression.
+     
+@item regex=@var{string}
+     The user name must match the given regular expression. This
+option must always be present. The default expression flavor is
+``extended, case-sensitive'', but this can be changed using other
+options (see above).
+
+@item sense=@{allow|deny@}
+     What to do if user name matches the regexp. Default is "allow".
+
+@item use_authtok	
+     Do not prompt the user for password, take it from the saved
+authentication tokens. This option is useful when @command{pam_fshadow}
+is used as a non-first module in a stack of authentication modules.
+
+@item waitdebug
+     Enter a dead loop. This option is intended for
+@command{pam_regex} developers and is not enabled unless you configure
+the package with symbol @code{DEBUG_MODE} defined. Most probably you
+will not need it. The following description is provided in case you
+decide to participate in further developing:
+
+     When this option is present, @command{pam_regex} displays the
+following diagnostics in @command{syslog} @code{auth.crit} channel:
+
+@smallexample
+WAITING FOR DEBUG AT pam_regex.c:240
+@end smallexample
+
+@noindent
+and enters a time-consuming loop. The developer is supposed to attach
+to the process with a debugger, set @var{retval} variable to 1 and to
+continue execution of the module in the debugging mode.
+
+@end table
+
+     Here's an example of using this module:
+     
+@smallexample
+httpd auth  required  pam_regex.so sense=deny regex=.*@@.*
+@end smallexample
+
+@noindent
+this example denies login for users whose login names contain
+@samp{@@} character.
+
+@node Reporting Bugs, Copying This Manual, regex, Top
+@chapter How to Report a Bug
+
+Email bug reports to @email{gray@@gnu.org.ua}.
+Be sure to include the word ``pam-modules'' somewhere
+in the ``Subject:'' field.
+
+As the purpose of bug reporting is to improve software, please be sure
+to include maximum information when reporting a bug. The information
+needed is:
+
+@itemize
+@item Version of the package you are using.
+@item Compilation options used when configuring the package.
+@item Conditions under which the bug appears.
+@end itemize
+
+@node Copying This Manual, Concept Index, Reporting Bugs, Top
+@include fdl.texi
+
+@node Concept Index,  , Copying This Manual, Top
+@comment node-name,  next,  previous,  up
+@unnumbered Concept Index
+
+This is a general index of all issues discussed in this manual
+
+@printindex cp
+
+@bye
+
+
+
+
