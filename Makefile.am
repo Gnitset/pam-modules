@@ -9,4 +9,4 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 AUTOMAKE_OPTIONS = gnits 1.8
-SUBDIRS = pam_fshadow pam_regex
+SUBDIRS = doc pam_fshadow pam_regex

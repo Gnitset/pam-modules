@@ -1,4 +1,21 @@
-dnl Process this file with autoconf to produce a configure script.
+# This file is part of pam-modules.       -*- autoconf -*-
+# Copyright (C) 2005, Sergey Poznyakoff
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+# MA 02110-1301 USA 
+
 AC_PREREQ(2.53)
 
 AC_INIT(pam-modules, 0.1, gray@mirddin.farlep.net)
@@ -43,5 +60,6 @@ AC_ARG_WITH(pamdir,
 AC_SUBST(PAMDIR)
 
 AC_OUTPUT(Makefile
+          doc/Makefile 
 	  pam_fshadow/Makefile
           pam_regex/Makefile)
