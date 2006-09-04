@@ -125,6 +125,7 @@ _pam_debug(char *format, ...)
 static int cntl_flags;
 static const char *regex = NULL;
 static int regex_flags = REG_NOSUB;
+static char *user_name = NULL;
 
 #define DEBUG(m,c) if (CNTL_DEBUG_LEV()>=(m)) _pam_debug c
 #define AUDIT(c) if (cntl_flags&CNTL_AUDIT) _pam_debug c
@@ -195,6 +196,8 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 		} else if (!strcmp(*argv,"case")) {
 			regex_flags &= ~REG_ICASE;
 			ctrl |= CNTL_REGEX_FLAGS;
+		} else if (!strncmp(*argv,"user=",5)) {
+			user_name = *argv + 5;
 		} else {
 			_pam_log(LOG_ERR,"pam_parse: unknown option; %s",*argv);
 		}
@@ -227,7 +230,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
 	char *name;
 	char *password;
 	regex_t rx;
-	
+
 	_pam_parse(pamh, argc, argv);
 	
 #ifdef DEBUG_MODE
@@ -272,8 +275,16 @@ pam_sm_authenticate(pam_handle_t *pamh,
 		if (retval) {
 			_pam_log(LOG_NOTICE, "rejecting %s", name);
 			retval = PAM_AUTH_ERR;
-		} else
+		} else {
+			_pam_log(LOG_NOTICE, "allowing %s", name);
+			if (user_name) {
+				retval = pam_set_item(pamh, PAM_USER,
+						      strdup(user_name));
+				DEBUG(100,("user name=%s, status=%d",
+					   user_name,retval));
+			}
 			retval = PAM_SUCCESS;
+		}
 		break;
 	}
 
