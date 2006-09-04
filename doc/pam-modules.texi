@@ -159,8 +159,8 @@ authentication credentials (user password, in particular).
      
 @item regex=@var{string}
      The user name must match the given regular expression. This
-option must always be present. The default expression flavor is
-``extended, case-sensitive'', but this can be changed using other
+option is mandatory. The default expression flavor is
+``basic, case-sensitive'', but this can be changed using other
 options (see above).
 
 @item sense=@{allow|deny@}
@@ -170,6 +170,9 @@ options (see above).
      Do not prompt the user for password, take it from the saved
 authentication tokens. This option is useful when @command{pam_fshadow}
 is used as a non-first module in a stack of authentication modules.
+
+@item user=@var{string}
+     Upon successful matching, return set PAM user name to @var{string}.
 
 @item waitdebug
      Enter a dead loop. This option is intended for
@@ -199,7 +202,7 @@ httpd auth  required  pam_regex.so sense=deny regex=.*@@.*
 @end smallexample
 
 @noindent
-this example denies login for users whose login names contain
+this example denies login for users whose login names contain the
 @samp{@@} character.
 
 @node Reporting Bugs, Copying This Manual, regex, Top
