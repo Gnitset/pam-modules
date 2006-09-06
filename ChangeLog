@@ -1,5 +1,7 @@
 2006-09-06  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	* configure.ac: New option --without-sql
+
 	* doc/pam-modules.texi: Updated
 	* common.c: Moved here syslog-reporting and debugging functions
 	* pam_fshadow/Makefile.am (AM_CPPFLAGS): Define MODULE_NAME
