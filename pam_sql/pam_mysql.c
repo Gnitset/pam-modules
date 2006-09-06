@@ -60,7 +60,7 @@ sql_expand_query (MYSQL *mysql,
 				
 				len += strlen (esc_user);
 				p += 2;
-			} if (p[1] == 'u') {
+			} if (p[1] == 'p') {
 				int size = 2*strlen(pass)+1;
 				esc_pass = malloc(len);
 				if (!esc_pass)

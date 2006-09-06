@@ -76,7 +76,7 @@ sql_expand_query (const char *query, const char *user, const char *pass)
 				esc_user = sql_escape_string(user);
 				len += strlen (esc_user);
 				p += 2;
-			} if (p[1] == 'u') {
+			} if (p[1] == 'p') {
 				esc_pass = sql_escape_string(pass);
 				len += strlen (esc_pass);
 				p += 2;
