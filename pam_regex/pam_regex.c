@@ -1,21 +1,20 @@
 /* This file is part of pam-modules.
- * Copyright (C) 2001 Sergey Poznyakoff
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301 USA  
- */
+   Copyright (C) 2001, 2006 Sergey Poznyakoff
+ 
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+ 
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+   MA 02110-1301 USA  */
 
 #if defined(HAVE_CONFIG_H)
 # include <config.h>
@@ -44,39 +43,10 @@
 
 #include <common.c>
 
-/* logging */
-static void
-_pam_vlog(int err, const char *format, va_list args)
-{
-	openlog("pam_regex", LOG_CONS|LOG_PID, LOG_AUTH);
-	vsyslog(err, format, args);
-	closelog();
-}
-
-static void
-_pam_log(int err, const char *format, ...)
-{
-	va_list args;
-
-	va_start(args, format);
-	_pam_vlog(err, format, args);
-	va_end(args);
-}
-
-static void
-_pam_debug(char *format, ...)
-{
-	va_list args;
-
-	va_start(args, format);
-	_pam_vlog(LOG_DEBUG, format, args);
-	va_end(args);
-}
-
 #define CNTL_DEBUG        0x0001
 #define CNTL_AUDIT        0x0002
 #define CNTL_AUTHTOK      0x0004
-#define CNTL_WAITDEBUG    0x0008
+
 #define CNTL_SENSE_DENY   0x0010
 #define CNTL_REGEX_FLAGS  0x0020
 
@@ -86,12 +56,10 @@ _pam_debug(char *format, ...)
 static int cntl_flags;
 static const char *regex = NULL;
 static int regex_flags = REG_NOSUB;
-static char *user_name = NULL;
+static const char *user_name = NULL;
 
 #define DEBUG(m,c) if (CNTL_DEBUG_LEV()>=(m)) _pam_debug c
 #define AUDIT(c) if (cntl_flags&CNTL_AUDIT) _pam_debug c
-
-#define XSTRDUP(s) (s) ? strdup(s) : NULL
 
 static void
 make_str(pam_handle_t *pamh, const char *str, const char *name, char **ret)
@@ -118,53 +86,54 @@ make_str(pam_handle_t *pamh, const char *str, const char *name, char **ret)
 static void
 _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 {
-	int ctrl=0;
+	int ctrl = 0;
 
 	/* step through arguments */
-	for (ctrl=0; argc-- > 0; ++argv) {
+	for (; argc-- > 0; ++argv) {
 
 		/* generic options */
 
-		if (!strncmp(*argv,"debug",5)) {
+		if (!strncmp(*argv, "debug", 5)) {
 			ctrl |= CNTL_DEBUG;
 			if ((*argv)[5] == '=') 
-				CNTL_SET_DEBUG_LEV(ctrl,atoi(*argv+6));
+				CNTL_SET_DEBUG_LEV(ctrl, atoi(*argv + 6));
 			else
-				CNTL_SET_DEBUG_LEV(ctrl,1);
-		} else if (!strcmp(*argv,"audit"))
+				CNTL_SET_DEBUG_LEV(ctrl, 1);
+		} else if (!strcmp(*argv, "audit"))
 			ctrl |= CNTL_AUDIT;
-		else if (!strcmp(*argv,"waitdebug"))
-			ctrl |= CNTL_WAITDEBUG;
-		else if (!strcmp(*argv,"use_authtok"))
+		else if (!strncmp(*argv, "waitdebug", 9)) 
+			WAITDEBUG(*argv + 9);
+		else if (!strcmp(*argv, "use_authtok"))
 			ctrl |= CNTL_AUTHTOK;
-		else if (!strncmp(*argv,"sense=",6)) {
-			if (strcmp(*argv+6,"deny") == 0)
+		else if (!strncmp(*argv, "sense=", 6)) {
+			if (strcmp(*argv + 6, "deny") == 0)
 				ctrl |= CNTL_SENSE_DENY;
-			else if (strcmp(*argv+6,"allow"))
+			else if (strcmp(*argv + 6, "allow"))
 				_pam_log(LOG_ERR,"unknown sense value: %s",
-					 *argv+6);
-		} else if (!strncmp(*argv,"regex=",6))
+					 *argv + 6);
+		} else if (!strncmp(*argv, "regex=", 6))
 			regex = *argv + 6;
-		else if (!strcmp(*argv,"extended")) {
+		else if (!strcmp(*argv, "extended")) {
 			regex_flags |= REG_EXTENDED;
 			ctrl |= CNTL_REGEX_FLAGS;
-		} else if (!strcmp(*argv,"basic")) {
+		} else if (!strcmp(*argv, "basic")) {
 			regex_flags &= ~REG_EXTENDED;
 			ctrl |= CNTL_REGEX_FLAGS;
-		} else if (!strcmp(*argv,"icase")) {
+		} else if (!strcmp(*argv, "icase")) {
 			regex_flags |= REG_ICASE;
 			ctrl |= CNTL_REGEX_FLAGS;
-		} else if (!strcmp(*argv,"case")) {
+		} else if (!strcmp(*argv, "case")) {
 			regex_flags &= ~REG_ICASE;
 			ctrl |= CNTL_REGEX_FLAGS;
-		} else if (!strncmp(*argv,"user=",5)) {
+		} else if (!strncmp(*argv, "user=",5)) {
 			user_name = *argv + 5;
 		} else {
-			_pam_log(LOG_ERR,"pam_parse: unknown option; %s",*argv);
+			_pam_log(LOG_ERR,
+				 "unknown option: %s", *argv);
 		}
 	}
 	if (!regex)
-		_pam_log(LOG_ERR,"pam_parse: regex not sepcified");
+		_pam_log(LOG_ERR, "regex not specified");
 	if (!ctrl & CNTL_REGEX_FLAGS)
 		regex_flags |= REG_EXTENDED;
 	cntl_flags = ctrl;
@@ -194,15 +163,6 @@ pam_sm_authenticate(pam_handle_t *pamh,
 
 	_pam_parse(pamh, argc, argv);
 	
-#ifdef DEBUG_MODE
-	if (cntl_flags & CNTL_WAITDEBUG) {
-		_pam_log(LOG_CRIT, "WAITING FOR DEBUG AT %s:%d",
-			 __FILE__, __LINE__);
-		retval = 0;
-		while (!retval)
-			retval=retval;
-	}
-#endif	
 	DEBUG(100,("enter pam_sm_authenticate"));
 
 	if (!regex)

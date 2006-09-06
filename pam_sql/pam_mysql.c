@@ -34,7 +34,7 @@
 #include "sha1.h"
 #include "sha1.c"
 
-char *
+static char *
 sql_expand_query (MYSQL *mysql,
 		  const char *query, const char *user, const char *pass)
 {
@@ -306,7 +306,7 @@ check_query_result(MYSQL *mysql, const char *pass)
 	return rc;
 }
 
-int
+static int
 verify_user_pass(const char *username, const char *password)
 {
 	MYSQL mysql;

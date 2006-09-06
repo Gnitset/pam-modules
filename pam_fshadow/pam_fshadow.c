@@ -41,28 +41,6 @@
 
 #include <common.c>
 
-/* some syslogging */
-
-static void
-_pam_log(int err, const char *format, ...)
-{
-	va_list args;
-
-	va_start(args, format);
-	vsyslog(err|LOG_AUTH, format, args);
-	va_end(args);
-}
-
-static void
-_pam_debug(const char *format, ...)
-{
-	va_list args;
-
-	va_start(args, format);
-	vsyslog(LOG_AUTH|LOG_DEBUG, format, args);
-	va_end(args);
-}
-
 char *sysconfdir = SYSCONFDIR;
 static int cntl_flags = 0;
 
@@ -82,21 +60,24 @@ _pam_parse(int argc, const char **argv)
 
 		/* generic options */
 		
-		if (!strncmp(*argv,"debug",5)) {
+		if (!strncmp(*argv, "debug", 5)) {
 			cntl_flags |= CNTL_DEBUG;
 			if ((*argv)[5] == '=') 
-				CNTL_SET_DEBUG_LEV(cntl_flags,atoi(*argv+6));
+				CNTL_SET_DEBUG_LEV(cntl_flags,
+						   atoi(*argv + 6));
 			else
-				CNTL_SET_DEBUG_LEV(cntl_flags,1);
-		} else if (!strcmp(*argv,"use_authtok"))
+				CNTL_SET_DEBUG_LEV(cntl_flags, 1);
+		} else if (!strncmp(*argv, "waitdebug", 9))
+			WAITDEBUG(*argv + 9);
+		else if (!strcmp(*argv,"use_authtok"))
 			cntl_flags |= CNTL_AUTHTOK;
-		else if (!strncmp(*argv, "sysconfdir=",11))
-			sysconfdir = (char*) (*argv+11);
+		else if (!strncmp(*argv, "sysconfdir=", 11))
+			sysconfdir = (char*) (*argv + 11);
 		else if (!strcmp(*argv, "nopasswd"))
 			cntl_flags |= CNTL_NOPASSWD;
 		else 
 			_pam_log(LOG_ERR,
-				 "pam_parse: unknown option; %s", *argv);
+				 "unknown option: %s", *argv);
 	}
 	
 	return cntl_flags;

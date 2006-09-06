@@ -65,7 +65,8 @@ Individual modules
                         file.
 * regex::               Check if the username matches certain regular
                         expression.
-                        
+* log::                 Log arbitrary messages to syslog.
+* sql::                 Simple SQL authentication.                        
 * Reporting Bugs::      How to Report a Bug.
 
 Appendices
@@ -79,12 +80,41 @@ Appendices
 @chapter Introduction to PAM-modules
 
      PAM-modules is a collection of useful @acronym{PAM
-modules}. Currently it includes two modules: @code{pam_fshadow}, for
-authentication against an alternative @file{shadow} file, and
-@code{pam_regex}, allowing to control the login names of the logging
-in users. 
+modules}.  It includes modules for user authentication and logging.
 
-     Following chapters discuss each module in detail. The reader is
+     All modules from the package support the following command line
+arguments:
+
+@anchor{common options}
+@table @option
+@item debug[=@var{level}]
+     Change debugging level (0 <= @var{level} <= 100).  The debugging
+information will be logged via @code{syslog} channel
+@code{auth.debug}.  Notice, that debugging output can reveal
+authentication credentials (user password, in particular). 
+
+@item waitdebug[=@var{interval}]
+     Enter a dead loop.  This option is intended for
+the package developers and is not enabled unless you configure
+the package with symbol @code{DEBUG_MODE} defined.  Most probably you
+will not need it.  The following description is provided in case you
+decide to participate in further development:
+
+     When this option is present, the module displays the
+following diagnostics in @command{syslog} @code{auth.crit} channel:
+
+@smallexample
+WAITING FOR DEBUG AT pam_regex.c:240
+@end smallexample
+
+@noindent
+and waits for @var{interval} seconds (default 3600).  The developer is
+supposed to attach to the process with a debugger, set @var{interval}
+variable to 0 and to continue execution of the module in the debugging
+mode. 
+@end table
+
+     The following chapters discuss each module in detail.  The reader is
 expected to be sufficiently proficient with general @acronym{UNIX}
 administration issues and with Pluggable Authentication Modules
 (@acronym{PAM}) in particular.
@@ -94,28 +124,22 @@ administration issues and with Pluggable Authentication Modules
 
 @cindex pam_fshadow
      This module provides authentication against an alternative
-@file{shadow} file (or @file{passwd} / @file{shadow} pair). It takes
+@file{shadow} file (or @file{passwd} / @file{shadow} pair).  It takes
 following options:
 
-@table @code
-@item debug[=@var{level}]
-     Change debugging level (0 <= @var{level} <= 100). The debugging
-information will be logged via @code{syslog} channel
-@code{auth.debug}. Notice, that debugging output reveals
-authentication credentials (user password, in particular).
-
+@table @option
 @item nopasswd
      Do not require passwd file to be present.
      
 @item sysconfdir=@var{dir}
      Set full name of the directory where @file{shadow} and
-@file{passwd} are located. By default the system configuration
-directory will be used. It is set when configuring the package and
+@file{passwd} are located.  By default the system configuration
+directory will be used.  It is set when configuring the package and
 defaults to @file{@var{prefix}/etc}.
 
 @item use_authtok	
      Do not prompt the user for password, take it from the saved
-authentication tokens. This option is useful when @command{pam_fshadow}
+authentication tokens.  This option is useful when @command{pam_fshadow}
 is used as a non-first module in a stack of authentication modules.
 @end table
 
@@ -128,23 +152,16 @@ tuhs auth  required   pam_fshadow.so \
                       sysconfdir=/home/tuhs/tuhs/etc nopasswd use_authtok
 @end smallexample
 
-
-@node regex, Reporting Bugs, fshadow, Top
+@node regex, log, fshadow, Top
 @chapter pam_regex
 
 @cindex pam_regex
-     The module @command{pam_regex} allows to control logging in users by
-matching their login name against a regular expression. This module is
-useful in authentication stacks for such services as @acronym{FTP} or
-@acronym{HTTP}. 
+     The module @command{pam_regex} allows to control user access by
+matching their login name against the given regular expression.  It
+is useful in authentication stacks for such services as
+@acronym{FTP} or @acronym{HTTP}. 
      
 @table @code
-@item debug[=@var{level}]
-     Change debugging level (0 <= @var{level} <= 100). The debugging
-information will be logged via @code{syslog} channel
-@code{auth.debug}. Notice, that debugging output reveals
-authentication credentials (user password, in particular). 
-
 @item basic
      Use basic regular expression.
      
@@ -158,40 +175,21 @@ authentication credentials (user password, in particular).
      Use case-insensitive regular expression.
      
 @item regex=@var{string}
-     The user name must match the given regular expression. This
-option is mandatory. The default expression flavor is
+     The user name must match the given regular expression.  This
+option is mandatory.  The default expression flavor is
 ``basic, case-sensitive'', but this can be changed using other
 options (see above).
 
 @item sense=@{allow|deny@}
-     What to do if user name matches the regexp. Default is "allow".
+     What to do if user name matches the regexp.  Default is @samp{allow}.
 
 @item use_authtok	
      Do not prompt the user for password, take it from the saved
-authentication tokens. This option is useful when @command{pam_fshadow}
+authentication tokens.  This option is useful when @command{pam_fshadow}
 is used as a non-first module in a stack of authentication modules.
 
 @item user=@var{string}
      Upon successful matching, return set PAM user name to @var{string}.
-
-@item waitdebug
-     Enter a dead loop. This option is intended for
-@command{pam_regex} developers and is not enabled unless you configure
-the package with symbol @code{DEBUG_MODE} defined. Most probably you
-will not need it. The following description is provided in case you
-decide to participate in further developing:
-
-     When this option is present, @command{pam_regex} displays the
-following diagnostics in @command{syslog} @code{auth.crit} channel:
-
-@smallexample
-WAITING FOR DEBUG AT pam_regex.c:240
-@end smallexample
-
-@noindent
-and enters a time-consuming loop. The developer is supposed to attach
-to the process with a debugger, set @var{retval} variable to 1 and to
-continue execution of the module in the debugging mode.
 
 @end table
 
@@ -205,15 +203,170 @@ httpd auth  required  pam_regex.so sense=deny regex=.*@@.*
 this example denies login for users whose login names contain the
 @samp{@@} character.
 
-@node Reporting Bugs, Copying This Manual, regex, Top
+@node log, sql, regex, Top
+@chapter Log arbitrary messages to syslog.
+
+     The @command{pam_log} logs is a diagnostic tool.  It works as the
+shell @command{echo} command, outputting its arguments to the
+@command{syslog}.  The module can be used in any PAM service
+stack.
+
+     Before logging, each argument is subject to @dfn{variable
+substitiution}.  During this phase, any occurrence of
+@code{$@var{variable}} is substituted by the value of @var{variable}.
+If the @var{variable} is not defined, emtpy string is substituted
+instead.  The shell-style default values are also supported: the
+notation @code{$@{@var{variable}:-@var{value}@}} expands to the value
+of @var{variable} if it is set, and to @var{value} otherwise.
+
+     Supported variables are:
+
+@multitable @columnfractions .30 .50
+@headitem Variable name @tab PAM variable
+@item service @tab PAM_SERVICE 
+@item user    @tab PAM_USER 
+@item tty     @tab PAM_TTY 
+@item rhost   @tab PAM_RHOST 
+@item ruser   @tab PAM_RUSER 
+@item prompt  @tab PAM_USER_PROMPT
+@item password @tab PAM_AUTHTOK
+@end multitable
+
+     In order to be discerned from the arguments, all @command{pam_log}'s
+options begin with a dash (@samp{-}).  They must precede the
+non-option arguments.  If the first non-option argument happens to
+begin with a dash, you can inhibit its special handling by placing
+@samp{--} before it.
+
+     The following table lists all the supported options:
+
+@table @option
+@item -debug[=@var{level}]
+Similar to @option{debug} in other modules (@pxref{Intro}).
+
+@item -no-open
+
+@item -waitdebug[=@var{interval}]
+Similar to @option{waitdebug} in other modules (@pxref{Intro}).
+
+@item -pri=@var{facility}.@var{priority}
+Requests to send log messages to the given syslog facility and
+priority.  The @var{facility} part can be any of: @samp{user},
+@samp{daemon}, @samp{auth}, @samp{authpriv}, @samp{local0}, @samp{local1},
+@samp{local2}, @samp{local3}, @samp{local4}, @samp{local5}, @samp{local6},
+@samp{local7}. 
+
+     The @var{priority} is any of the following: @samp{emerg}, @samp{alert}, 
+@samp{crit}, @samp{err}, @samp{warning}, @samp{notice}, @samp{info},
+@samp{debug}. 
+
+     Either @var{facility} or @var{priority} can be omitted, in which case
+the following defaults are used: @var{facility}=@code{authpriv},
+@var{priority}=@code{info}.
+
+@item -tag=@var{label}
+Use @var{label} as the syslog tag, instead of the module name.
+@end table
+
+     The following example illustrates the use of this module:
+
+@smallexample
+@group
+cvs auth       required  pam_regex.so extended \
+    regex=(anoncvs|anonymous) sense=allow 
+cvs account    requisite pam_log.so -tag CVS-ACCESS \
+    -pri=daemon.info User $@{user:-unknown@} is granted CVS access
+cvs account    required   pam_permit.so
+cvs session    required   pam_permit.so
+@end group
+@end smallexample
+
+@node sql, Reporting Bugs, log, Top
+@chapter Simple SQL authentication.
+
+     The package provides two modules for SQL authentication:
+@command{pam_mysql}, for MySQL and @command{pam_pgsql} for
+PostgreSQL.  Both modules share the same set of options and provide
+similar functionality.  To authenticate the user, the module connects
+to the database and issues a query which should return the user
+password.  Then the obtained password is compared with the
+authentication token, using a preconfigured algorithm.  If it matches,
+the user is authenticated successfully. 
+
+     The options, common for both modules are:
+
+@table @option
+@item use_authtok	
+     Do not prompt the user for password, take it from the saved
+authentication tokens.  This option is useful when this module is
+not the first in the stack of authentication modules.
+
+@item config=@var{file}
+     Read SQL access credentials from the given @var{file}.
+@end table
+
+     The configuration file has a simple line-oriented syntax.  Empty
+lines and lines beginning with @samp{#} are ignored.  Nonempty lines
+consist of the keyword and its value, separated by any amount of the
+white space.
+
+     The keywords, common for both modules are:
+
+@table @code
+@item host @var{hostname}
+Defines the host where the database is running.
+
+@item port @var{number}
+Defines the SQL port number.
+
+@item db @var{database}
+Sets the database name.
+
+@item login @var{string}
+Sets the SQL user name.
+
+@item pass @var{password}
+Sets the SQL user password
+
+@item query @var{query}
+Defines the query used to obtain the user's password from the
+database.  The query can contain the following meta-characters:
+
+@multitable @columnfractions .15 .40
+@headitem Meta-char @tab Replaced by
+@item %u @tab User name
+@item %p @tab User password (authentication token)
+@item %% @tab Literal @samp{%} character
+@end multitable
+
+@end table
+
+     Variables, specific for @command{pam_pgsql}:
+
+@table @code
+@item allow-plaintext-pass @var{bool}
+The returned password can be plaintext.  Without this option, it is
+supposed to be encrypted using the system @code{crypt} function.
+@end table
+
+     Variables, specific for @command{pam_mysql}:
+     
+@table @code
+@item allow-mysql-pass @var{bool}
+The returned password can be encrypted using MySQL @code{password}
+function.
+
+@item allow-plaintext-pass @var{bool}
+The returned password can be plaintext.
+@end table
+
+@node Reporting Bugs, Copying This Manual, sql, Top
 @chapter How to Report a Bug
 
-Email bug reports to @email{gray@@gnu.org.ua}.
-Be sure to include the word ``pam-modules'' somewhere
-in the ``Subject:'' field.
+Email bug reports to @email{bug-pam-modules@@gnu.org.ua}.
 
 As the purpose of bug reporting is to improve software, please be sure
-to include maximum information when reporting a bug. The information
+to include maximum information when reporting a bug.  The information
 needed is:
 
 @itemize
@@ -229,7 +382,7 @@ needed is:
 @comment node-name,  next,  previous,  up
 @unnumbered Concept Index
 
-This is a general index of all issues discussed in this manual
+This is a general index of all issues discussed in this manual.
 
 @printindex cp
 

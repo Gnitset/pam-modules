@@ -58,7 +58,7 @@ sql_escape_string (const char *ustr)
 	return str;
 }
 
-char *
+static char *
 sql_expand_query (const char *query, const char *user, const char *pass)
 {
 	char *p, *q, *res;
@@ -132,7 +132,7 @@ sql_expand_query (const char *query, const char *user, const char *pass)
 	return res;
 }
 
-int
+static int
 verify_user_pass(const char *username, const char *password)
 {
 	PGconn  *pgconn;

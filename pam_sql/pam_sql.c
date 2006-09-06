@@ -47,41 +47,11 @@
 	}                                                                  \
        	DEBUG(100,("Config: %s=%s", #v, v));
 
-/* logging */
-static void
-_pam_vlog(int err, const char *format, va_list args)
-{
-	openlog(MODULE_NAME, LOG_CONS|LOG_PID, LOG_AUTH);
-	vsyslog(err, format, args);
-	closelog();
-}
-
-static void
-_pam_log(int err, const char *format, ...)
-{
-	va_list args;
-
-	va_start(args, format);
-	_pam_vlog(err, format, args);
-	va_end(args);
-}
-
-void
-_pam_debug(char *format, ...)
-{
-	va_list args;
-
-	va_start(args, format);
-	_pam_vlog(LOG_DEBUG, format, args);
-	va_end(args);
-}
-
 int verify_user_pass(const char *username, const char *password);
 
 #define CNTL_DEBUG        0x0001
 #define CNTL_AUDIT        0x0002
 #define CNTL_AUTHTOK      0x0004
-#define CNTL_WAITDEBUG    0x0008
 
 #define CNTL_SET_DEBUG_LEV(cntl,n) (cntl |= ((n)<<16))
 #define CNTL_DEBUG_LEV() (cntl_flags>>16)
@@ -134,14 +104,14 @@ _pam_parse(int argc, const char **argv)
 				CNTL_SET_DEBUG_LEV(ctrl,1);
 		} else if (!strcmp(*argv,"audit"))
 			ctrl |= CNTL_AUDIT;
-		else if (!strcmp(*argv,"waitdebug"))
-			ctrl |= CNTL_WAITDEBUG;
+		else if (!strncmp(*argv,"waitdebug", 9))
+			WAITDEBUG(*argv + 9);
 		else if (!strcmp(*argv,"use_authtok"))
 			ctrl |= CNTL_AUTHTOK;
 		else if (!strncmp(*argv, "config=", 7)) 
 			config_file = (char*) (*argv + 7);
 		else {
-			_pam_log(LOG_ERR,"pam_parse: unknown option; %s",
+			_pam_log(LOG_ERR,"unknown option: %s",
 				 *argv);
 		}
 	}

@@ -1,3 +1,17 @@
+2006-09-06  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* doc/pam-modules.texi: Updated
+	* common.c: Moved here syslog-reporting and debugging functions
+	* pam_fshadow/Makefile.am (AM_CPPFLAGS): Define MODULE_NAME
+	* pam_log/Makefile.am: Likewise
+	* pam_regex/Makefile.am: Likewise
+
+	* pam_fshadow/pam_fshadow.c: Update
+	* pam_regex/pam_regex.c: Update
+	* pam_sql/pam_sql.c: Update
+	
+	* pam_log/pam_log.c: Implemented
+	
 2006-09-04  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	* pam_regex/pam_regex.c: New option 'user=[arg]'
