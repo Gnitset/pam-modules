@@ -9,6 +9,9 @@
 	* pam_fshadow/pam_fshadow.c: Update
 	* pam_regex/pam_regex.c: Update
 	* pam_sql/pam_sql.c: Update
+
+	* pam_sql/pam_mysql.c (sql_expand_query): Bugfix
+	* pam_sql/pam_pgsql.c (sql_expand_query): Bugfix
 	
 	* pam_log/pam_log.c: Implemented
 	
