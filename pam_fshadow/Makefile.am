@@ -21,7 +21,7 @@ AM_INSTALLCHECK_STD_OPTIONS_EXEMPT = pam_fshadow.la
 pam_fshadow_la_SOURCES = pam_fshadow.c
 pam_fshadow_la_LDADD = -lpam  
 AM_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
-AM_CPPFLAGS=-DSYSCONFDIR=\"${sysconfdir}\"
+AM_CPPFLAGS=-DMODULE_NAME=\"pam_fshadow\" -DSYSCONFDIR=\"${sysconfdir}\"
 INCLUDES=@PAM_COMMON_INCLUDES@
 NORMAL_UNINSTALL = -rm -f $(DESTDIR)$(pamdir)/pam_fshadow.a $(DESTDIR)$(pamdir)/pam_fshadow.so.@VI_CURRENT@.@VI_REVISION@.@VI_AGE@
 

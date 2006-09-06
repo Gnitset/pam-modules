@@ -21,7 +21,7 @@ pam_regex_la_SOURCES = pam_regex.c
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT = pam_regex.la
 pam_regex_la_LDADD = -lpam 
 AM_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
-AM_CPPFLAGS=-DSYSCONFDIR=\"${sysconfdir}\"
+AM_CPPFLAGS=-DMODULE_NAME=\"pam_regex\" -DSYSCONFDIR=\"${sysconfdir}\"
 INCLUDES=@PAM_COMMON_INCLUDES@
 NORMAL_UNINSTALL = -rm -f $(DESTDIR)$(pamdir)/pam_regex.a $(DESTDIR)$(pamdir)/pam_regex.so.@VI_CURRENT@.@VI_REVISION@.@VI_AGE@
 
