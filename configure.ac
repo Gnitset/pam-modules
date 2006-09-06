@@ -67,7 +67,11 @@ AC_ARG_WITH(mysql,
 AC_ARG_WITH(postgres,
           [  --without-postgres     Configure to work without Postgres],
 	  [PGSQL=$withval])
-
+AC_ARG_WITH(sql,
+	  [  --without-sql          Do not build SQL dependent modules],
+	  [MYSQL=$withval
+	   PGSQL=$withval])
+	   
 if test "$MYSQL" != no; then
   RA_CHECK_LIB(mysqlclient, mysql_real_connect, "-lm",
               [ AC_DEFINE(USE_SQL_MYSQL,1,
