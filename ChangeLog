@@ -17,6 +17,31 @@
 	
 	* pam_log/pam_log.c: Implemented
 	
+2006-09-06  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* acinclude.m4: New file
+	* common.c: New file
+	* pam_log: New directory
+	* pam_log/pam_log.c: New file
+	* pam_log/Makefile.am: New file
+	* pam_log/.cvsignore: New file
+	
+	* pam_sql: New directory
+	* pam_sql/Makefile.am: New file
+	* pam_sql/pam_mysql.c: New file
+	* pam_sql/pam_pgsql.c: New file
+	* pam_sql/pam_sql.c: New file
+	* pam_sql/pam_sql.h: New file
+	* pam_sql/sha1.c: New file
+	* pam_sql/sha1.h: New file
+	* pam_sql/.cvsignore: New file
+
+	* Makefile.am (SUBDIRS): Add pam_log pam_sql
+	* configure.ac: Add library versioning. Check for libmysqlclient
+	and libpq. Create pam_log/Makefile and pam_sql/Makefile
+	* pam_fshadow/Makefile.am, pam_regex/Makefile.am: Update
+	* pam_fshadow/pam_fshadow.c, pam_regex/pam_regex.c: Include <common.c>
+
 2006-09-04  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	* pam_regex/pam_regex.c: New option 'user=[arg]'
