@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
- * Copyright (C) 2001,2005 Sergey Poznyakoff
+ * Copyright (C) 2001, 2005, 2007 Sergey Poznyakoff
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <pwd.h>
 #include <shadow.h>
+#include <regex.h>
 
 #define PAM_SM_AUTH
 #define PAM_SM_ACCOUNT
@@ -44,17 +45,26 @@
 char *sysconfdir = SYSCONFDIR;
 static int cntl_flags = 0;
 
+static regex_t rexp;
+const char *regex_str = NULL;
+static int username_index = 1;
+static int domain_index = 2;
+
 #define CNTL_DEBUG       0x0001
 #define CNTL_AUTHTOK     0x0002
 #define CNTL_NOPASSWD    0x0004
+#define CNTL_REGEX       0x0008
 
 #define CNTL_DEBUG_LEV() (cntl_flags>>16)
 #define CNTL_SET_DEBUG_LEV(cntl,n) (cntl |= ((n)<<16))
 #define DEBUG(m,c) if (CNTL_DEBUG_LEV()>=(m)) _pam_debug c
 
 static int
-_pam_parse(int argc, const char **argv)
+_pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 {
+	int regex_flags = 0;
+	int retval = PAM_SUCCESS;
+	
 	/* step through arguments */
 	for (cntl_flags = 0; argc-- > 0; ++argv) {
 
@@ -73,14 +83,64 @@ _pam_parse(int argc, const char **argv)
 			cntl_flags |= CNTL_AUTHTOK;
 		else if (!strncmp(*argv, "sysconfdir=", 11))
 			sysconfdir = (char*) (*argv + 11);
-		else if (!strcmp(*argv, "nopasswd"))
+		else if (!strncmp(*argv, "regex=", 6)) 
+			regex_str = (*argv + 6);
+		else if (!strcmp(*argv, "basic"))
+			regex_flags &= ~REG_EXTENDED;
+		else if (!strcmp(*argv, "extended"))
+			regex_flags |= REG_EXTENDED;
+		else if (!strcmp(*argv, "icase")
+			 || !strcmp(*argv, "ignore-case"))
+			regex_flags |= REG_ICASE;
+		else if (!strcmp(*argv, "revert-index")) {
+			username_index = 2;
+			domain_index = 1;
+		} else if (!strcmp(*argv, "nopasswd"))
 			cntl_flags |= CNTL_NOPASSWD;
 		else 
 			_pam_log(LOG_ERR,
 				 "unknown option: %s", *argv);
 	}
-	
-	return cntl_flags;
+
+
+	if (regex_str) {
+		int rc;
+		if (rc = regcomp(&rexp, regex_str, regex_flags)) {
+			size_t s = regerror(rc, &rexp, NULL, 0);
+			char *buf = malloc (s);
+			if (buf) {
+				regerror(rc, &rexp, buf, s);
+				_pam_log(LOG_NOTICE,
+					 "cannot compile regex `%s': %s",
+					 regex_str, buf);
+				free (buf);
+			} else
+				_pam_log(LOG_NOTICE,
+					 "cannot compile regex `%s'",
+					 regex_str);
+			retval = PAM_AUTHINFO_UNAVAIL;
+		} else if (rexp.re_nsub != 2) {
+			_pam_log(LOG_NOTICE,
+				 "invalid regular expression `%s': "
+				 "must contain two reference groups",
+				 regex_str);
+			regfree(&rexp);
+			retval = PAM_AUTHINFO_UNAVAIL;
+		} else {
+			cntl_flags |= CNTL_REGEX;
+			rc = pam_set_data(pamh, "REGEX", &rexp,
+					  _cleanup_regex);
+			
+			if (rc != PAM_SUCCESS) {
+				_pam_log(LOG_NOTICE, 
+					 "can't keep data [%s]: %s",
+					 "REGEX",
+					 pam_strerror(pamh, rc));
+			}
+		}
+	}
+       
+	return retval;
 }
 
 static int
@@ -211,7 +271,7 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 }
 
 char *
-mkfilename(char *dir, char *name)
+mkfilename(const char *dir, const char *name)
 {
         int len = strlen(dir) + strlen(name);
         char *p = malloc(len+2);
@@ -224,16 +284,20 @@ mkfilename(char *dir, char *name)
 }
 
 int
-verify_user_acct(const char *username)
+verify_user_acct(const char *confdir, const char *username, char **pwd)
 {
-	char *filename = mkfilename(sysconfdir, "passwd");
+	char *filename = mkfilename(confdir, "passwd");
 	FILE *fp;
 	int retval;
+
+	DEBUG(10,("Looking up user `%s' in `%s'",
+		  username, filename));
 	
+	*pwd = NULL;
 	fp = fopen (filename, "r");
 	if (fp) {
 		struct passwd *pw;
-
+		
 		while ((pw = fgetpwent (fp)) != NULL) {
 			if (strcmp (pw->pw_name, username) == 0)
 				break;
@@ -242,8 +306,11 @@ verify_user_acct(const char *username)
 			_pam_log(LOG_ERR, "user %s not found in %s",
 				 username, filename);
 			retval = PAM_USER_UNKNOWN;
-		} else
+		} else {
+			if (pw->pw_passwd && strlen(pw->pw_passwd) > 1)
+				*pwd = strdup(pw->pw_passwd);
 			retval = PAM_SUCCESS;
+		}
 	} else {
 		_pam_log(LOG_ERR, "can't open %s: %s",
 			 filename, strerror(errno));
@@ -254,16 +321,17 @@ verify_user_acct(const char *username)
 }
 
 int
-verify_user_pass(const char *username, const char *password)
+verify_user_pass(const char *confdir, const char *username,
+		 const char *password)
 {
 	struct spwd *sp = NULL;
 	time_t curdays;
 	FILE *fp;
 	int retval = PAM_AUTH_ERR;
-	char *shadow = mkfilename(sysconfdir, "shadow");
+	char *shadow = mkfilename(confdir, "shadow");
 		
-	DEBUG(10,("Verify user `%s' with password `%s'",
-		  username, password));
+	DEBUG(10,("Verifying user `%s' with password `%s' in `%s'",
+		  username, password, shadow));
 
 	fp = fopen(shadow, "r");
 	if (!fp) {
@@ -310,6 +378,40 @@ verify_user_pass(const char *username, const char *password)
 
 /* --- authentication management functions (only) --- */
 
+static int
+copy_backref (pam_handle_t *pamh, const char *name,
+	      const char *buf, regmatch_t rmatch[3], int index, char **pstr)
+{
+	char *str;
+	size_t size;
+	int rc;
+	
+	if (rmatch[index].rm_so == -1)
+		size = 0;
+	else
+		size = rmatch[index].rm_eo - rmatch[index].rm_so;
+
+	str = malloc (size + 1);
+	if (!str) {
+		_pam_log(LOG_CRIT, "not enough memory");
+		return PAM_SYSTEM_ERR;
+	}
+	rc = pam_set_data(pamh, name, (void *)str, _cleanup_string);
+	if (rc != PAM_SUCCESS) {
+		_pam_log(LOG_CRIT, 
+			 "can't keep data [%s]: %s",
+			 name,
+			 pam_strerror(pamh, rc));
+		_pam_delete(str);
+	} else {
+		if (size != 0)
+			memcpy(str, buf + rmatch[index].rm_so, size);
+		str[size] = 0;
+		*pstr = str;
+	}
+	return rc;
+}
+
 PAM_EXTERN int
 pam_sm_authenticate(pam_handle_t *pamh, int flags,
 		    int argc, const char **argv)
@@ -317,10 +419,15 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 	const char *username;
 	char *password;
 	int retval = PAM_AUTH_ERR;
-
+	int rc;
+	char *confdir;
+	char *pwstr;
+	
 	/* parse arguments */
-	_pam_parse(argc, argv);
-
+	if ((rc = _pam_parse(pamh, argc, argv)) != PAM_SUCCESS)
+		return rc;
+	confdir = sysconfdir;
+	
 	/* Get the username */
 	retval = pam_get_user(pamh, &username, NULL);
 	if (retval != PAM_SUCCESS || !username) {
@@ -328,6 +435,32 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 		return PAM_SERVICE_ERR;
 	}
 
+	if (cntl_flags & CNTL_REGEX) {
+		regmatch_t rmatch[3];
+		if (regexec(&rexp, username, 3, rmatch, 0) == 0) {
+			char *domain;
+			
+			rc = copy_backref(pamh, "DOMAIN", username, rmatch,
+					  domain_index, &domain);
+			if (rc != PAM_SUCCESS)
+				return rc;
+			rc = copy_backref(pamh, "USERNAME", username, rmatch,
+					  username_index, (char **) &username);
+			if (rc != PAM_SUCCESS)
+				return rc;
+			confdir = mkfilename(sysconfdir, domain);
+			pam_set_data(pamh, "CONFDIR",
+				     (void *)confdir, _cleanup_string);
+		} else {
+			_pam_log(LOG_DEBUG,
+				 "user name `%s' does not match regular "
+				 "expression `%s'",
+				 username,
+				 regex_str);
+		}
+	}
+		
+	
 	/* Get the password */
 	if (_pam_get_password(pamh, &password, "Password:"))
 		return PAM_SERVICE_ERR;
@@ -340,9 +473,17 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 	if (cntl_flags & CNTL_NOPASSWD)
 		retval = 0;
 	else
-		retval = verify_user_acct(username);
-	if (retval == PAM_SUCCESS)
-		retval = verify_user_pass(username, password);
+		retval = verify_user_acct(confdir, username, &pwstr);
+	if (retval == PAM_SUCCESS) {
+		if (pwstr) {
+			if (strcmp(pwstr, crypt(password, pwstr)) == 0)
+				retval = PAM_SUCCESS;
+			else
+				retval = PAM_AUTH_ERR;
+			free(pwstr);
+		} else
+			retval = verify_user_pass(confdir, username, password);
+	}
 	
 	switch (retval) {
 	case PAM_ACCT_EXPIRED:
