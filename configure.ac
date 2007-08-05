@@ -1,5 +1,5 @@
 # This file is part of pam-modules.       -*- autoconf -*-
-# Copyright (C) 2005, 2006 Sergey Poznyakoff
+# Copyright (C) 2005, 2006, 2007 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 AC_PREREQ(2.53)
 
-AC_INIT(pam-modules, 1.0, gray@gnu.org.ua)
+AC_INIT(pam-modules, 1.0.90, gray@gnu.org.ua)
 AC_CONFIG_SRCDIR(pam_fshadow/pam_fshadow.c)
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE(no-exeext)
