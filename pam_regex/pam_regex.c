@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2001, 2006 Sergey Poznyakoff
+   Copyright (C) 2001, 2006, 2007 Sergey Poznyakoff
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -62,28 +62,6 @@ static const char *user_name = NULL;
 #define AUDIT(c) if (cntl_flags&CNTL_AUDIT) _pam_debug c
 
 static void
-make_str(pam_handle_t *pamh, const char *str, const char *name, char **ret)
-{
-	int retval;
-	char *newstr = XSTRDUP(str);
-
-	retval = pam_set_data(pamh, name, (void *)newstr, _cleanup_string);
-	if (retval != PAM_SUCCESS) {
-		_pam_log(LOG_CRIT, 
-			 "can't keep data [%s]: %s",
-			 name,
-			 pam_strerror(pamh, retval));
-		_pam_delete(newstr);
-	} else {
-		*ret = newstr;
-		newstr = NULL;
-	}
-}
-
-#define MAKE_STR(pamh, str, var) \
- make_str(pamh,str,#var,&var)
-	
-static void
 _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 {
 	int ctrl = 0;
@@ -119,7 +97,8 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 		} else if (!strcmp(*argv, "basic")) {
 			regex_flags &= ~REG_EXTENDED;
 			ctrl |= CNTL_REGEX_FLAGS;
-		} else if (!strcmp(*argv, "icase")) {
+		} else if (!strcmp(*argv, "icase")
+			   || !strcmp(*argv, "ignore-case")) {
 			regex_flags |= REG_ICASE;
 			ctrl |= CNTL_REGEX_FLAGS;
 		} else if (!strcmp(*argv, "case")) {
