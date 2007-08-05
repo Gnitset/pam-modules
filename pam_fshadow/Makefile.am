@@ -1,4 +1,4 @@
-# Copyright (C) 2001, 2006 Sergey Poznyakoff
+# Copyright (C) 2001, 2006, 2007 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ pamdir=@PAMDIR@
 pam_PROGRAMS = pam_fshadow.la
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT = pam_fshadow.la
 pam_fshadow_la_SOURCES = pam_fshadow.c
-pam_fshadow_la_LDADD = -lpam  
+pam_fshadow_la_LDADD = -lpam @LIBS@ 
 AM_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 AM_CPPFLAGS=-DMODULE_NAME=\"pam_fshadow\" -DSYSCONFDIR=\"${sysconfdir}\"
 INCLUDES=@PAM_COMMON_INCLUDES@
