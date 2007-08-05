@@ -1,8 +1,17 @@
-pam-modules -- history of user-visible changes. 2005-08-18
-Copyright (C) 2001,2004,2005 Sergey Poznyakoff
+pam-modules -- history of user-visible changes. 2007-08-05
+Copyright (C) 2001,2004,2005,2007 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 Please send radius bug reports to <gray@gnu.org.ua>
+
+Version 1.0.90 (CVS)
+
+* pam_fshadow allows to use virtual domains to specify alternate password
+databases.  New options: regex, basic, extended, ignore-case, icase
+and revert-index.
+
+* pam_regex: ignore-case can be used as an alias to icase.
+
 
 Version 1.0
 
@@ -32,6 +41,10 @@ Copyright (C) 2001,2004,2005 Sergey Poznyakoff
 Local variables:
 mode: outline
 paragraph-separate: "[  ]*$"
+eval: (add-hook 'write-file-hooks 'time-stamp)
+time-stamp-start: "changes. "
+time-stamp-format: "%:y-%02m-%02d"
+time-stamp-end: "\n"
 end:
 
 

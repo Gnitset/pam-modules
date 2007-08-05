@@ -1,3 +1,16 @@
+2007-08-05  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* NEWS: Update
+	* configure.ac: Version 1.0.90
+	* common.c: Include regex.h;
+	(_cleanup_regex, make_str): New functions
+	* doc/pam-modules.texi: Update
+	* pam_fshadow/Makefile.am (pam_fshadow_la_LDADD): Add @LIBS@
+	* pam_fshadow/pam_fshadow.c: Implement virtual domain
+	authentication.
+	* pam_regex/pam_regex.c (make_str): Moved to ../common.c
+	* pam_sql/pam_sql.c (verify_user_pass): static
+
 2006-09-06  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	* configure.ac: New option --without-sql

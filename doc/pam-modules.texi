@@ -20,7 +20,7 @@ Published by the Free Software Foundation,
 51 Franklin Street, Fifth Floor
 Boston, MA 02110-1301, USA
 
-Copyright @copyright{} 2005 Sergey Poznyakoff
+Copyright @copyright{} 2005, 2007 Sergey Poznyakoff
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
@@ -124,18 +124,46 @@ administration issues and with Pluggable Authentication Modules
 
 @cindex pam_fshadow
      This module provides authentication against an alternative
-@file{shadow} file (or @file{passwd} / @file{shadow} pair).  It takes
-following options:
+@file{shadow} file (or @file{passwd} / @file{shadow}) pair or pairs.
+There are two main operation modes: @dfn{plain} mode, in which
+@command{pam_fshadow} uses only one @file{passwd}/@file{shadow} pair,
+and @dfn{virtual domain} mode, which allows to select the pair to use
+based on the authentication token (the user name).  First, let's
+describe the plain mode. 
+
+@cindex plain mode, pam_fshadow
+@cindex pam_fshadow, plain
+     In plain mode @command{pam_fshadow} uses the authentication token
+as the user name and verifies it against the
+@file{passwd}/@file{shadow} pair located in the system configuration 
+directory (which is set when configuring the package and
+defaults to @file{@var{prefix}/etc}).  This default location can be
+changed using the @option{sysconfdir} option (see below).  The
+authentication goes as follows:
+
+     First, the user name is looked up in @file{passwd} file and the
+corresponding record is fetched.  If this record contains a valid
+password hash (i.e. its second field is at least 2 characters long),
+it is compared with the supplied password using @code{crypt} function.
+Otherwise, if @file{passwd} contains no password, the shadow file is
+examined and the hash retrieved from there is used.  If the record
+retrieved from the shadow file has not expired, and if its password
+hash field matches the supplied password, the user is authenticated
+successfully.
+
+     Several options are provided to alter the default behavior.  All
+of them, except @command{sysconfdir}, have the same effect in the
+virtual domain mode as well.  The table below summarizes these options.
 
 @table @option
 @item nopasswd
-     Do not require passwd file to be present.
-     
+     Do not require @file{passwd} file to be present.  Only
+@file{shadow} is used for authentication.
+
 @item sysconfdir=@var{dir}
      Set full name of the directory where @file{shadow} and
 @file{passwd} are located.  By default the system configuration
-directory will be used.  It is set when configuring the package and
-defaults to @file{@var{prefix}/etc}.
+directory will be used.
 
 @item use_authtok	
      Do not prompt the user for password, take it from the saved
@@ -144,13 +172,75 @@ is used as a non-first module in a stack of authentication modules.
 @end table
 
      The following example illustrates the use of
-@command{pam_fshadow} in @file{pam.conf} file:
+@command{pam_fshadow} in plain mode in @file{pam.conf} file:
 
 @smallexample
-tuhs auth  requisite  pam_radius.so
 tuhs auth  required   pam_fshadow.so \
                       sysconfdir=/home/tuhs/tuhs/etc nopasswd use_authtok
 @end smallexample
+
+@cindex virtual domain mode, pam_fshadow
+@cindex pam_fshadow, virtual domain
+
+     In @dfn{virtual domain} mode, @command{pam_fshadow} uses the
+authentication token to determine where to look for the
+@file{passwd}/@file{shadow} file pair.  The token is split into
+the @dfn{user name proper} and @dfn{authentication domain}.  The
+configuration directory name is then obtained by appending to the
+system configuration directory name a directory separator (@samp{/})
+and the name of the authentication domain.  Then, the authentication
+goes on as described above for the plain mode.  If the supplied
+authentication token does not match the regular expression,
+@command{pam_fshadow} proceeds as in plain mode.
+
+     This mode is enabled by the option @option{regex}, which supplies
+a regular expression used to split the authentication token.  This
+regular expression must contain two parenthesized groups.  First of
+them is be used to extract the user name, and the second one is used
+to extract the authentication domain.  For example, the following option:
+
+@smallexample
+regex=\(.*\)@@\(.*\)
+@end smallexample
+
+@noindent
+instructs @command{pam_fshadow} to use any characters before the
+@samp{@@} as the user name, and anything following it as the
+authentication domain.
+
+     Several options are provided, that control the flavor of the
+regular expression and the group indices used to retrieve
+authentication data.  These are:
+
+@table @option
+@item basic
+     Use basic regular expression.  This is the default.
+     
+@item extended
+     Use extended regular expression.
+
+@item ignore-case
+@itemx icase
+     Use case-insensitive regular expression.
+     
+@item revert-index
+     Use group 2 as the user name and group 1 as the authentication domain.
+@end table
+
+     To summarize, consider the following @file{pam.conf} entry:
+
+@smallexample     
+check auth required pam_fshadow.so \
+   sysconfdir=/etc/auth regex=(.*)@@(.*) extended 
+@end smallexample
+
+@noindent
+It instructs @command{pam_fshadow} to use @samp{@@} as the
+username/domain separator and to look up for the password databases
+under the @file{/etc/auth} directory.  For example, if the supplied
+authentication token was @samp{smith@@ftp}, the module will look up
+for the user name @samp{smith} in the files
+@file{/etc/auth/ftp/passwd} and @file{/etc/auth/ftp/shadow}.
 
 @node regex, log, fshadow, Top
 @chapter pam_regex
