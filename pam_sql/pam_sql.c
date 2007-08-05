@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2005, 2006 Sergey Poznyakoff
+   Copyright (C) 2005, 2006, 2007 Sergey Poznyakoff
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@
 	}                                                                  \
        	DEBUG(100,("Config: %s=%s", #v, v));
 
-int verify_user_pass(const char *username, const char *password);
+static int verify_user_pass(const char *username, const char *password);
 
 #define CNTL_DEBUG        0x0001
 #define CNTL_AUDIT        0x0002
@@ -62,30 +62,6 @@ int verify_user_pass(const char *username, const char *password);
 static int cntl_flags;
 char *config_file = SYSCONFDIR "/pam_sql.conf";
 
-#define XSTRDUP(s) (s) ? strdup(s) : NULL
-
-static void
-make_str(pam_handle_t *pamh, const char *str, const char *name, char **ret)
-{
-	int retval;
-	char *newstr = XSTRDUP(str);
-
-	retval = pam_set_data(pamh, name, (void *)newstr, _cleanup_string);
-	if (retval != PAM_SUCCESS) {
-		_pam_log(LOG_CRIT, 
-			 "can't keep data [%s]: %s",
-			 name,
-			 pam_strerror(pamh, retval));
-		_pam_delete(newstr);
-	} else {
-		*ret = newstr;
-		newstr = NULL;
-	}
-}
-
-#define MAKE_STR(pamh, str, var) \
- make_str(pamh,str,#var,&var)
-	
 static void
 _pam_parse(int argc, const char **argv)
 {
