@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2001 Sergey Poznyakoff
+   Copyright (C) 2001, 2007 Sergey Poznyakoff
  
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,6 +25,8 @@
 #ifndef PAM_EXTERN
 # define PAM_EXTERN
 #endif
+
+#include <regex.h>
 
 #define XSTRDUP(s) (s) ? strdup(s) : NULL
 
@@ -59,6 +61,36 @@ _cleanup_string(pam_handle_t *pamh, void *x, int error_status)
 	_pam_delete(x);
 }
 
+static void
+_cleanup_regex(pam_handle_t *pamh, void *x, int error_status)
+{
+	regfree((regex_t*)x);
+}
+
+static void _pam_log(int err, const char *format, ...);
+
+static void
+make_str(pam_handle_t *pamh, const char *str, const char *name, char **ret)
+{
+	int retval;
+	char *newstr = XSTRDUP(str);
+
+	retval = pam_set_data(pamh, name, (void *)newstr, _cleanup_string);
+	if (retval != PAM_SUCCESS) {
+		_pam_log(LOG_CRIT, 
+			 "can't keep data [%s]: %s",
+			 name,
+			 pam_strerror(pamh, retval));
+		_pam_delete(newstr);
+	} else {
+		*ret = newstr;
+		newstr = NULL;
+	}
+}
+
+#define MAKE_STR(pamh, str, var) \
+ make_str(pamh,str,#var,&var)
+	
 /* Syslog functions */
 static int syslog_dont_open = 0;
 static const char *syslog_tag = MODULE_NAME;
