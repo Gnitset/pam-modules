@@ -1,8 +1,0 @@
-.deps
-.libs
-Makefile
-Makefile.in
-pam_mysql.la
-pam_mysql.lo
-pam_pgsql.la
-pam_pgsql.lo
