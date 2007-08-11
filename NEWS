@@ -2,9 +2,9 @@ pam-modules -- history of user-visible changes. 2007-08-11
 Copyright (C) 2001,2004,2005,2007 Sergey Poznyakoff
 See the end of file for copying conditions.
 
-Please send radius bug reports to <gray@gnu.org.ua>
+Please send radius bug reports to <bug-pam-modules@gnu.org.ua>
 
-Version 1.1 (CVS)
+Version 1.1, 2007-08-11
 
 * pam_fshadow allows to use virtual domains to specify alternate password
 databases.  New options: regex, basic, extended, ignore-case, icase
