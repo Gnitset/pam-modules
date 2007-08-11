@@ -16,7 +16,7 @@
 
 AC_PREREQ(2.53)
 
-AC_INIT(pam-modules, 1.0.90, gray@gnu.org.ua)
+AC_INIT(pam-modules, 1.1, gray@gnu.org.ua)
 AC_CONFIG_SRCDIR(pam_fshadow/pam_fshadow.c)
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE(no-exeext)
@@ -60,15 +60,18 @@ MYSQL=probe
 PGSQL=probe
 
 AC_ARG_WITH(mysql,
-          [  --without-mysql        Configure to work without MySQL],
-	  [MYSQL=$withval])
+            AC_HELP_STRING([--without-mysql],
+	                   [Configure to work without MySQL]),
+	    [MYSQL=$withval])	
 AC_ARG_WITH(postgres,
-          [  --without-postgres     Configure to work without Postgres],
+            AC_HELP_STRING([--without-postgres],
+	                   [Configure to work without Postgres]),
 	  [PGSQL=$withval])
 AC_ARG_WITH(sql,
-	  [  --without-sql          Do not build SQL dependent modules],
-	  [MYSQL=$withval
-	   PGSQL=$withval])
+	    AC_HELP_STRING([--without-sql],
+	                   [Do not build SQL dependent modules]),
+	  [MYSQL=$withval	
+	   PGSQL=$withval])	
 	   
 if test "$MYSQL" != no; then
   RA_CHECK_LIB(mysqlclient, mysql_real_connect, "-lm",
@@ -85,7 +88,14 @@ fi
 
 if test "$PGSQL" != no; then
   RA_CHECK_LIB(pq, PQconnectStart, [],
-  	      [ AC_DEFINE(USE_SQL_PGSQL,1,
+  	      [ save_CPPFLAGS=$CPPFLAGS
+	        for dir in /usr/local/pgsql/include /usr/pgsql/include
+		do
+			CPPFLAGS="$save_CPPFLAGS -I$dir"
+			AC_CHECK_HEADER([libpq-fe.h], [break])
+			CPPFLAGS="$save_CPPFLAGS"
+		done
+	        AC_DEFINE(USE_SQL_PGSQL,1,
                           [Define this if you are going to use PostgreSQL])
                 AC_DEFINE(HAVE_LIBPQ,1,
                           [Define this if you have libp]) 
@@ -105,10 +115,44 @@ AC_SUBST(SQL_MODULES)
 ## **************
 PAMDIR='$(prefix)/lib/security'
 AC_ARG_WITH(pamdir,
-	[  --with-pamdir=DIR             install PAM modiles in DIR [PREFIX/lib/security]],
-	[PAMDIR=$withval])
+	    AC_HELP_STRING([--with-pamdir=DIR],
+	                   [install PAM modiles in DIR (PREFIX/lib/security)]),
+	    [PAMDIR=$withval])
 AC_SUBST(PAMDIR)
 
+## **************
+## Summary
+## **************
+   
+AC_CONFIG_COMMANDS([status],[
+echo ""
+delim="-------------------------------------------------------------------"
+echo $delim | tr '-' '*'
+echo "Modules to build:"     
+for module in fshadow regex log pgsql mysql
+do
+	modname=pam_$module
+	eval enable=\${enable_$module}
+	str=`echo ${modname}" yes" | sed 's/./-/g'`
+	dstr=`echo $delim | sed "s/^$str//" | tr '-' '.'`
+	echo ${modname}$dstr $enable
+done
+echo $delim | tr '-' '*'
+],[
+enable_fshadow=yes
+enable_regex=yes
+enable_log=yes
+if test "$PGSQL" = no; then	
+  enable_pgsql=no
+else
+  enable_pgsql=yes
+fi
+if test "$MYSQL" = no; then
+  enable_mysql=no
+else
+  enable_mysql=yes
+fi])  	  
+		
 AC_OUTPUT(Makefile
           doc/Makefile 
 	  pam_fshadow/Makefile

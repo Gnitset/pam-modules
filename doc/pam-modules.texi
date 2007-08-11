@@ -109,7 +109,7 @@ WAITING FOR DEBUG AT pam_regex.c:240
 
 @noindent
 and waits for @var{interval} seconds (default 3600).  The developer is
-supposed to attach to the process with a debugger, set @var{interval}
+supposed to attach to the process with a debugger, set the @code{interval}
 variable to 0 and to continue execution of the module in the debugging
 mode. 
 @end table
@@ -133,7 +133,7 @@ describe the plain mode.
 
 @cindex plain mode, pam_fshadow
 @cindex pam_fshadow, plain
-     In plain mode @command{pam_fshadow} uses the authentication token
+     In plain mode, @command{pam_fshadow} uses the authentication token
 as the user name and verifies it against the
 @file{passwd}/@file{shadow} pair located in the system configuration 
 directory (which is set when configuring the package and
@@ -196,7 +196,7 @@ authentication token does not match the regular expression,
      This mode is enabled by the option @option{regex}, which supplies
 a regular expression used to split the authentication token.  This
 regular expression must contain two parenthesized groups.  First of
-them is be used to extract the user name, and the second one is used
+them is used to extract the user name, and the second one is used
 to extract the authentication domain.  For example, the following option:
 
 @smallexample
@@ -335,6 +335,7 @@ begin with a dash, you can inhibit its special handling by placing
 Similar to @option{debug} in other modules (@pxref{Intro}).
 
 @item -no-open
+Reserved for future use.
 
 @item -waitdebug[=@var{interval}]
 Similar to @option{waitdebug} in other modules (@pxref{Intro}).
