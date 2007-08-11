@@ -1,5 +1,5 @@
 PAM-modules README
-Copyright 2005 Sergey Poznyakoff
+Copyright (C) 2001, 2004, 2005, 2007 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 * Introduction
@@ -10,7 +10,7 @@ using them. It is *not* intended as a replacement for the
 documentation, it is provided as a brief reference only. The complete 
 documentation for PAM-modules is available in doc/ subdirectory. To
 read it without installing the package run `info -f
-doc/pam-modules'. After installation the documentation can be accessed
+doc/pam-modules'. After installation, the documentation can be accessed
 running `info pam-modules'. 
 
 The online copy of the documentation in various formats is available
@@ -23,30 +23,43 @@ To install the package, do
 **  ./configure [options]
 
 For the list of available options consult file INSTALL.
-The only applications-specific option is:
+The applications-specific options are:
 
-*** --with-pamdir=DIR
+ --with-pamdir=DIR
 	Set installation directory for PAM loadable files.
 	Default is PREFIX/lib/security
+	
+ --without-mysql
+        Do not build pam_mysql
 
+ --without-pgsql
+ --without-postgres
+        Do not build pam_pgsql
+
+ --without-sql
+        Do not build SQL-dependent modules (i.e. pam_mysql and
+        pam_pgsql)
+
+ --with-pamdir=DIR
+	Install PAM modiles in DIR (default is PREFIX/lib/security)
+	
 ** Run make
 
 ** Run make install
 
 * Usage
 
-See accompanying documentation for the detailed	discussion. 
+See the accompanying documentation for the detailed description. 
 
 * Bug reporting
 
-Send bug reports to <gray@gnu.org.ua>. Take a look at chapter
-"Reporting Bugs" in the accompanying documentation, it can contain
-some useful hints.
+Send bug reports to <bug-pam-modules@gnu.org.ua>. Read the chapter
+"Reporting Bugs" in the accompanying documentation for more information.
 
 
 * Copyright information:
 
-Copyright (C) 2001,2004,2005 Sergey Poznyakoff
+Copyright (C) 2001, 2004, 2005, 2007 Sergey Poznyakoff
 
    Permission is granted to anyone to make or distribute verbatim copies
    of this document as received, in any medium, provided that the

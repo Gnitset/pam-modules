@@ -5,9 +5,9 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
 
 <head>
-<title>%%TITLE%% - Free Software - gray.gnu.org.ua</title>
+<title>%%TITLE%% - Free Software - puszcza.gnu.org.ua</title>
 <meta http-equiv="content-type" content='text/html; charset=utf-8' />
-<link rel="stylesheet" type="text/css" href="/gnu.css" />
+<link rel="stylesheet" type="text/css" href="/local/css/gnu.css" />
 <link rev="made" href="mailto:gray@gnu.org" />
  <link rel="icon" type="image/png" href="/graphics/gnu-head-icon.png" />
 </head>

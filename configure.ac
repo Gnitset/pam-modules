@@ -63,9 +63,13 @@ AC_ARG_WITH(mysql,
             AC_HELP_STRING([--without-mysql],
 	                   [Configure to work without MySQL]),
 	    [MYSQL=$withval])	
+AC_ARG_WITH(pgsql,
+            AC_HELP_STRING([--without-pgsql],
+	                   [Configure to work without Postgres]),
+	    [PGSQL=$withval])
 AC_ARG_WITH(postgres,
             AC_HELP_STRING([--without-postgres],
-	                   [Configure to work without Postgres]),
+	                   [Same as --without-pgsql]),
 	  [PGSQL=$withval])
 AC_ARG_WITH(sql,
 	    AC_HELP_STRING([--without-sql],
