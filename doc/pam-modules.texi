@@ -104,11 +104,12 @@ information will be logged via @code{syslog} channel
 authentication credentials (user password, in particular). 
 
 @opindex waitdebug, common option
+@opindex enable-debug, @option{--enable-debug}, @command{configure} option
 @item waitdebug[=@var{interval}]
      Wait for @var{interval} seconds before starting the operation.
 This option is intended for the package developers and is not enabled,
-unless you configure the package with symbol @code{DEBUG_MODE}
-defined.  Most probably you will not need this option.  The following
+unless you configure the package with @option{--enable-debug} option.
+Most probably you will not need this option.  The following
 description is provided in case you decide to participate in
 @command{PAM-modules} development: 
 

@@ -25,6 +25,11 @@ To install the package, do
 For the list of available options consult file INSTALL.
 The applications-specific options are:
 
+ --enable-debug
+        Enable additional debugging code. See description of the
+        `waitdebug' option in node `Introduction to PAM-modules' of
+        the documentation.
+	
  --with-pamdir=DIR
 	Set installation directory for PAM loadable files.
 	Default is PREFIX/lib/security

@@ -8,6 +8,8 @@
 	* common.c (wait_debug): Bugfix
 	* pam_log/pam_log.c: Include ctype.h
 	(parse_priority): Change return type.
+	* pam_fshadow/Makefile.am, pam_log/Makefile.am,
+	pam_regex/Makefile.am, pam_sql/Makefile.am: Use CPPFLAGS in cc rules.
 	
 2007-08-06  Sergey Poznyakoff  <gray@gnu.org.ua>
 

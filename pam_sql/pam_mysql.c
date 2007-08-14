@@ -317,7 +317,6 @@ verify_user_pass(const char *username, const char *password)
 	int portno;
 	char *query, *exquery;
 	char *p;
-	MYSQL_RES *result;
 	int rc;
 	
 	hostname = find_config("host");
