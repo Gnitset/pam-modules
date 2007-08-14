@@ -1,8 +1,13 @@
-pam-modules -- history of user-visible changes. 2007-08-11
+pam-modules -- history of user-visible changes. 2007-08-14
 Copyright (C) 2001,2004,2005,2007 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 Please send radius bug reports to <bug-pam-modules@gnu.org.ua>
+
+Version 1.2, CVS
+
+Several fixes in debugging code and pam_mysql, pam_pgsql modules.
+
 
 Version 1.1, 2007-08-11
 

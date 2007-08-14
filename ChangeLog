@@ -1,5 +1,7 @@
 2007-08-14  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	* NEWS, configure.ac: Version 1.2
+	
 	* pam_fshadow/pam_fshadow.c: Include config.h and time.h
 	* pam_sql/pam_mysql.c, pam_sql/pam_pgsql.c, pam_sql/pam_sql.c: Use
 	_pam_log for diagnostics.
