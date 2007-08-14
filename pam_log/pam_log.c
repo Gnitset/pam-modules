@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2006 Sergey Poznyakoff
+   Copyright (C) 2006, 2007 Sergey Poznyakoff
  
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <stdarg.h>
+#include <ctype.h>
 #define obstack_chunk_alloc malloc
 #define obstack_chunk_free free
 #include <obstack.h>
@@ -99,7 +100,7 @@ static struct keyword syslog_priority[] = {
 	{ NULL }
 };
 
-static char *
+static void
 parse_priority(const char *str)
 {
 	int len;

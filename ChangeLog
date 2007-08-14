@@ -1,3 +1,14 @@
+2007-08-14  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* pam_fshadow/pam_fshadow.c: Include config.h and time.h
+	* pam_sql/pam_mysql.c, pam_sql/pam_pgsql.c, pam_sql/pam_sql.c: Use
+	_pam_log for diagnostics.
+	* pam_regex/pam_regex.c (pam_sm_authenticate): Remove unused variable.
+	* configure.ac: New option --enable-debug
+	* common.c (wait_debug): Bugfix
+	* pam_log/pam_log.c: Include ctype.h
+	(parse_priority): Change return type.
+	
 2007-08-06  Sergey Poznyakoff  <gray@gnu.org.ua>
 
         Relicense under GPLv3.

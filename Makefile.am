@@ -14,5 +14,5 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 AUTOMAKE_OPTIONS = gnits 1.8
-SUBDIRS = doc pam_fshadow pam_regex pam_log pam_sql
+SUBDIRS = doc pam_fshadow pam_regex pam_log pam_sql 
 EXTRA_DIST=common.c

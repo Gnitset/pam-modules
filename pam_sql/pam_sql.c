@@ -40,7 +40,7 @@
 
 #define CHKVAR(v) \
  	if (!(v)) {                                                        \
-	        _pam_err(LOG_ERR, "%s: %s not defined", config_file, #v);  \
+	        _pam_log(LOG_ERR, "%s: %s not defined", config_file, #v);  \
 		return PAM_SERVICE_ERR;                                    \
 	}                                                                  \
        	DEBUG(100,("Config: %s=%s", #v, v));
@@ -76,9 +76,9 @@ _pam_parse(int argc, const char **argv)
 				CNTL_SET_DEBUG_LEV(ctrl,atoi(*argv+6));
 			else
 				CNTL_SET_DEBUG_LEV(ctrl,1);
-		} else if (!strcmp(*argv,"audit"))
+		} else if (!strcmp(*argv, "audit"))
 			ctrl |= CNTL_AUDIT;
-		else if (!strncmp(*argv,"waitdebug", 9))
+		else if (!strncmp(*argv, "waitdebug", 9))
 			WAITDEBUG(*argv + 9);
 		else if (!strcmp(*argv,"use_authtok"))
 			ctrl |= CNTL_AUTHTOK;
@@ -90,6 +90,46 @@ _pam_parse(int argc, const char **argv)
 		}
 	}
 	cntl_flags = ctrl;
+}
+
+
+/* FIXME: Duplicated in pam_fshadow */
+static int
+converse(pam_handle_t *pamh,
+	 int nargs,
+	 struct pam_message **message,
+	 struct pam_response **response)
+{
+	int retval;
+	struct pam_conv *conv;
+
+	DEBUG(100,("enter converse"));
+
+	retval = pam_get_item(pamh, PAM_CONV, (const void **) &conv);
+	DEBUG(10,("pam_get_item(PAM_CONV): %d", retval));
+	if (retval == PAM_SUCCESS) {
+
+		retval = conv->conv(nargs,
+				    (const struct pam_message **) message,
+				    response,
+				    conv->appdata_ptr);
+		
+		DEBUG(10, ("app conversation returned %d", retval));
+
+		if (retval != PAM_SUCCESS) {
+			_pam_log(LOG_ERR,
+				 "conversation failure [%s]",
+				 pam_strerror(pamh, retval));
+		}
+	} else if (retval != PAM_CONV_AGAIN) {
+		_pam_log(LOG_ERR, 
+		         "couldn't obtain coversation function: %s",
+			 pam_strerror(pamh, retval));
+	}
+
+	DEBUG(100,("exit converse: %d", retval));
+
+	return retval;		/* propagate error status */
 }
 
 static int

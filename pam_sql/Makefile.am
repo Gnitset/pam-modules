@@ -34,12 +34,12 @@ pam_pgsql.lo: $(srcdir)/pam_sql.c
 
 pam_mysql.lo: $(srcdir)/pam_mysql.c 
 	$(LIBTOOL) --mode=compile $(CC) -o$@ -c -DHAVE_CONFIG_H \
-		$(CFLAGS) $(AM_CFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(INCLUDES) \
+		$(CFLAGS) $(AM_CFLAGS) $(CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(INCLUDES) \
 		-DMODULE_NAME=\"pam_mysql\" $<
 
 pam_pgsql.lo: $(srcdir)/pam_pgsql.c
 	$(LIBTOOL) --mode=compile $(CC) -o$@ -c -DHAVE_CONFIG_H \
-		$(CFLAGS) $(AM_CFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(INCLUDES) \
+		$(CFLAGS) $(AM_CFLAGS) $(CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS) $(INCLUDES) \
 		-DMODULE_NAME=\"pam_pgsql\" $<
 
 pam_mysql.la$(EXEEXT): pam_mysql.lo

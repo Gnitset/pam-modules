@@ -135,7 +135,6 @@ pam_sm_authenticate(pam_handle_t *pamh,
 {
 	int retval;
 	char *name;
-	char *password;
 	regex_t rx;
 
 	_pam_parse(pamh, argc, argv);

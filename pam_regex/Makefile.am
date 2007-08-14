@@ -25,7 +25,7 @@ NORMAL_UNINSTALL = -rm -f $(DESTDIR)$(pamdir)/pam_regex.a $(DESTDIR)$(pamdir)/pa
 
 pam_regex.lo: $(srcdir)/pam_regex.c
 	$(LIBTOOL) --mode=compile $(CC) -c -DHAVE_CONFIG_H \
-                $(CFLAGS) $(AM_CFLAGS) $(AM_CPPFLAGS) $(INCLUDES) $<
+                $(CFLAGS) $(AM_CFLAGS) $(CPPFLAGS) $(AM_CPPFLAGS) $(INCLUDES) $<
 
 pam_regex.la$(EXEEXT): pam_regex.lo
 	$(LIBTOOL) --mode=link $(CC) -module -export-dynamic \

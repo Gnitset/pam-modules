@@ -113,7 +113,30 @@ fi
 AC_SUBST(MYSQLLIBS)	
 AC_SUBST(PGSQLLIBS)
 AC_SUBST(SQL_MODULES)
-	      
+
+## *****************
+## debugging support
+## *****************
+AC_ARG_ENABLE(debug,                     
+    AC_HELP_STRING([--enable-debug], [enable debugging mode]),
+    [if test "$enableval" = yes; then
+       if test "$GCC" = yes; then
+	 AC_MSG_CHECKING(whether gcc accepts -ggdb)
+         save_CFLAGS=$CFLAGS
+         CFLAGS="-ggdb -Wall"
+         AC_TRY_COMPILE([],void f(){},
+           AC_MSG_RESULT(yes),
+           [if test x"$ac_cv_prog_cc_g" = xyes; then
+              CFLAGS="-g -Wall"
+            else
+              CFLAGS=
+            fi
+            AC_MSG_RESULT(no)])
+         CFLAGS="`echo $save_CFLAGS | sed 's/-O[[0-9]]//g'` $CFLAGS"
+	 AC_DEFINE_UNQUOTED([DEBUG_MODE],1,[Define to enable debugging])
+       fi
+     fi])
+   
 ## **************
 ## Directories
 ## **************

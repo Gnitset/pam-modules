@@ -17,6 +17,10 @@
 
 /* pam_fshadow */
  
+#if defined(HAVE_CONFIG_H)
+# include <config.h>
+#endif
+
 #include <security/_pam_aconf.h>
 
 #include <stdlib.h>
@@ -25,6 +29,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <stdarg.h>
+#include <time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

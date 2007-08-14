@@ -25,7 +25,7 @@ NORMAL_UNINSTALL = -rm -f $(DESTDIR)$(pamdir)/pam_fshadow.a $(DESTDIR)$(pamdir)/
 
 pam_fshadow.lo: $(srcdir)/pam_fshadow.c
 	$(LIBTOOL) --mode=compile $(CC) -c -DHAVE_CONFIG_H \
-                $(CFLAGS) $(AM_CFLAGS) $(AM_CPPFLAGS) $(INCLUDES) $<
+                $(CFLAGS) $(AM_CFLAGS) $(CPPFLAGS) $(AM_CPPFLAGS) $(INCLUDES) $<
 
 pam_fshadow.la$(EXEEXT): pam_fshadow.lo
 	$(LIBTOOL) --mode=link $(CC) -module -export-dynamic \

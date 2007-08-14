@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2005, 2006 Sergey Poznyakoff
+   Copyright (C) 2005, 2006, 2007 Sergey Poznyakoff
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -141,7 +141,6 @@ verify_user_pass(const char *username, const char *password)
 	char *db;
 	char *port;
 	char *query, *exquery;
-	char *p;
 	int rc;
 	
 	hostname = find_config("host");
@@ -164,24 +163,24 @@ verify_user_pass(const char *username, const char *password)
 	
 	exquery = sql_expand_query (query, username, password);
 	if (!exquery) {
-		_pam_err(LOG_ERR, "cannot expand query");
+		_pam_log(LOG_ERR, "cannot expand query");
 		return PAM_SERVICE_ERR;
 	}
 
 	pgconn = PQsetdbLogin (hostname, port, NULL, NULL,
 			       db, login, password);
 	if (PQstatus (pgconn) == CONNECTION_BAD) {
-		_pam_err(LOG_ERR, "cannot connect to database");
+		_pam_log(LOG_ERR, "cannot connect to database");
 		return PAM_SERVICE_ERR;
 	}
 
 	DEBUG(10,("Executing %s", exquery));
 	res = PQexec (pgconn, exquery);
 	if (res == NULL) {
-		_pam_err(LOG_ERR, "PQexec: %s", PQerrorMessage(pgconn));
+		_pam_log(LOG_ERR, "PQexec: %s", PQerrorMessage(pgconn));
 		rc = PAM_SERVICE_ERR;
 	} else if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-		_pam_err(LOG_ERR, "PQexec: query did not return tuples");
+		_pam_log(LOG_ERR, "PQexec: query did not return tuples");
 		rc = PAM_SERVICE_ERR;
 	} else {
 		char *p;
@@ -190,7 +189,7 @@ verify_user_pass(const char *username, const char *password)
 		n = PQntuples(res);
 		DEBUG(20,("Returned %d tuples", n));
 		if (n != 1) {
-			_pam_err(LOG_WARNING,
+			_pam_log(LOG_WARNING,
 				 "PQexec: query returned %d tuples", n);
 			if (n == 0) {
 				PQclear(res);
@@ -202,7 +201,7 @@ verify_user_pass(const char *username, const char *password)
 		n = PQnfields(res);
 		DEBUG(20,("Returned %d fields", n));
 		if (n != 1) {
-			_pam_err(LOG_WARNING,
+			_pam_log(LOG_WARNING,
 				 "PQexec: query returned %d fields", n);
 		}
 

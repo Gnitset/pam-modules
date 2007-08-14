@@ -25,7 +25,7 @@ NORMAL_UNINSTALL = -rm -f $(DESTDIR)$(pamdir)/pam_log.a $(DESTDIR)$(pamdir)/pam_
 
 pam_log.lo: $(srcdir)/pam_log.c
 	$(LIBTOOL) --mode=compile $(CC) -c -DHAVE_CONFIG_H \
-                $(CFLAGS) $(AM_CFLAGS) $(AM_CPPFLAGS) $(INCLUDES) $<
+                $(CFLAGS) $(AM_CFLAGS) $(CPPFLAGS) $(AM_CPPFLAGS) $(INCLUDES) $<
 
 pam_log.la$(EXEEXT): pam_log.lo
 	$(LIBTOOL) --mode=link $(CC) -module -export-dynamic \

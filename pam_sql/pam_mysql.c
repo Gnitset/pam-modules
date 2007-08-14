@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2005, 2006 Sergey Poznyakoff
+   Copyright (C) 2005, 2006, 2007 Sergey Poznyakoff
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -266,13 +266,13 @@ check_query_result(MYSQL *mysql, const char *pass)
 	
 	result = mysql_store_result(mysql);
 	if (!result) {
-		_pam_err(LOG_ERR, "MySQL: query returned 0 tuples");
+		_pam_log(LOG_ERR, "MySQL: query returned 0 tuples");
 		rc = PAM_AUTH_ERR;
 	} else {
 		MYSQL_ROW row;
 		long n = mysql_num_rows(result);
 		if (n != 1) {
-			_pam_err(LOG_WARNING,
+			_pam_log(LOG_WARNING,
 				 "MySQL: query returned %d tuples", n);
 			if (n == 0) {
 				mysql_free_result(result);
@@ -281,7 +281,7 @@ check_query_result(MYSQL *mysql, const char *pass)
 		}
 		n = mysql_num_fields(result);
 		if (n != 1) {
-			_pam_err(LOG_WARNING,
+			_pam_log(LOG_WARNING,
 				 "MySQL: query returned %d fields", n);
 		}
 		
@@ -331,7 +331,7 @@ verify_user_pass(const char *username, const char *password)
 	CHKVAR(port);
 	portno = strtoul (port, &p, 0);
 	if (*p) {
-	        _pam_err(LOG_ERR, "Invalid port number: %s", port);
+	        _pam_log(LOG_ERR, "Invalid port number: %s", port);
 		return PAM_SERVICE_ERR;                       
 	}
 	
@@ -349,7 +349,7 @@ verify_user_pass(const char *username, const char *password)
 
 	exquery = sql_expand_query (&mysql, query, username, password);
 	if (!exquery) {
-		_pam_err(LOG_ERR, "cannot expand query");
+		_pam_log(LOG_ERR, "cannot expand query");
 		return PAM_SERVICE_ERR;
 	}
 		
@@ -358,14 +358,14 @@ verify_user_pass(const char *username, const char *password)
 	if (!mysql_real_connect(&mysql, hostname,
 				login, pass, db,
 				portno, socket_path, 0)) {
-		_pam_err(LOG_ERR, "cannot connect to MySQL");
+		_pam_log(LOG_ERR, "cannot connect to MySQL");
 		mysql_close(&mysql);
 		free(exquery);
 		return PAM_SERVICE_ERR;
 	}
 
 	if (mysql_query(&mysql, exquery)) {
-		_pam_err(LOG_ERR, "MySQL: %s", mysql_error(&mysql));
+		_pam_log(LOG_ERR, "MySQL: %s", mysql_error(&mysql));
 		mysql_close(&mysql);
 		free(exquery);
 		return PAM_SERVICE_ERR;

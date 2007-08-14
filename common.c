@@ -135,7 +135,7 @@ wait_debug(size_t interval, const char *file, size_t line)
 	_pam_log(LOG_CRIT, "WAITING FOR DEBUG AT %s:%d",
 		 file, (unsigned long)line);
 	while (interval-- > 0)
-		sleep();
+		sleep(1);
 #else
 	_pam_log(LOG_NOTICE, "Debugging is not configured");
 #endif	
@@ -147,3 +147,4 @@ wait_debug(size_t interval, const char *file, size_t line)
   else                                                    \
      wait_debug(0, __FILE__, line);		          \
 } while (0)
+
