@@ -307,7 +307,7 @@ read_config ()
 
 		line++;
 		while (*p && isspace(*p))
-			;
+			p++;
 		len = strlen(p);
 		if (len == 0)
 			continue;
@@ -340,6 +340,8 @@ read_config ()
 
 		for (p = env->name; *p && !isspace(*p); p++) 
 			;
+		if (*p)
+			*p++ = 0;
 		for (; *p && isspace(*p); p++)
 			;
 		if (!*p) {
@@ -408,6 +410,20 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 	}
 
 	return retval;
+}
+
+PAM_EXTERN
+int pam_sm_setcred(pam_handle_t *pamh, int flags,
+		   int argc, const char **argv)
+{
+    return PAM_SUCCESS;
+}
+
+PAM_EXTERN
+int pam_sm_acct_mgmt(pam_handle_t *pamh, int flags,
+		   int argc, const char **argv)
+{
+    return PAM_SUCCESS;
 }
 
 #ifdef PAM_STATIC

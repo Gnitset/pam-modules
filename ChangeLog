@@ -1,3 +1,21 @@
+2007-08-28  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* pam_fshadow/Makefile.am, pam_regex/Makefile.am,
+	pam_log/Makefile.am: Place INCLUDES in front of CPPFLAGS
+	
+	* pam_sql/Makefile.am: Place INCLUDES in front of CPPFLAGS
+	(pam_mysql.la): Redo rule
+	
+	* pam_sql/sha1.h, pam_sql/sha1.c, pam_sql/md5.h, pam_sql/md5.c:
+	Replace with another version 
+	
+	* pam_fshadow/pam_fshadow.c: Minor change
+	* pam_sql/pam_mysql.c (sql_expand_query): Bugfix
+	Implement pure md5 passwords
+	(verify_user_pass): Lots of bugfixes
+	* pam_sql/pam_sql.c (read_config): Lots of bugfixes
+	(pam_sm_setcred,pam_sm_acct_mgmt): Add required functions
+	
 2007-08-14  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	* NEWS, configure.ac: Version 1.2

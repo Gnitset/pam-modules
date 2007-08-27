@@ -379,8 +379,6 @@ verify_user_pass(const char *confdir, const char *username,
 	return retval;
 }
 
-/* --- authentication management functions (only) --- */
-
 static int
 copy_backref (pam_handle_t *pamh, const char *name,
 	      const char *buf, regmatch_t rmatch[3], int index, char **pstr)
@@ -414,6 +412,8 @@ copy_backref (pam_handle_t *pamh, const char *name,
 	}
 	return rc;
 }
+
+/* --- authentication management functions (only) --- */
 
 PAM_EXTERN int
 pam_sm_authenticate(pam_handle_t *pamh, int flags,

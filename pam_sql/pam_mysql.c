@@ -30,7 +30,7 @@
 
 #include "pam_sql.c"
 #include "sha1.h"
-#include "sha1.c"
+#include "md5.h"
 
 static char *
 sql_expand_query (MYSQL *mysql,
@@ -48,24 +48,26 @@ sql_expand_query (MYSQL *mysql,
 	for (len = 0, p = (char *) query; *p; ) {
 		if (*p == '%') {
 			if (p[1] == 'u') {
-				int size = 2*strlen(user)+1;
+				int input_len = strlen(user);
+				int size = 2 * input_len +1;
 				esc_user = malloc(size);
 				if (!esc_user)
 					return NULL;
 				mysql_real_escape_string(mysql,
 							 esc_user,
-							 user, size);
+							 user, input_len);
 				
 				len += strlen (esc_user);
 				p += 2;
 			} if (p[1] == 'p') {
-				int size = 2*strlen(pass)+1;
-				esc_pass = malloc(len);
+				int input_len = strlen(pass);
+				int size = 2 * input_len + 1;
+				esc_pass = malloc(size);
 				if (!esc_pass)
 					return NULL;
 				mysql_real_escape_string(mysql,
 							 esc_pass,
-							 pass, size);
+							 pass, input_len);
 				
 				len += strlen (esc_pass);
 				p += 2;
@@ -124,13 +126,14 @@ sql_expand_query (MYSQL *mysql,
 
 /* MySQL scrambled password support */
 
+
 /* Convert a single hex digit to corresponding number */
 static unsigned 
 digit_to_number (char c)
 {
-	return (unsigned) (c >= '0' && c <= '9' ? c-'0' :
-			   c >= 'A' && c <= 'Z' ? c-'A'+10 :
-			   c-'a'+10);
+  return (unsigned) (c >= '0' && c <= '9' ? c-'0' :
+                     c >= 'A' && c <= 'Z' ? c-'A'+10 :
+                     c-'a'+10);
 }
 
 /* Extract salt value from MySQL scrambled password.
@@ -143,121 +146,158 @@ digit_to_number (char c)
 static void
 get_salt_from_scrambled (unsigned long *res, const char *password)
 {
-	res[0] = res[1] = 0;
-	while (*password) {
-		unsigned long val = 0;
-		unsigned i;
+  res[0] = res[1] = 0;
+  while (*password)
+    {
+      unsigned long val = 0;
+      unsigned i;
 
-		for (i = 0; i < 8 ; i++)
-			val = (val << 4) + digit_to_number (*password++);
-		*res++ = val;
-	}
+      for (i = 0; i < 8 ; i++)
+        val = (val << 4) + digit_to_number (*password++);
+      *res++ = val;
+    }
 }
 
 /* Scramble a plaintext password */
 static void
 scramble_password (unsigned long *result, const char *password)
 {
-	unsigned long nr = 1345345333L, add = 7, nr2 = 0x12345671L;
-	unsigned long tmp;
-	
-	for (; *password ; password++) {
-		if (*password == ' ' || *password == '\t')
-			continue;                   
-		tmp = (unsigned long) (unsigned char) *password;
-		nr ^= (((nr & 63) + add) * tmp)+ (nr << 8);
-		nr2 += (nr2 << 8) ^ nr;
-		add += tmp;
-	}
-	
-	result[0] = nr & (((unsigned long) 1L << 31) -1L);
-	result[1] = nr2 & (((unsigned long) 1L << 31) -1L);
+  unsigned long nr = 1345345333L, add = 7, nr2 = 0x12345671L;
+  unsigned long tmp;
+
+  for (; *password ; password++)
+    {
+      if (*password == ' ' || *password == '\t')
+        continue;                   
+      tmp = (unsigned long) (unsigned char) *password;
+      nr ^= (((nr & 63) + add) * tmp)+ (nr << 8);
+      nr2 += (nr2 << 8) ^ nr;
+      add += tmp;
+    }
+
+  result[0] = nr & (((unsigned long) 1L << 31) -1L);
+  result[1] = nr2 & (((unsigned long) 1L << 31) -1L);
 }
 
 static void
-octet2hex (char *to, const unsigned char *str, unsigned len)
+mu_octet_to_hex (char *to, const unsigned char *str, unsigned len)
 {
-	const unsigned char *str_end= str + len;
-	static char d[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	
-	for ( ; str != str_end; ++str) {
-		*to++ = d[(*str & 0xF0) >> 4];
-		*to++ = d[*str & 0x0F];
-	}
-	*to= '\0';
+  const unsigned char *str_end= str + len;
+  static char d[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  for ( ; str != str_end; ++str)
+    {
+      *to++ = d[(*str & 0xF0) >> 4];
+      *to++ = d[*str & 0x0F];
+    }
+  *to= '\0';
 }
 
 #define SHA1_HASH_SIZE 20
 static int
-make_mysql_4x_password (char *to, const char *message)
-{
-	SHA1_CTX sha1_context;
-	unsigned char hash_stage2[SHA1_HASH_SIZE];
-	
-	/* stage 1: hash password */
-	SHA1Init(&sha1_context);
-	SHA1Update(&sha1_context, message, strlen (message));
-	SHA1Final(to, &sha1_context);
-	
-	/* stage 2: hash stage1 output */
-	SHA1Init(&sha1_context);
-	SHA1Update(&sha1_context, to, SHA1_HASH_SIZE);
-	SHA1Final(hash_stage2, &sha1_context);
-	
-	/* convert hash_stage2 to hex string */
-	*to++ =  '*';
-	octet2hex (to, hash_stage2, SHA1_HASH_SIZE);
-}
-
-static int
 mu_check_mysql_4x_password (const char *scrambled, const char *message)
 {
+	struct sha1_ctx sha1_context;
+	unsigned char hash_stage2[SHA1_HASH_SIZE];
 	char to[2*SHA1_HASH_SIZE + 2];
+
+	/* stage 1: hash password */
+	sha1_init_ctx (&sha1_context);
+	sha1_process_bytes (message, strlen (message), &sha1_context);
+	sha1_finish_ctx (&sha1_context, to);
 	
-	make_mysql_4x_password (to, message);
+	/* stage 2: hash stage1 output */
+	sha1_init_ctx (&sha1_context);
+	sha1_process_bytes (to, SHA1_HASH_SIZE, &sha1_context);
+	sha1_finish_ctx (&sha1_context, hash_stage2);
+	
+	/* convert hash_stage2 to hex string */
+	to[0] = '*';
+	mu_octet_to_hex (to + 1, hash_stage2, SHA1_HASH_SIZE);
+	
 	/* Compare both strings */
 	return memcmp (to, scrambled, strlen (scrambled));
 }
 
-/* Check whether a plaintext password MESSAGE matches MySQL scrambled password
-   PASSWORD */
 static int
-mu_check_mysql_scrambled_password (const char *scrambled, const char *message)
+mu_check_mysql_3x_password (const char *scrambled, const char *message)
 {
 	unsigned long hash_pass[2], hash_message[2];
 	char buf[17];
 	
-	if (strlen (scrambled) < 16)
-		return 1;
-	if (strlen (scrambled) > 16) {
-		const char *p;
-		/* Try to normalize it by cutting off trailing whitespace */
-		for (p = scrambled + strlen (scrambled) - 1;
-		     p > scrambled && isspace (*p); p--)
-			;
-		if (p - scrambled != 15)
-			return 1;
-		memcpy (buf, scrambled, 16);
-		buf[17] = 0;
-		scrambled = buf;
-	}
-  
-	get_salt_from_password (hash_pass, scrambled);
+	memcpy (buf, scrambled, 16);
+	buf[16] = 0;
+	scrambled = buf;
+	
+	get_salt_from_scrambled (hash_pass, scrambled);
 	scramble_password (hash_message, message);
 	return !(hash_message[0] == hash_pass[0]
 		 && hash_message[1] == hash_pass[1]);
 }
 
+/* Check whether a plaintext password MESSAGE matches MySQL scrambled password
+   PASSWORD */
+int
+mu_check_mysql_scrambled_password (const char *scrambled, const char *message)
+{
+	const char *p;
+
+	/* Try to normalize it by cutting off trailing whitespace */
+	for (p = scrambled + strlen (scrambled) - 1;
+	     p > scrambled && isspace (*p); p--)
+		;
+	switch (p - scrambled) {
+	case 15:
+		return mu_check_mysql_3x_password (scrambled, message);
+	case 40:
+		return mu_check_mysql_4x_password (scrambled, message);
+	}
+  return 1;
+}
+
 static int
 check_mysql_pass(const char *sqlpass, const char *userpass)
 {
-	if (mu_check_mysql_4x_password(sqlpass, userpass) == 0
-	    || mu_check_mysql_scrambled_password (sqlpass, userpass) == 0)
+	if (mu_check_mysql_scrambled_password (sqlpass, userpass) == 0)
 		return PAM_SUCCESS;
 	else
 		return PAM_AUTH_ERR;
 }
 
+
+static void
+make_digest (char *md5str, unsigned char *digest)
+{
+	int i;
+	
+	for (i = 0; i < 16; i++) {
+		sprintf(md5str, "%02x", digest[i]);
+		md5str += 2;
+	}
+
+	*md5str = 0;
+}
+
+static int
+check_md5_pass(const char *sqlpass, const char *userpass)
+{
+	char md5str[33];
+	struct md5_ctx ctx;
+	unsigned char digest[16];
+
+	md5str[0] = 0;
+	md5_init_ctx (&ctx);
+	md5_process_bytes (userpass, strlen (userpass), &ctx);
+	md5_finish_ctx (&ctx, digest);
+	make_digest (md5str, digest);
+	if (strcmp (sqlpass, md5str) == 0)
+		return PAM_SUCCESS;
+	else
+		return PAM_AUTH_ERR;
+}
+		
+
+	
 static int
 check_query_result(MYSQL *mysql, const char *pass)
 {
@@ -294,6 +334,9 @@ check_query_result(MYSQL *mysql, const char *pass)
 		    && check_boolean_config ("allow-mysql-pass", 1))
 			rc = check_mysql_pass (row[0], pass);
 		if (rc != PAM_SUCCESS
+		    && check_boolean_config ("allow-md5-pass", 1))
+			rc = check_md5_pass (row[0], pass);
+		if (rc != PAM_SUCCESS
 		    && check_boolean_config ("allow-plaintext-pass", 0)) {
 			if (strcmp (row[0], pass) == 0)
 				rc = PAM_SUCCESS;
@@ -327,11 +370,14 @@ verify_user_pass(const char *username, const char *password)
 	}
 	
 	port = find_config("port");
-	CHKVAR(port);
-	portno = strtoul (port, &p, 0);
-	if (*p) {
-	        _pam_log(LOG_ERR, "Invalid port number: %s", port);
-		return PAM_SERVICE_ERR;                       
+	if (!port)
+		portno = 3306;
+	else {
+		portno = strtoul (port, &p, 0);
+		if (*p) {
+			_pam_log(LOG_ERR, "Invalid port number: %s", port);
+			return PAM_SERVICE_ERR;                       
+		}
 	}
 	
 	login = find_config("login");
@@ -346,23 +392,22 @@ verify_user_pass(const char *username, const char *password)
 	query = find_config("query");
 	CHKVAR(query);
 
-	exquery = sql_expand_query (&mysql, query, username, password);
-	if (!exquery) {
-		_pam_log(LOG_ERR, "cannot expand query");
-		return PAM_SERVICE_ERR;
-	}
-		
 	mysql_init(&mysql);
 
 	if (!mysql_real_connect(&mysql, hostname,
 				login, pass, db,
 				portno, socket_path, 0)) {
 		_pam_log(LOG_ERR, "cannot connect to MySQL");
-		mysql_close(&mysql);
-		free(exquery);
 		return PAM_SERVICE_ERR;
 	}
 
+	exquery = sql_expand_query (&mysql, query, username, password);
+	if (!exquery) {
+		mysql_close(&mysql);
+		_pam_log(LOG_ERR, "cannot expand query");
+		return PAM_SERVICE_ERR;
+	}
+		
 	if (mysql_query(&mysql, exquery)) {
 		_pam_log(LOG_ERR, "MySQL: %s", mysql_error(&mysql));
 		mysql_close(&mysql);
