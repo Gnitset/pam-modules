@@ -424,7 +424,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 	int retval = PAM_AUTH_ERR;
 	int rc;
 	char *confdir;
-	char *pwstr;
+	char *pwstr = NULL;
 	
 	/* parse arguments */
 	if ((rc = _pam_parse(pamh, argc, argv)) != PAM_SUCCESS)

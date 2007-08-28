@@ -131,9 +131,9 @@ sql_expand_query (MYSQL *mysql,
 static unsigned 
 digit_to_number (char c)
 {
-  return (unsigned) (c >= '0' && c <= '9' ? c-'0' :
-                     c >= 'A' && c <= 'Z' ? c-'A'+10 :
-                     c-'a'+10);
+	return (unsigned) (c >= '0' && c <= '9' ? c-'0' :
+			   c >= 'A' && c <= 'Z' ? c-'A'+10 :
+			   c-'a'+10);
 }
 
 /* Extract salt value from MySQL scrambled password.
@@ -146,51 +146,48 @@ digit_to_number (char c)
 static void
 get_salt_from_scrambled (unsigned long *res, const char *password)
 {
-  res[0] = res[1] = 0;
-  while (*password)
-    {
-      unsigned long val = 0;
-      unsigned i;
-
-      for (i = 0; i < 8 ; i++)
-        val = (val << 4) + digit_to_number (*password++);
-      *res++ = val;
-    }
+	res[0] = res[1] = 0;
+	while (*password) {
+		unsigned long val = 0;
+		unsigned i;
+		
+		for (i = 0; i < 8 ; i++)
+			val = (val << 4) + digit_to_number (*password++);
+		*res++ = val;
+	}
 }
 
 /* Scramble a plaintext password */
 static void
 scramble_password (unsigned long *result, const char *password)
 {
-  unsigned long nr = 1345345333L, add = 7, nr2 = 0x12345671L;
-  unsigned long tmp;
+	unsigned long nr = 1345345333L, add = 7, nr2 = 0x12345671L;
+	unsigned long tmp;
 
-  for (; *password ; password++)
-    {
-      if (*password == ' ' || *password == '\t')
-        continue;                   
-      tmp = (unsigned long) (unsigned char) *password;
-      nr ^= (((nr & 63) + add) * tmp)+ (nr << 8);
-      nr2 += (nr2 << 8) ^ nr;
-      add += tmp;
-    }
+	for (; *password ; password++) {
+		if (*password == ' ' || *password == '\t')
+			continue;                   
+		tmp = (unsigned long) (unsigned char) *password;
+		nr ^= (((nr & 63) + add) * tmp)+ (nr << 8);
+		nr2 += (nr2 << 8) ^ nr;
+		add += tmp;
+	}
 
-  result[0] = nr & (((unsigned long) 1L << 31) -1L);
-  result[1] = nr2 & (((unsigned long) 1L << 31) -1L);
+	result[0] = nr & (((unsigned long) 1L << 31) -1L);
+	result[1] = nr2 & (((unsigned long) 1L << 31) -1L);
 }
 
 static void
 mu_octet_to_hex (char *to, const unsigned char *str, unsigned len)
 {
-  const unsigned char *str_end= str + len;
-  static char d[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	const unsigned char *str_end= str + len;
+	static char d[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-  for ( ; str != str_end; ++str)
-    {
-      *to++ = d[(*str & 0xF0) >> 4];
-      *to++ = d[*str & 0x0F];
-    }
-  *to= '\0';
+	for ( ; str != str_end; ++str) {
+		*to++ = d[(*str & 0xF0) >> 4];
+		*to++ = d[*str & 0x0F];
+	}
+	*to= '\0';
 }
 
 #define SHA1_HASH_SIZE 20
@@ -237,7 +234,7 @@ mu_check_mysql_3x_password (const char *scrambled, const char *message)
 
 /* Check whether a plaintext password MESSAGE matches MySQL scrambled password
    PASSWORD */
-int
+static int
 mu_check_mysql_scrambled_password (const char *scrambled, const char *message)
 {
 	const char *p;
