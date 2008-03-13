@@ -136,7 +136,6 @@ pam_sm_authenticate(pam_handle_t *pamh,
 	int retval, rc;
 	char *name;
 	regex_t rx;
-	regmatch_t rmatch[2];
 	
 	_pam_parse(pamh, argc, argv);
 	
@@ -182,7 +181,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
 				break;
 			}
 
-			retval = regexec(&rx, name, 2, rmatch, 0);
+			retval = regexec(&rx, name, 0, NULL, 0);
 			if (retval) {
 				DEBUG(1,("%s does not match %s",name,regex));
 			}
