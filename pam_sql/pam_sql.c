@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2005, 2006, 2007 Sergey Poznyakoff
+   Copyright (C) 2005, 2006, 2007, 2008 Sergey Poznyakoff
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -14,29 +14,15 @@
    You should have received a copy of the GNU General Public License along
    with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-#if defined(HAVE_CONFIG_H)
-# include <config.h>
-#endif
-#ifdef HAVE__PAM_ACONF_H
-# include <security/_pam_aconf.h>
-#endif
-#include <security/pam_modules.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <syslog.h>
-#include <errno.h>
+#include <graypam.h>
 #if defined(HAVE_CRYPT_H)
 # include <crypt.h>
+#else
+extern char *crypt(const char *, const char *);
 #endif
 
 /* indicate the following groups are defined */
 #define PAM_SM_AUTH
-
-#include <common.c>
 
 #define CHKVAR(v) \
  	if (!(v)) {                                                        \
@@ -47,15 +33,7 @@
 
 static int verify_user_pass(const char *username, const char *password);
 
-#define CNTL_DEBUG        0x0001
-#define CNTL_AUDIT        0x0002
-#define CNTL_AUTHTOK      0x0004
-
-#define CNTL_SET_DEBUG_LEV(cntl,n) (cntl |= ((n)<<16))
-#define CNTL_DEBUG_LEV() (cntl_flags>>16)
-
-#define DEBUG(m,c) if (CNTL_DEBUG_LEV()>=(m)) _pam_debug c
-#define AUDIT(c) if (cntl_flags&CNTL_AUDIT) _pam_debug c
+#define CNTL_AUTHTOK      0x0010
 
 static int cntl_flags;
 char *config_file = SYSCONFDIR "/pam_sql.conf";
@@ -64,6 +42,8 @@ static void
 _pam_parse(int argc, const char **argv)
 {
 	int ctrl=0;
+
+	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
 
 	/* step through arguments */
 	for (ctrl=0; argc-- > 0; ++argv) {
@@ -93,45 +73,6 @@ _pam_parse(int argc, const char **argv)
 }
 
 
-/* FIXME: Duplicated in pam_fshadow */
-static int
-converse(pam_handle_t *pamh,
-	 int nargs,
-	 struct pam_message **message,
-	 struct pam_response **response)
-{
-	int retval;
-	struct pam_conv *conv;
-
-	DEBUG(100,("enter converse"));
-
-	retval = pam_get_item(pamh, PAM_CONV, (const void **) &conv);
-	DEBUG(10,("pam_get_item(PAM_CONV): %d", retval));
-	if (retval == PAM_SUCCESS) {
-
-		retval = conv->conv(nargs,
-				    (const struct pam_message **) message,
-				    response,
-				    conv->appdata_ptr);
-		
-		DEBUG(10, ("app conversation returned %d", retval));
-
-		if (retval != PAM_SUCCESS) {
-			_pam_log(LOG_ERR,
-				 "conversation failure [%s]",
-				 pam_strerror(pamh, retval));
-		}
-	} else if (retval != PAM_CONV_AGAIN) {
-		_pam_log(LOG_ERR, 
-		         "couldn't obtain coversation function: %s",
-			 pam_strerror(pamh, retval));
-	}
-
-	DEBUG(100,("exit converse: %d", retval));
-
-	return retval;		/* propagate error status */
-}
-
 static int
 _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 {
@@ -177,7 +118,7 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 	/* run conversation */
 	resp = NULL;
 	token = NULL;
-	retval = converse(pamh, i, pmsg, &resp);
+	retval = gray_converse(pamh, i, pmsg, &resp);
 
 	if (resp != NULL) {
 		if (retval == PAM_SUCCESS) { 	/* a good conversation */
@@ -201,12 +142,12 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 		 */
 		retval = pam_set_data(pamh, "password",
 				      (void *)token,
-				      _cleanup_string);
+				      gray_cleanup_string);
 		if (retval != PAM_SUCCESS) {
 			_pam_log(LOG_CRIT, 
 			         "can't keep password: %s",
 				 pam_strerror(pamh, retval));
-			_pam_delete(token);
+			gray_pam_delete(token);
 		} else {
 			*password = token;
 			token = NULL;	/* break link to password */

@@ -1,4 +1,4 @@
-# Copyright (C) 2006 Sergey Poznyakoff
+# Copyright (C) 2006, 2008 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,18 +17,13 @@ pamdir=@PAMDIR@
 pam_PROGRAMS = pam_log.la
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT = pam_log.la
 pam_log_la_SOURCES = pam_log.c
-pam_log_la_LDADD = -lpam 
+LDADD = -lpam ../lib/libgraypam.la
 AM_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 AM_CPPFLAGS=-DMODULE_NAME=\"pam_log\" -DSYSCONFDIR=\"${sysconfdir}\"
 INCLUDES=@PAM_COMMON_INCLUDES@
 NORMAL_UNINSTALL = -rm -f $(DESTDIR)$(pamdir)/pam_log.a $(DESTDIR)$(pamdir)/pam_log.so.@VI_CURRENT@.@VI_REVISION@.@VI_AGE@
 
-pam_log.lo: $(srcdir)/pam_log.c
-	$(LIBTOOL) --mode=compile $(CC) -c -DHAVE_CONFIG_H \
-                $(CFLAGS) $(AM_CFLAGS) $(INCLUDES) $(CPPFLAGS) $(AM_CPPFLAGS) $<
+include $(top_srcdir)/Make.rules
 
-pam_log.la$(EXEEXT): pam_log.lo
-	$(LIBTOOL) --mode=link $(CC) -module -export-dynamic \
-                 $(AM_LDFLAGS) \
-                 -o $@ $< $(pam_log_la_LDADD) $(AM_LDADD) $(LDADD)\
-                 -rpath $(pamdir)
+pam_log.lo: pam_log.c
+pam_log.la: pam_log.lo

@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
- * Copyright (C) 2001, 2005, 2007 Sergey Poznyakoff
+ * Copyright (C) 2001, 2005, 2007, 2008 Sergey Poznyakoff
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -17,33 +17,21 @@
 
 /* pam_fshadow */
  
-#if defined(HAVE_CONFIG_H)
-# include <config.h>
-#endif
-
-#include <security/_pam_aconf.h>
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <syslog.h>
-#include <stdarg.h>
+#include <graypam.h>
 #include <time.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <pwd.h>
 #include <shadow.h>
-#include <regex.h>
+
+#if defined(HAVE_CRYPT_H)
+# include <crypt.h>
+#else
+extern char *crypt(const char *, const char *);
+#endif
 
 #define PAM_SM_AUTH
 #define PAM_SM_ACCOUNT
 
 #include <security/pam_modules.h>
-
-#include <common.c>
 
 char *sysconfdir = SYSCONFDIR;
 static int cntl_flags = 0;
@@ -53,20 +41,17 @@ const char *regex_str = NULL;
 static int username_index = 1;
 static int domain_index = 2;
 
-#define CNTL_DEBUG       0x0001
-#define CNTL_AUTHTOK     0x0002
-#define CNTL_NOPASSWD    0x0004
-#define CNTL_REGEX       0x0008
-
-#define CNTL_DEBUG_LEV() (cntl_flags>>16)
-#define CNTL_SET_DEBUG_LEV(cntl,n) (cntl |= ((n)<<16))
-#define DEBUG(m,c) if (CNTL_DEBUG_LEV()>=(m)) _pam_debug c
+#define CNTL_AUTHTOK     0x0010
+#define CNTL_NOPASSWD    0x0020
+#define CNTL_REGEX       0x0040
 
 static int
 _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 {
 	int regex_flags = 0;
 	int retval = PAM_SUCCESS;
+
+	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
 	
 	/* step through arguments */
 	for (cntl_flags = 0; argc-- > 0; ++argv) {
@@ -81,7 +66,7 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 			else
 				CNTL_SET_DEBUG_LEV(cntl_flags, 1);
 		} else if (!strncmp(*argv, "waitdebug", 9))
-			WAITDEBUG(*argv + 9);
+ 			WAITDEBUG(*argv + 9);
 		else if (!strcmp(*argv,"use_authtok"))
 			cntl_flags |= CNTL_AUTHTOK;
 		else if (!strncmp(*argv, "sysconfdir=", 11))
@@ -132,7 +117,7 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 		} else {
 			cntl_flags |= CNTL_REGEX;
 			rc = pam_set_data(pamh, "REGEX", &rexp,
-					  _cleanup_regex);
+					  gray_cleanup_regex);
 			
 			if (rc != PAM_SUCCESS) {
 				_pam_log(LOG_NOTICE, 
@@ -144,44 +129,6 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 	}
        
 	return retval;
-}
-
-static int
-converse(pam_handle_t *pamh,
-	 int nargs,
-	 struct pam_message **message,
-	 struct pam_response **response)
-{
-	int retval;
-	struct pam_conv *conv;
-
-	DEBUG(100,("enter converse"));
-
-	retval = pam_get_item(pamh, PAM_CONV, (const void **) &conv);
-	DEBUG(10,("pam_get_item(PAM_CONV): %d", retval));
-	if (retval == PAM_SUCCESS) {
-
-		retval = conv->conv(nargs,
-				    (const struct pam_message **) message,
-				    response,
-				    conv->appdata_ptr);
-		
-		DEBUG(10, ("app conversation returned %d", retval));
-
-		if (retval != PAM_SUCCESS) {
-			_pam_log(LOG_ERR,
-				 "conversation failure [%s]",
-				 pam_strerror(pamh, retval));
-		}
-	} else if (retval != PAM_CONV_AGAIN) {
-		_pam_log(LOG_ERR, 
-		         "couldn't obtain coversation function: %s",
-			 pam_strerror(pamh, retval));
-	}
-
-	DEBUG(100,("exit converse: %d", retval));
-
-	return retval;		/* propagate error status */
 }
 
 static int
@@ -229,11 +176,11 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 	/* run conversation */
 	resp = NULL;
 	token = NULL;
-	retval = converse(pamh, i, pmsg, &resp);
+	retval = gray_converse(pamh, i, pmsg, &resp);
 
 	if (resp != NULL) {
 		if (retval == PAM_SUCCESS) { 	/* a good conversation */
-			token = XSTRDUP(resp[i - replies].resp);
+ 			token = XSTRDUP(resp[i - replies].resp);
 			DEBUG(10,("app returned [%s]", token));
 			PAM_DROP_REPLY(resp, 1);
 		} else {
@@ -253,12 +200,12 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 		 */
 		retval = pam_set_data(pamh, "password",
 				      (void *)token,
-				      _cleanup_string);
+				      gray_cleanup_string);
 		if (retval != PAM_SUCCESS) {
 			_pam_log(LOG_CRIT, 
 			         "can't keep password: %s",
 				 pam_strerror(pamh, retval));
-			_pam_delete(token);
+			gray_pam_delete(token);
 		} else {
 			*password = token;
 			token = NULL;	/* break link to password */
@@ -397,13 +344,13 @@ copy_backref (pam_handle_t *pamh, const char *name,
 		_pam_log(LOG_CRIT, "not enough memory");
 		return PAM_SYSTEM_ERR;
 	}
-	rc = pam_set_data(pamh, name, (void *)str, _cleanup_string);
+	rc = pam_set_data(pamh, name, (void *)str, gray_cleanup_string);
 	if (rc != PAM_SUCCESS) {
 		_pam_log(LOG_CRIT, 
 			 "can't keep data [%s]: %s",
 			 name,
 			 pam_strerror(pamh, rc));
-		_pam_delete(str);
+		gray_pam_delete(str);
 	} else {
 		if (size != 0)
 			memcpy(str, buf + rmatch[index].rm_so, size);
@@ -453,7 +400,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 				return rc;
 			confdir = mkfilename(sysconfdir, domain);
 			pam_set_data(pamh, "CONFDIR",
-				     (void *)confdir, _cleanup_string);
+				     (void *)confdir, gray_cleanup_string);
 		} else {
 			_pam_log(LOG_DEBUG,
 				 "user name `%s' does not match regular "

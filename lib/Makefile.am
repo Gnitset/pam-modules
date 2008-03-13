@@ -1,4 +1,4 @@
-# Copyright (C) 2001, 2006, 2008 Sergey Poznyakoff
+# Copyright (C) 2008 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,5 +13,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-AUTOMAKE_OPTIONS = gnits 1.8
-SUBDIRS = doc lib pam_fshadow pam_regex pam_log pam_sql 
+lib_LTLIBRARIES = libgraypam.la
+
+libgraypam_la_SOURCES = log.c mem.c slist.c transform.c converse.c
+noinst_HEADERS = graypam.h

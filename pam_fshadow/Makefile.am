@@ -1,4 +1,4 @@
-# Copyright (C) 2001, 2006, 2007 Sergey Poznyakoff
+# Copyright (C) 2001, 2006, 2007, 2008 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,18 +17,13 @@ pamdir=@PAMDIR@
 pam_PROGRAMS = pam_fshadow.la
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT = pam_fshadow.la
 pam_fshadow_la_SOURCES = pam_fshadow.c
-pam_fshadow_la_LDADD = -lpam @LIBS@ 
+LDADD = -lpam @LIBS@ ../lib/libgraypam.la
 AM_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 AM_CPPFLAGS=-DMODULE_NAME=\"pam_fshadow\" -DSYSCONFDIR=\"${sysconfdir}\"
 INCLUDES=@PAM_COMMON_INCLUDES@
 NORMAL_UNINSTALL = -rm -f $(DESTDIR)$(pamdir)/pam_fshadow.a $(DESTDIR)$(pamdir)/pam_fshadow.so.@VI_CURRENT@.@VI_REVISION@.@VI_AGE@
 
-pam_fshadow.lo: $(srcdir)/pam_fshadow.c
-	$(LIBTOOL) --mode=compile $(CC) -c -DHAVE_CONFIG_H \
-                $(CFLAGS) $(AM_CFLAGS) $(INCLUDES) $(CPPFLAGS) $(AM_CPPFLAGS) $<
+include $(top_srcdir)/Make.rules
 
-pam_fshadow.la$(EXEEXT): pam_fshadow.lo
-	$(LIBTOOL) --mode=link $(CC) -module -export-dynamic \
-                   $(AM_LDFLAGS) \
-                 -o $@ $< $(pam_fshadow_la_LDADD) $(AM_LDADD) $(LDADD) \
-                 -rpath $(pamdir)
+pam_fshadow.lo: pam_fshadow.c
+pam_fshadow.la: pam_fshadow.lo

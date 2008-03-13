@@ -1,4 +1,4 @@
-# Copyright (C) 2005, 2006 Sergey Poznyakoff
+# Copyright (C) 2005, 2006, 2008 Sergey Poznyakoff
 #
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
@@ -13,6 +13,7 @@ pam_PROGRAMS = @SQL_MODULES@
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT = pam_mysql.la pam_pgsql.la
 EXTRA_PROGRAMS = pam_mysql.la pam_pgsql.la
 EXTRA_DIST = sha1.h sha1.c pam_sql.c md5.c md5.h
+LDADD = ../lib/libgraypam.la
 pam_mysql_la_SOURCES = pam_mysql.c pam_sql.c
 pam_mysql_la_LDADD = -lpam @MYSQLLIBS@
 pam_pgsql_la_SOURCES = pam_pgsql.c pam_sql.c

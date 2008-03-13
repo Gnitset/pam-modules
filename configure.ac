@@ -26,7 +26,7 @@ dnl Library versioning
 AC_SUBST(VI_CURRENT,1)
 AC_SUBST(VI_REVISION,0)
 AC_SUBST(VI_AGE,0)
-AC_SUBST(PAM_COMMON_INCLUDES, '-I${top_builddir} -I${top_srcdir}')
+AC_SUBST(PAM_COMMON_INCLUDES, '-I${top_builddir} -I${top_srcdir} -I${top_srcdir}/lib')
 	
 dnl Checks for programs.
 AC_PROG_CC
@@ -181,7 +181,8 @@ else
 fi])  	  
 		
 AC_OUTPUT(Makefile
-          doc/Makefile 
+          doc/Makefile
+	  lib/Makefile
 	  pam_fshadow/Makefile
           pam_regex/Makefile
 	  pam_log/Makefile

@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2005, 2006, 2007 Sergey Poznyakoff
+   Copyright (C) 2005, 2006, 2007, 2008 Sergey Poznyakoff
 
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -14,18 +14,7 @@
    You should have received a copy of the GNU General Public License along
    with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-#if defined(HAVE_CONFIG_H)
-# include <config.h>
-#endif
-#ifdef HAVE__PAM_ACONF_H
-#include <security/_pam_aconf.h>
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#include <unistd.h>
+#include <graypam.h>
 #include <libpq-fe.h>
 
 #include "pam_sql.c"

@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2006, 2007 Sergey Poznyakoff
+   Copyright (C) 2006, 2007, 2008 Sergey Poznyakoff
  
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -14,46 +14,17 @@
    You should have received a copy of the GNU General Public License along
    with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#if defined(HAVE_CONFIG_H)
-# include <config.h>
-#endif
-#ifdef HAVE__PAM_ACONF_H
-#include <security/_pam_aconf.h>
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <syslog.h>
-#include <stdarg.h>
-#include <ctype.h>
-#define obstack_chunk_alloc malloc
-#define obstack_chunk_free free
-#include <obstack.h>
-
-#define PAM_SM_AUTH
-#define PAM_SM_PASSWORD
-#include <security/pam_modules.h>
-
-#include <common.c>
+#include <graypam.h>
 
 
 /* Command line parsing */
-#define CNTL_DEBUG        0x0001
-#define CNTL_AUDIT        0x0002
-#define CNTL_WAITDEBUG    0x0004
-
-#define CNTL_DEBUG_LEV() (cntl_flags>>16)
-#define CNTL_SET_DEBUG_LEV(cntl,n) (cntl |= ((n)<<16))
-
 static int cntl_flags;
 
 static int xargc;
 static const char **xargv;
 static int priority = LOG_INFO;
-
-#define DEBUG(m,c) if (CNTL_DEBUG_LEV()>=(m)) _pam_debug c
-#define AUDIT(c) if (cntl_flags&CNTL_AUDIT) _pam_debug c
+static int facility = LOG_AUTHPRIV;
+static const char *syslog_tag =MODULE_NAME;
 
 struct keyword {
 	char *name;
@@ -137,7 +108,8 @@ static void
 _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 {
 	int ctrl = 0;
-
+	int dont_open = 0;
+	
 	/* Collect generic arguments */
 	for (; argc > 0; argv++, argc--) {
 		if (!strncmp(*argv, "-debug", 6)) {
@@ -155,7 +127,7 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 		else if (!strncmp(*argv, "-pri=", 5))
 			parse_priority(*argv + 5);
 		else if (!strcmp(*argv, "-no-open"))
-			syslog_dont_open = 1;
+			dont_open = 1;
 		else if (!strcmp(*argv, "--"))
 			break;
 		else if (**argv == '-')
@@ -170,6 +142,8 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 	xargv = argv;
 
 	cntl_flags = ctrl;
+	
+	gray_log_init(dont_open, syslog_tag, facility);
 }
 
 static struct keyword vartab[] = {
@@ -214,7 +188,7 @@ repl_tok(const char *str, const char ** pret, size_t *plen)
 }
 
 static int
-get_variable(pam_handle_t *pamh, const char *str, struct obstack *stk,
+get_variable(pam_handle_t *pamh, const char *str, gray_slist_t slist,
 	     const char **endp)
 {
 	const char *name;
@@ -277,36 +251,37 @@ get_variable(pam_handle_t *pamh, const char *str, struct obstack *stk,
 	} else
 		vallen = strlen(val);
 
-	obstack_grow(stk, val, vallen);
+	gray_slist_append(slist, val, vallen);
 	*endp = end;
 	return 0;
 }
 
 static void
-expand_string(pam_handle_t *pamh, struct obstack *stk)
+expand_string(pam_handle_t *pamh, gray_slist_t slist)
 {
 	int i;
 
 	for (i = 0; i < xargc; i++) {
 		DEBUG(2,("%s: %d %s", __FUNCTION__, i, xargv[i]));
 		if (i > 0)
-			obstack_1grow(stk, ' ');
+			gray_slist_append_char(slist, ' ');
 		if (strchr(xargv[i], '$') == 0)
-			obstack_grow(stk, xargv[i], strlen(xargv[i]));
+			gray_slist_append(slist, xargv[i], strlen(xargv[i]));
 		else {
 			const char *p;
 			
 			for (p = xargv[i]; *p; p++) {
 				if (*p == '\\') {
 					p++;
-					obstack_1grow(stk, *p);
+					gray_slist_append_char(slist, *p);
 				} else if (*p == '$') {
-					if (get_variable(pamh, p, stk, &p))
-						obstack_1grow(stk, *p);
+					if (get_variable(pamh, p, slist, &p))
+						gray_slist_append_char(slist,
+								       *p);
 					else
 						p--;
 				} else
-					obstack_1grow(stk, *p);
+					gray_slist_append_char(slist, *p);
 			}
 		}
 	}
@@ -316,19 +291,19 @@ static int
 echo(pam_handle_t *pamh, const char *prefix, int argc, const char **argv)
 {
 	char *str;
-	struct obstack stk;
+	gray_slist_t slist;
 
 	_pam_parse(pamh, argc, argv);
-	obstack_init(&stk);
+	slist = gray_slist_create();
 	if (prefix) {
-		obstack_grow(&stk, prefix, strlen(prefix));
-		obstack_grow(&stk, ": ", 2);
+		gray_slist_append(slist, prefix, strlen(prefix));
+		gray_slist_append(slist, ": ", 2);
 	}
-	expand_string(pamh, &stk);
-	obstack_1grow(&stk, 0);
-	str = obstack_finish(&stk);
+	expand_string(pamh, slist);
+	gray_slist_append_char(slist, 0);
+	str = gray_slist_finish(slist);
 	_pam_log(priority, "%s", str);
-	obstack_free(&stk, NULL);
+	gray_slist_free(&slist);
 	return PAM_IGNORE;
 }
 

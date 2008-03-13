@@ -271,9 +271,9 @@ for the user name @samp{smith} in the files
 
 @prindex pam_regex
      The module @command{pam_regex} allows to control user access by
-matching their login name against a regular expression.  It
-may be useful, for example, in authentication stacks for such services
-as @acronym{FTP} or @acronym{HTTP}. 
+matching their login name against a regular expression and to alter
+user names.  It may be useful, for example, in authentication stacks
+for such services as @acronym{FTP} or @acronym{HTTP}. 
      
 @table @code
 @opindex basic, @command{pam_regex} option
@@ -305,6 +305,80 @@ options (see above).
 @item sense=@{allow|deny@}
      What to do if user name matches the regexp.  Default is @samp{allow}.
 
+@opindex transform, @command{pam_regex} option
+@item transform=@var{expression}
+     Transform the user name using given expression.  The argument
+@var{expression} is a @command{sed}-like replace expression of the 
+form:
+
+@smallexample
+s/@var{regexp}/@var{replace}/[@var{flags}]
+@end smallexample
+
+@noindent
+where @var{regexp} is a @dfn{regular expression}, @var{replace} is a
+replacement for each file name part that matches @var{regexp}.  Both
+@var{regexp} and @var{replace} are described in detail in
+@ref{The "s" Command, The "s" Command, The `s' Command, sed, GNU sed}.
+
+As in @command{sed}, you can give several replace expressions,
+separated by a semicolon.
+
+Supported @var{flags} are:
+
+@table @samp
+@item g
+Apply the replacement to @emph{all} matches to the @var{regexp}, not
+just the first.
+
+@item i
+Use case-insensitive matching
+
+@item x
+@var{regexp} is an @dfn{extended regular expression} (@pxref{Extended
+regexps, Extended regular expressions, Extended regular expressions,
+sed, GNU sed}).
+
+@item @var{number}
+Only replace the @var{number}th match of the @var{regexp}.
+
+Note: the @var{posix} standard does not specify what should happen
+when you mix the @samp{g} and @var{number} modifiers.  @command{Pam_regex}
+follows the GNU @command{sed} implementation in this regard, so
+the interaction is defined to be: ignore matches before the
+@var{number}th, and then match and replace all matches from the
+@var{number}th on.
+
+@end table
+
+Any delimiter can be used in lieue of @samp{/}, the only requirement being
+that it be used consistently throughout the expression. For example,
+the following two expressions are equivalent:
+
+@smallexample
+@group
+s/one/two/
+s,one,two,
+@end group
+@end smallexample
+
+Changing delimiters is often useful when the @var{regex} contains
+slashes.  For instance, it is more convenient to write @code{s,/,-,} than
+@code{s/\//-/}.
+
+The following example converts the user name to
+lower case and removes anything after the @samp{@@} symbol.  It allows
+allows only user names @samp{anoncvs} and @samp{anonymous}.  As a
+result, the following user names will pass the module: @samp{anoncvs},
+@samp{Anoncvs}, @samp{AnonCVS@@user.org}.
+
+@smallexample
+@group
+pam_refex.so extended transform=s/.*/\L&/g;s/@.*/ \
+             regex=^(anoncvs|anonymous)$ sense=allow 
+@end group
+@end smallexample
+     
 @opindex use_authtok, @command{pam_regex} option     
 @item use_authtok	
      Do not prompt the user for password, take it from the saved

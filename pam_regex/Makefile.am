@@ -1,4 +1,4 @@
-# Copyright (C) 2001, 2006 Sergey Poznyakoff
+# Copyright (C) 2001, 2006, 2008 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,19 +16,15 @@
 pamdir=@PAMDIR@
 pam_PROGRAMS = pam_regex.la
 pam_regex_la_SOURCES = pam_regex.c
+pam_regex_la_LDADD = ../lib/libgraypam.la
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT = pam_regex.la
-pam_regex_la_LDADD = -lpam 
+LDADD = -lpam ../lib/libgraypam.la
 AM_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 AM_CPPFLAGS=-DMODULE_NAME=\"pam_regex\" -DSYSCONFDIR=\"${sysconfdir}\"
-INCLUDES=@PAM_COMMON_INCLUDES@
+INCLUDES=-I. @PAM_COMMON_INCLUDES@
 NORMAL_UNINSTALL = -rm -f $(DESTDIR)$(pamdir)/pam_regex.a $(DESTDIR)$(pamdir)/pam_regex.so.@VI_CURRENT@.@VI_REVISION@.@VI_AGE@
 
-pam_regex.lo: $(srcdir)/pam_regex.c
-	$(LIBTOOL) --mode=compile $(CC) -c -DHAVE_CONFIG_H \
-                $(CFLAGS) $(AM_CFLAGS) $(INCLUDES) $(CPPFLAGS) $(AM_CPPFLAGS) $<
+include $(top_srcdir)/Make.rules
 
-pam_regex.la$(EXEEXT): pam_regex.lo
-	$(LIBTOOL) --mode=link $(CC) -module -export-dynamic \
-                 $(AM_LDFLAGS) \
-                 -o $@ $< $(pam_regex_la_LDADD) $(AM_LDADD) $(LDADD)\
-                 -rpath $(pamdir)
+pam_regex.lo: pam_regex.c
+pam_regex.la: pam_regex.lo

@@ -1,3 +1,20 @@
+2008-03-13  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* configure.ac (PAM_COMMON_INCLUDES): Add -I${top_srcdir}/lib.
+	(AC_OUTPUT): Add lib/Makefile.
+	* doc/pam-modules.texi: Document `transform' option.
+	* Make.rules: New file.
+
+	* lib/mem.c, lib/slist.c, lib/log.c, lib/converse.c,
+	lib/graypam.h, lib/Makefile.am, lib/transform.c.
+
+	* pam_regex/pam_regex.c: Implement user name transformations.
+	
+	* pam_fshadow/Makefile.am, pam_sql/Makefile.am:
+	Add ../lib/libgraypam.la to LDADD
+	* pam_fshadow/pam_fshadow.c, pam_sql/pam_mysql.c,
+	pam_sql/pam_pgsql.c, pam_sql/pam_sql.c: Use functions from ../lib.
+	
 2007-08-28  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	* pam_fshadow/Makefile.am, pam_regex/Makefile.am,

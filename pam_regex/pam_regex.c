@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2001, 2006, 2007 Sergey Poznyakoff
+   Copyright (C) 2001, 2006, 2007, 2008 Sergey Poznyakoff
  
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -14,9 +14,6 @@
    You should have received a copy of the GNU General Public License along
    with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#if defined(HAVE_CONFIG_H)
-# include <config.h>
-#endif
 #ifdef HAVE__PAM_ACONF_H
 #include <security/_pam_aconf.h>
 #endif
@@ -31,6 +28,8 @@
 #include <errno.h>
 #include <regex.h>
 
+#include "graypam.h"
+
 /* indicate the following groups are defined */
 #define PAM_SM_AUTH
 
@@ -39,31 +38,26 @@
 #endif				/* LINUX_PAM */
 #include <security/pam_modules.h>
 
-#include <common.c>
+#define CNTL_AUTHTOK       0x0010
+#define CNTL_REGEX_FLAGS   0x0012
 
-#define CNTL_DEBUG        0x0001
-#define CNTL_AUDIT        0x0002
-#define CNTL_AUTHTOK      0x0004
+#define SENSE_ALLOW   0
+#define SENSE_DENY    1
 
-#define CNTL_SENSE_DENY   0x0010
-#define CNTL_REGEX_FLAGS  0x0020
-
-#define CNTL_DEBUG_LEV() (cntl_flags>>16)
-#define CNTL_SET_DEBUG_LEV(cntl,n) (cntl |= ((n)<<16))
-
+static int sense;
 static int cntl_flags;
 static const char *regex = NULL;
 static int regex_flags = REG_NOSUB;
-static const char *user_name = NULL;
-
-#define DEBUG(m,c) if (CNTL_DEBUG_LEV()>=(m)) _pam_debug c
-#define AUDIT(c) if (cntl_flags&CNTL_AUDIT) _pam_debug c
+static const char *transform = NULL;
+static const char *user_name;
 
 static void
 _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 {
 	int ctrl = 0;
 
+	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
+	
 	/* step through arguments */
 	for (; argc-- > 0; ++argv) {
 
@@ -83,11 +77,17 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 			ctrl |= CNTL_AUTHTOK;
 		else if (!strncmp(*argv, "sense=", 6)) {
 			if (strcmp(*argv + 6, "deny") == 0)
-				ctrl |= CNTL_SENSE_DENY;
-			else if (strcmp(*argv + 6, "allow"))
+				sense = SENSE_DENY;
+			else if (strcmp(*argv + 6, "allow") == 0)
+				sense = SENSE_ALLOW;
+			else
 				_pam_log(LOG_ERR,"unknown sense value: %s",
 					 *argv + 6);
-		} else if (!strncmp(*argv, "regex=", 6))
+		} else if (!strncmp(*argv, "transform=", 10))
+			transform = *argv + 10;
+		else if (!strncmp(*argv, "user=",5)) 
+			user_name = *argv + 5;
+		else if (!strncmp(*argv, "regex=", 6))
 			regex = *argv + 6;
 		else if (!strcmp(*argv, "extended")) {
 			regex_flags |= REG_EXTENDED;
@@ -102,8 +102,6 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 		} else if (!strcmp(*argv, "case")) {
 			regex_flags &= ~REG_ICASE;
 			ctrl |= CNTL_REGEX_FLAGS;
-		} else if (!strncmp(*argv, "user=",5)) {
-			user_name = *argv + 5;
 		} else {
 			_pam_log(LOG_ERR,
 				 "unknown option: %s", *argv);
@@ -111,7 +109,9 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 	}
 	if (!regex)
 		_pam_log(LOG_ERR, "regex not specified");
-	if (!ctrl & CNTL_REGEX_FLAGS)
+	if (user_name && transform)
+		_pam_log(LOG_ERR, "Both `user' and `transform' are given");
+	if (!(ctrl & CNTL_REGEX_FLAGS))
 		regex_flags |= REG_EXTENDED;
 	cntl_flags = ctrl;
 }
@@ -123,7 +123,7 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 
 /* Fun starts here :)
 
- * pam_sm_authenticate() performs RADIUS authentication
+ * pam_sm_authenticate() performs authentication
  *
  */
 
@@ -133,56 +133,80 @@ pam_sm_authenticate(pam_handle_t *pamh,
 		    int argc,
 		    const char **argv)
 {
-	int retval;
+	int retval, rc;
 	char *name;
 	regex_t rx;
-
+	regmatch_t rmatch[2];
+	
 	_pam_parse(pamh, argc, argv);
 	
 	DEBUG(100,("enter pam_sm_authenticate"));
 
 	if (!regex)
 		return PAM_AUTHINFO_UNAVAIL;
-	
-	for (;;) {
 
-		/*
-		 * get username
-		 */
-		retval = pam_get_user(pamh, (const char**)&name, "login: ");
-		if (retval == PAM_SUCCESS) {
-			DEBUG(10, ("username [%s] obtained", name));
-		} else {
-			_pam_log(LOG_NOTICE, "can't get username");
-			break;
-		}
+	gray_pam_init(PAM_AUTHINFO_UNAVAIL);
 
-		if (regcomp(&rx, regex, regex_flags)) {
-			_pam_log(LOG_NOTICE, "can't compile regex: %s", regex);
-			retval = PAM_AUTHINFO_UNAVAIL;
-			break;
-		}
+	/*
+	 * get username
+	 */
+	retval = pam_get_user(pamh, (const char**)&name, "login: ");
+	if (retval == PAM_SUCCESS) {
+		DEBUG(10, ("username [%s] obtained", name));
+	} else {
+		_pam_log(LOG_NOTICE, "can't get username");
+		return PAM_AUTHINFO_UNAVAIL;
+	}
 
-		retval = regexec(&rx, name, 0, NULL, 0);
-		if (retval) {
-			DEBUG(1,("%s does not match %s",name,regex));
-		}
-		if (cntl_flags & CNTL_SENSE_DENY)
-			retval = !retval;
-		if (retval) {
-			_pam_log(LOG_NOTICE, "rejecting %s", name);
-			retval = PAM_AUTH_ERR;
-		} else {
-			_pam_log(LOG_NOTICE, "allowing %s", name);
-			if (user_name) {
-				retval = pam_set_item(pamh, PAM_USER,
-						      strdup(user_name));
-				DEBUG(100,("user name=%s, status=%d",
-					   user_name,retval));
+	if (transform) {
+		char *newname;
+		gray_slist_t slist;
+
+		gray_set_transform_expr(transform);
+		slist = gray_slist_create();
+		gray_transform_name_to_slist(slist, name, &newname);
+		DEBUG(100,("new name: %s", newname));
+		MAKE_STR(pamh, newname, name);
+		pam_set_item(pamh, PAM_AUTHTOK, name);
+	}
+
+	if (regex) {
+		for (;;) {
+
+			if (rc = regcomp(&rx, regex, regex_flags)) {
+				char errbuf[512];
+				regerror (rc, &rx, errbuf, sizeof (errbuf));
+				_pam_log(LOG_ERR, "can't compile regex: %s",
+					 errbuf);
+				retval = PAM_AUTHINFO_UNAVAIL;
+				break;
 			}
-			retval = PAM_SUCCESS;
+
+			retval = regexec(&rx, name, 2, rmatch, 0);
+			if (retval) {
+				DEBUG(1,("%s does not match %s",name,regex));
+			}
+
+			switch (sense) {
+			case SENSE_ALLOW:
+				break;
+				
+			case SENSE_DENY:
+				retval = !retval;
+				break;
+				
+			}
+			
+			if (retval != PAM_SUCCESS) {
+				_pam_log(LOG_NOTICE, "rejecting %s", name);
+				retval = PAM_AUTH_ERR;
+				if (user_name) 
+					retval = pam_set_item(pamh, PAM_USER,
+							      strdup(user_name));
+			} else 
+				_pam_log(LOG_NOTICE, "allowing %s", name);
+			break;
 		}
-		break;
 	}
 
 	DEBUG(100,("exit pam_sm_authenticate: %d", retval));

@@ -1,12 +1,16 @@
-pam-modules -- history of user-visible changes. 2007-08-14
-Copyright (C) 2001,2004,2005,2007 Sergey Poznyakoff
+pam-modules -- history of user-visible changes. 2008-03-13
+Copyright (C) 2001,2004,2005,2007,2008 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 Please send radius bug reports to <bug-pam-modules@gnu.org.ua>
 
-Version 1.2, CVS
+Version 1.2, SVN
 
-Several fixes in debugging code and pam_mysql, pam_pgsql modules.
+* Several fixes in debugging code and pam_mysql, pam_pgsql modules.
+
+* pam_regex transform=expr
+
+New command line option `transform' allows to rewrite user names.
 
 
 Version 1.1, 2007-08-11
@@ -37,7 +41,7 @@ Version 0.1
 =========================================================================
 Copyright information:
 
-Copyright (C) 2001,2004,2005 Sergey Poznyakoff
+Copyright (C) 2001,2004,2005,2007,2008 Sergey Poznyakoff
 
    Permission is granted to anyone to make or distribute verbatim copies
    of this document as received, in any medium, provided that the
