@@ -19,12 +19,14 @@
 
 /* Command line parsing */
 static int cntl_flags;
+static long debug_level;
 
 static int xargc;
 static const char **xargv;
 static int priority = LOG_INFO;
 static int facility = LOG_AUTHPRIV;
-static const char *syslog_tag =MODULE_NAME;
+static const char *syslog_tag = MODULE_NAME;
+static int do_open = 1;
 
 struct keyword {
 	char *name;
@@ -71,8 +73,8 @@ static struct keyword syslog_priority[] = {
 	{ NULL }
 };
 
-static void
-parse_priority(const char *str)
+static int
+parse_priority(struct pam_opt *opt, const char *str)
 {
 	int len;
 	struct keyword *kw;
@@ -87,7 +89,7 @@ parse_priority(const char *str)
 			_pam_log(LOG_ERR,
 				 "unknown syslog facility: %*.*s",
 				 len, len, str);
-			return;
+			return 1;
 		}
 		facility = kw->code;
 	}
@@ -98,52 +100,51 @@ parse_priority(const char *str)
 		if (!kw) {
 			_pam_log(LOG_ERR,
 				 "unknown syslog priority: %s", str);
-			return;
+			return 1;
 		}
 		priority = kw->code;
 	}
+	return 0;
 }
+
+struct pam_opt pam_opt[] = {
+	{ PAM_OPTSTR(debug), pam_opt_long, &debug_level },
+	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, 1 },
+	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, CNTL_AUDIT },
+	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, 0, gray_wait_debug_fun },
+	{ PAM_OPTSTR(tag), pam_opt_string, &syslog_tag },
+	{ PAM_OPTSTR(pri), pam_opt_null, NULL, 0, parse_priority },
+	{ PAM_OPTSTR(open), pam_opt_bool, &do_open },
+	{ NULL }
+};
+
 
 static void
 _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 {
-	int ctrl = 0;
-	int dont_open = 0;
-	
-	/* Collect generic arguments */
-	for (; argc > 0; argv++, argc--) {
-		if (!strncmp(*argv, "-debug", 6)) {
-			ctrl |= CNTL_DEBUG;
-			if ((*argv)[6] == '=') 
-				CNTL_SET_DEBUG_LEV(ctrl, atoi(*argv + 7));
-			else
-				CNTL_SET_DEBUG_LEV(ctrl, 1);
-		} else if (!strcmp(*argv, "-audit"))
-			ctrl |= CNTL_AUDIT;
-		else if (!strncmp(*argv, "-waitdebug", 10))
-			WAITDEBUG(*argv + 10);
-		else if (!strncmp(*argv, "-tag=", 5))
-			syslog_tag = *argv + 5;
-		else if (!strncmp(*argv, "-pri=", 5))
-			parse_priority(*argv + 5);
-		else if (!strcmp(*argv, "-no-open"))
-			dont_open = 1;
-		else if (!strcmp(*argv, "--"))
-			break;
-		else if (**argv == '-')
-			_pam_log(LOG_ERR,
-				 "unknown option: %s", *argv);
-		else
+	int i;
+	const char **targv;
+
+	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
+
+	targv = gray_malloc(argc * sizeof (targv[0]));
+	for (i = 0; i < argc; i++) {
+		if (argv[i][0] == '-') {
+			if (argv[i][1] == '-' && argv[i][2] == 0)
+				break;
+			targv[i] = argv[i] + 1;
+		} else
 			break;
 	}
-	
-	/* Save the format variables */
-	xargc = argc;
-	xargv = argv;
 
-	cntl_flags = ctrl;
+	gray_parseopt(pam_opt, i, targv);
+	free(targv);
 	
-	gray_log_init(dont_open, syslog_tag, facility);
+	xargc = argc - i;
+	xargv = argv + i;
+
+	closelog();
+	gray_log_init(!do_open, syslog_tag, facility);
 }
 
 static struct keyword vartab[] = {
@@ -312,24 +313,28 @@ echo(pam_handle_t *pamh, const char *prefix, int argc, const char **argv)
 PAM_EXTERN int
 pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
+	gray_pam_init(PAM_IGNORE);
 	return echo(pamh, __FUNCTION__, argc, argv);
 }
 
 PAM_EXTERN int
 pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
+	gray_pam_init(PAM_IGNORE);
 	return echo(pamh, __FUNCTION__, argc, argv);
 }
 
 PAM_EXTERN int
 pam_sm_chauthtok(pam_handle_t *pamh,int flags,int argc,const char **argv)
 {
+	gray_pam_init(PAM_IGNORE);
 	return echo(pamh, __FUNCTION__, argc, argv);
 }
 
 PAM_EXTERN int
 pam_sm_acct_mgmt (pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
+	gray_pam_init(PAM_IGNORE);
 	return echo(pamh, __FUNCTION__, argc, argv);
 }
 
@@ -337,6 +342,7 @@ PAM_EXTERN int
 pam_sm_open_session (pam_handle_t *pamh, int flags, int argc,
                      const char **argv)
 {
+	gray_pam_init(PAM_IGNORE);
 	return echo(pamh, __FUNCTION__, argc, argv);
 }
 
@@ -344,6 +350,7 @@ PAM_EXTERN int
 pam_sm_close_session (pam_handle_t *pamh, int flags, int argc,
 		      const char **argv)
 {
+	gray_pam_init(PAM_IGNORE);
 	return echo(pamh, __FUNCTION__, argc, argv);
 }
 

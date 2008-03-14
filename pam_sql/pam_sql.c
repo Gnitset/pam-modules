@@ -36,40 +36,25 @@ static int verify_user_pass(const char *username, const char *password);
 #define CNTL_AUTHTOK      0x0010
 
 static int cntl_flags;
+static long debug_level;
 char *config_file = SYSCONFDIR "/pam_sql.conf";
+
+struct pam_opt pam_opt[] = {
+	{ PAM_OPTSTR(debug), pam_opt_long, &debug_level },
+	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, 1 },
+	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, CNTL_AUDIT },
+	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, 0, gray_wait_debug_fun },
+	{ PAM_OPTSTR(use_authtok), pam_opt_bitmask, &cntl_flags,
+	  CNTL_AUTHTOK },
+	{ PAM_OPTSTR(config_file), pam_opt_string, &config_file },
+	{ NULL }
+};
 
 static void
 _pam_parse(int argc, const char **argv)
 {
-	int ctrl=0;
-
 	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
-
-	/* step through arguments */
-	for (ctrl=0; argc-- > 0; ++argv) {
-
-		/* generic options */
-
-		if (!strncmp(*argv,"debug",5)) {
-			ctrl |= CNTL_DEBUG;
-			if ((*argv)[5] == '=') 
-				CNTL_SET_DEBUG_LEV(ctrl,atoi(*argv+6));
-			else
-				CNTL_SET_DEBUG_LEV(ctrl,1);
-		} else if (!strcmp(*argv, "audit"))
-			ctrl |= CNTL_AUDIT;
-		else if (!strncmp(*argv, "waitdebug", 9))
-			WAITDEBUG(*argv + 9);
-		else if (!strcmp(*argv,"use_authtok"))
-			ctrl |= CNTL_AUTHTOK;
-		else if (!strncmp(*argv, "config=", 7)) 
-			config_file = (char*) (*argv + 7);
-		else {
-			_pam_log(LOG_ERR,"unknown option: %s",
-				 *argv);
-		}
-	}
-	cntl_flags = ctrl;
+	gray_parseopt(pam_opt, argc, argv);
 }
 
 

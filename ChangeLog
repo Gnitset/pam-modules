@@ -1,3 +1,15 @@
+2008-03-14  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* lib/parseopt.c: New file.
+	* lib/Makefile.am (libgraypam_la_SOURCES): Add parseopt.c
+	* lib/graypam.h (gray_parseopt, gray_wait_debug_fun): New
+	functions
+	(CNTL_DEBUG_LEV, CNTL_SET_DEBUG_LEV): Removed.
+	* lib/log.c (gray_wait_debug): New functions.
+	* pam_fshadow/pam_fshadow.c, pam_sql/pam_sql.c,
+	pam_regex/pam_regex.c, pam_log/pam_log.c: Use gray_parseopt for
+	command line parsing.
+
 2008-03-13  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	* configure.ac (PAM_COMMON_INCLUDES): Add -I${top_srcdir}/lib.

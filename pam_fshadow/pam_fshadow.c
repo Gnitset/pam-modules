@@ -33,64 +33,59 @@ extern char *crypt(const char *, const char *);
 
 #include <security/pam_modules.h>
 
+#define CNTL_AUTHTOK       0x0010 
+#define CNTL_PASSWD        0x0020
+#define CNTL_REGEX         0x0040
+#define CNTL_REVERT_INDEX  0x0080
+
 char *sysconfdir = SYSCONFDIR;
-static int cntl_flags = 0;
+static int cntl_flags = CNTL_PASSWD;
+static long debug_level = 0;
 
 static regex_t rexp;
-const char *regex_str = NULL;
+static const char *regex_str = NULL;
+static int regex_flags = REG_EXTENDED;
 static int username_index = 1;
 static int domain_index = 2;
 
-#define CNTL_AUTHTOK     0x0010
-#define CNTL_NOPASSWD    0x0020
-#define CNTL_REGEX       0x0040
+struct pam_opt pam_opt[] = {
+	{ PAM_OPTSTR(debug), pam_opt_long, &debug_level },
+	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, 1 },
+	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, CNTL_AUDIT },
+	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, 0, gray_wait_debug_fun },
+	{ PAM_OPTSTR(use_authtok), pam_opt_bitmask, &cntl_flags,
+	  CNTL_AUTHTOK },
+	{ PAM_OPTSTR(sysconfdir), pam_opt_string, &sysconfdir },
+	{ PAM_OPTSTR(regex), pam_opt_string, &regex_str },
+	{ PAM_OPTSTR(extended), pam_opt_bitmask, &regex_flags,
+	  REG_EXTENDED },
+	{ PAM_OPTSTR(basic), pam_opt_bitmask_rev, &regex_flags,
+	  REG_EXTENDED },
+	{ PAM_OPTSTR(icase), pam_opt_bitmask, &regex_flags,
+	  REG_ICASE },
+	{ PAM_OPTSTR(ignore-case), pam_opt_bitmask, &regex_flags,
+	  REG_ICASE },
+	{ PAM_OPTSTR(case), pam_opt_bitmask_rev, &regex_flags,
+	  REG_ICASE },
+	{ PAM_OPTSTR(passwd), pam_opt_bool, &cntl_flags, CNTL_PASSWD },
+	{ PAM_OPTSTR(revert-index), pam_opt_bool, &cntl_flags,
+	  CNTL_REVERT_INDEX },
+	{ NULL }
+};
 
 static int
 _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 {
-	int regex_flags = 0;
 	int retval = PAM_SUCCESS;
-
-	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
 	
-	/* step through arguments */
-	for (cntl_flags = 0; argc-- > 0; ++argv) {
+	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
+	if (gray_parseopt(pam_opt, argc, argv))
+		return PAM_AUTHINFO_UNAVAIL;
 
-		/* generic options */
-		
-		if (!strncmp(*argv, "debug", 5)) {
-			cntl_flags |= CNTL_DEBUG;
-			if ((*argv)[5] == '=') 
-				CNTL_SET_DEBUG_LEV(cntl_flags,
-						   atoi(*argv + 6));
-			else
-				CNTL_SET_DEBUG_LEV(cntl_flags, 1);
-		} else if (!strncmp(*argv, "waitdebug", 9))
- 			WAITDEBUG(*argv + 9);
-		else if (!strcmp(*argv,"use_authtok"))
-			cntl_flags |= CNTL_AUTHTOK;
-		else if (!strncmp(*argv, "sysconfdir=", 11))
-			sysconfdir = (char*) (*argv + 11);
-		else if (!strncmp(*argv, "regex=", 6)) 
-			regex_str = (*argv + 6);
-		else if (!strcmp(*argv, "basic"))
-			regex_flags &= ~REG_EXTENDED;
-		else if (!strcmp(*argv, "extended"))
-			regex_flags |= REG_EXTENDED;
-		else if (!strcmp(*argv, "icase")
-			 || !strcmp(*argv, "ignore-case"))
-			regex_flags |= REG_ICASE;
-		else if (!strcmp(*argv, "revert-index")) {
-			username_index = 2;
-			domain_index = 1;
-		} else if (!strcmp(*argv, "nopasswd"))
-			cntl_flags |= CNTL_NOPASSWD;
-		else 
-			_pam_log(LOG_ERR,
-				 "unknown option: %s", *argv);
+	if (cntl_flags & CNTL_REVERT_INDEX) {
+		username_index = 2;
+		domain_index = 1;
 	}
-
-
 	if (regex_str) {
 		int rc;
 		if (rc = regcomp(&rexp, regex_str, regex_flags)) {
@@ -420,10 +415,10 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 		return -2;
 	}
 
-	if (cntl_flags & CNTL_NOPASSWD)
-		retval = 0;
-	else
+	if (cntl_flags & CNTL_PASSWD)
 		retval = verify_user_acct(confdir, username, &pwstr);
+	else
+		retval = 0;
 	if (retval == PAM_SUCCESS) {
 		if (pwstr) {
 			if (strcmp(pwstr, crypt(password, pwstr)) == 0)

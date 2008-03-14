@@ -67,13 +67,33 @@ gray_wait_debug(size_t interval, const char *file, size_t line)
 #ifdef DEBUG_MODE
 	if (!interval)
 		interval = 3600;
-	gray_pam_log(LOG_CRIT, "WAITING FOR DEBUG AT %s:%d",
-		     file, (unsigned long)line);
+	if (file)
+		gray_pam_log(LOG_CRIT, "WAITING FOR DEBUG AT %s:%d",
+			     file, (unsigned long)line);
+	else
+		gray_pam_log(LOG_CRIT, "WAITING FOR DEBUG");
 	while (interval-- > 0)
 		sleep(1);
 #else
 	gray_pam_log(LOG_NOTICE, "Debugging is not configured");
 #endif	
 }
+
+int
+gray_wait_debug_fun (struct pam_opt *opt, const char *value)
+{
+	char *s = "";
+	long n = value ? strtol(value, &s, 0) : 0;
+	if (*s) { 
+		_pam_log(LOG_ERR,
+			 "%s: %s is not a valid number",
+			 opt->name, value);
+		return 1;
+	}
+	gray_wait_debug(0, NULL, 0);
+	return 0;
+}
+
+
 
 

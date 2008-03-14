@@ -39,81 +39,54 @@
 #include <security/pam_modules.h>
 
 #define CNTL_AUTHTOK       0x0010
-#define CNTL_REGEX_FLAGS   0x0012
 
 #define SENSE_ALLOW   0
 #define SENSE_DENY    1
+const char *sense_choice[] = { "allow", "deny", NULL };
 
 static int sense;
 static int cntl_flags;
+static long debug_level;
 static const char *regex = NULL;
-static int regex_flags = REG_NOSUB;
+static int regex_flags = REG_NOSUB|REG_EXTENDED;
 static const char *transform = NULL;
 static const char *user_name;
+
+struct pam_opt pam_opt[] = {
+	{ PAM_OPTSTR(debug), pam_opt_long, &debug_level },
+	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, 1 },
+	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, CNTL_AUDIT },
+	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, 0, gray_wait_debug_fun },
+	{ PAM_OPTSTR(use_authtok), pam_opt_bitmask, &cntl_flags,
+	  CNTL_AUTHTOK },
+	{ PAM_OPTSTR(sense), pam_opt_enum, &sense, sense_choice },
+	{ PAM_OPTSTR(transform), pam_opt_string, &transform },
+	{ PAM_OPTSTR(user_name), pam_opt_string, &user_name },
+	{ PAM_OPTSTR(regex), pam_opt_string, &regex },
+	{ PAM_OPTSTR(extended), pam_opt_bitmask, &regex_flags,
+	  REG_EXTENDED },
+	{ PAM_OPTSTR(basic), pam_opt_bitmask_rev, &regex_flags,
+	  REG_EXTENDED },
+	{ PAM_OPTSTR(icase), pam_opt_bitmask, &regex_flags,
+	  REG_ICASE },
+	{ PAM_OPTSTR(ignore-case), pam_opt_bitmask, &regex_flags,
+	  REG_ICASE },
+	{ PAM_OPTSTR(case), pam_opt_bitmask_rev, &regex_flags,
+	  REG_ICASE },
+	
+	{ NULL }
+};
+
 
 static void
 _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 {
-	int ctrl = 0;
-
 	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
-	
-	/* step through arguments */
-	for (; argc-- > 0; ++argv) {
-
-		/* generic options */
-
-		if (!strncmp(*argv, "debug", 5)) {
-			ctrl |= CNTL_DEBUG;
-			if ((*argv)[5] == '=') 
-				CNTL_SET_DEBUG_LEV(ctrl, atoi(*argv + 6));
-			else
-				CNTL_SET_DEBUG_LEV(ctrl, 1);
-		} else if (!strcmp(*argv, "audit"))
-			ctrl |= CNTL_AUDIT;
-		else if (!strncmp(*argv, "waitdebug", 9)) 
-			WAITDEBUG(*argv + 9);
-		else if (!strcmp(*argv, "use_authtok"))
-			ctrl |= CNTL_AUTHTOK;
-		else if (!strncmp(*argv, "sense=", 6)) {
-			if (strcmp(*argv + 6, "deny") == 0)
-				sense = SENSE_DENY;
-			else if (strcmp(*argv + 6, "allow") == 0)
-				sense = SENSE_ALLOW;
-			else
-				_pam_log(LOG_ERR,"unknown sense value: %s",
-					 *argv + 6);
-		} else if (!strncmp(*argv, "transform=", 10))
-			transform = *argv + 10;
-		else if (!strncmp(*argv, "user=",5)) 
-			user_name = *argv + 5;
-		else if (!strncmp(*argv, "regex=", 6))
-			regex = *argv + 6;
-		else if (!strcmp(*argv, "extended")) {
-			regex_flags |= REG_EXTENDED;
-			ctrl |= CNTL_REGEX_FLAGS;
-		} else if (!strcmp(*argv, "basic")) {
-			regex_flags &= ~REG_EXTENDED;
-			ctrl |= CNTL_REGEX_FLAGS;
-		} else if (!strcmp(*argv, "icase")
-			   || !strcmp(*argv, "ignore-case")) {
-			regex_flags |= REG_ICASE;
-			ctrl |= CNTL_REGEX_FLAGS;
-		} else if (!strcmp(*argv, "case")) {
-			regex_flags &= ~REG_ICASE;
-			ctrl |= CNTL_REGEX_FLAGS;
-		} else {
-			_pam_log(LOG_ERR,
-				 "unknown option: %s", *argv);
-		}
-	}
-	if (!regex)
-		_pam_log(LOG_ERR, "regex not specified");
+	gray_parseopt(pam_opt, argc, argv);
+	if (!regex && !transform)
+		_pam_log(LOG_ERR, "neither regex nor transform are specified");
 	if (user_name && transform)
 		_pam_log(LOG_ERR, "Both `user' and `transform' are given");
-	if (!(ctrl & CNTL_REGEX_FLAGS))
-		regex_flags |= REG_EXTENDED;
-	cntl_flags = ctrl;
 }
 
 /*
@@ -140,9 +113,6 @@ pam_sm_authenticate(pam_handle_t *pamh,
 	_pam_parse(pamh, argc, argv);
 	
 	DEBUG(100,("enter pam_sm_authenticate"));
-
-	if (!regex)
-		return PAM_AUTHINFO_UNAVAIL;
 
 	gray_pam_init(PAM_AUTHINFO_UNAVAIL);
 

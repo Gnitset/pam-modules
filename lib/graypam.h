@@ -74,11 +74,12 @@
 #define MAKE_STR(pamh, str, var) \
  gray_make_str(pamh,str,#var,&var)
 
-#define WAITDEBUG(arg) do { size_t line = __LINE__;       \
+#define WAITDEBUG(arg) do {                               \
+  size_t line = __LINE__;                                 \
   if ((arg)[0] == '=')                                    \
-     gray_wait_debug(atoi((arg)+1), __FILE__, line);           \
+     gray_wait_debug(atoi((arg)+1), __FILE__, line);      \
   else                                                    \
-     gray_wait_debug(0, __FILE__, line);		          \
+     gray_wait_debug(0, __FILE__, line);		  \
 } while (0)
 
 extern jmp_buf gray_pam_jmp;
@@ -140,10 +141,36 @@ int gray_converse(pam_handle_t *pamh, int nargs,
 #define CNTL_AUDIT        0x0002
 #define CNTL_WAITDEBUG    0x0004
 
-#define CNTL_DEBUG_LEV() (cntl_flags>>16)
-#define CNTL_SET_DEBUG_LEV(cntl,n) (cntl |= ((n)<<16))
-
-#define DEBUG(m,c) if (CNTL_DEBUG_LEV()>=(m)) _pam_debug c
+#define DEBUG(m,c) if (debug_level>=(m)) _pam_debug c
 #define AUDIT(c) if (cntl_flags&CNTL_AUDIT) _pam_debug c
+
+enum pam_opt_type {
+	pam_opt_null,
+	pam_opt_bool,
+	pam_opt_bitmask,
+	pam_opt_bitmask_rev,
+	pam_opt_long,
+	pam_opt_string,
+	pam_opt_enum,
+	pam_opt_const
+};
+
+struct pam_opt {
+	const char *name;
+	size_t len;
+	enum pam_opt_type type;
+	void *data;
+	union {
+		long value;
+		const char **enumstr;
+	} v;
+	int (*func) (struct pam_opt *, const char *);
+};
+
+#define PAM_OPTSTR(s) #s, (sizeof(#s) - 1)
+
+int gray_parseopt(struct pam_opt *opt, int argc, const char **argv);
+int gray_wait_debug_fun (struct pam_opt *opt, const char *value);
+
 
 #endif
