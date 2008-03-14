@@ -1,5 +1,5 @@
 # This file is part of pam-modules.
-# Copyright (C) 2005, 2007, Sergey Poznyakoff
+# Copyright (C) 2005, 2007, 2008 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,5 +38,5 @@ manual:
 	TEXINPUTS=$(srcdir):$(top_srcdir)/build-aux:$(TEXINPUTS) \
 	 MAKEINFO="$(MAKEINFO) $(MAKEINFOFLAGS)" \
 	 TEXI2DVI="$(TEXI2DVI) -t @finalout" \
-	 $(GENDOCS) $(PACKAGE) '$(PACKAGE_NAME) manual'
+	 $(GENDOCS) --texi2html $(PACKAGE) '$(PACKAGE_NAME) manual'
 
