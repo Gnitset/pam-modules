@@ -1,5 +1,8 @@
 2008-03-14  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	* doc/Makefile.am: Use texi2html to produce html files.
+	* doc/gendocs_template: Use latest version from Texinfo.
+
 	-= Release 1.2 =-
 	
 	* lib/graypam.h: Minor change.
