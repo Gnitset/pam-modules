@@ -1,4 +1,4 @@
-pam-modules -- history of user-visible changes. 2008-03-13
+pam-modules -- history of user-visible changes. 2008-03-14
 Copyright (C) 2001,2004,2005,2007,2008 Sergey Poznyakoff
 See the end of file for copying conditions.
 
@@ -7,6 +7,10 @@ Please send radius bug reports to <bug-pam-modules@gnu.org.ua>
 Version 1.2, SVN
 
 * Several fixes in debugging code and pam_mysql, pam_pgsql modules.
+
+* pam_fshadow
+
+By default extended regular expressions are used. 
 
 * pam_regex transform=expr
 

@@ -234,11 +234,11 @@ from the token.  These options are:
 @table @option
 @opindex basic, @command{pam_fshadow} option
 @item basic
-     Use basic regular expression.  This is the default.
+     Use basic regular expression. 
 
 @opindex extended, @command{pam_fshadow} option      
 @item extended
-     Use extended regular expression.
+     Use extended regular expression.  This is the default.
 
 @opindex ignore-case, @command{pam_fshadow} option
 @opindex icase, @command{pam_fshadow} option     

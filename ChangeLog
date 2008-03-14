@@ -1,5 +1,8 @@
 2008-03-14  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	* NEWS, doc/pam-modules.texi: Document new regexp default for
+	pam_fshadow.c 
+
 	* lib/parseopt.c: New file.
 	* lib/Makefile.am (libgraypam_la_SOURCES): Add parseopt.c
 	* lib/graypam.h (gray_parseopt, gray_wait_debug_fun): New
