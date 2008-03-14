@@ -170,7 +170,7 @@ struct pam_opt {
 #define PAM_OPTSTR(s) #s, (sizeof(#s) - 1)
 
 int gray_parseopt(struct pam_opt *opt, int argc, const char **argv);
-int gray_wait_debug_fun (struct pam_opt *opt, const char *value);
+int gray_wait_debug_fun(struct pam_opt *opt, const char *value);
 
 
 #endif

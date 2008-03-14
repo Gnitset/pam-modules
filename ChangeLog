@@ -1,5 +1,12 @@
 2008-03-14  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	* lib/graypam.h: Minor change.
+	* pam_sql/pam_pgsql.c (verify_user_pass): port is optional.
+	Fix erroneous argument to PQsetdbLogin.
+	* pam_sql/pam_sql.c (pam_opt): Bugfix.
+	
+	* doc/pam-modules.texi: Minor change.
+
 	* NEWS, doc/pam-modules.texi: Document new regexp default for
 	pam_fshadow.c 
 

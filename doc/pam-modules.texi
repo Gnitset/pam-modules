@@ -516,6 +516,11 @@ not the first in the stack of authentication modules.
 @opindex config, @command{pam_mysql} option
 @item config=@var{file}
      Read SQL access credentials from the given @var{file}.
+
+@opindex allow-plaintext-pass, @command{pam_pgsql} configuration variable
+@item allow-plaintext-pass @var{bool}
+The returned password can be plaintext.  Without this option, it is
+supposed to be encrypted using the system @code{crypt} function.
 @end table
 
 @cindex configuration file, @command{pam_pgsql}
@@ -572,15 +577,6 @@ database.  The query can contain the following meta-characters:
 
 @end table
 
-     Variables, specific for @command{pam_pgsql}:
-
-@table @code
-@opindex allow-plaintext-pass, @command{pam_pgsql} configuration variable
-@item allow-plaintext-pass @var{bool}
-The returned password can be plaintext.  Without this option, it is
-supposed to be encrypted using the system @code{crypt} function.
-@end table
-
      Variables, specific for @command{pam_mysql}:
      
 @table @code
@@ -589,9 +585,7 @@ supposed to be encrypted using the system @code{crypt} function.
 The returned password can be encrypted using MySQL @code{password}
 function.
 
-@opindex allow-plaintext-pass, @command{pam_mysql} configuration variable
-@item allow-plaintext-pass @var{bool}
-The returned password can be plaintext.
+See also @code{allow-plaintext-pass}, above.
 @end table
 
 @node Reporting Bugs, Copying This Manual, sql, Top

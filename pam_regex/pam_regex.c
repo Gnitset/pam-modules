@@ -136,7 +136,11 @@ pam_sm_authenticate(pam_handle_t *pamh,
 		gray_transform_name_to_slist(slist, name, &newname);
 		DEBUG(100,("new name: %s", newname));
 		MAKE_STR(pamh, newname, name);
-		pam_set_item(pamh, PAM_AUTHTOK, name);
+		retval = pam_set_item(pamh, PAM_USER, name);
+		if (retval != PAM_SUCCESS) {
+			_pam_log(LOG_ERR, "retval %d", retval);
+			return PAM_AUTHINFO_UNAVAIL;
+		}
 	}
 
 	if (regex) {

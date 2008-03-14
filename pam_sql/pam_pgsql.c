@@ -136,13 +136,11 @@ verify_user_pass(const char *username, const char *password)
 	CHKVAR(hostname);
 	
 	port = find_config("port");
-	CHKVAR(port);
-	
+
 	login = find_config("login");
 	CHKVAR(login);
 
 	pass = find_config("pass");
-	CHKVAR(pass);
 
 	db = find_config("db");
 	CHKVAR(db);
@@ -157,9 +155,11 @@ verify_user_pass(const char *username, const char *password)
 	}
 
 	pgconn = PQsetdbLogin (hostname, port, NULL, NULL,
-			       db, login, password);
+			       db, login, pass);
 	if (PQstatus (pgconn) == CONNECTION_BAD) {
-		_pam_log(LOG_ERR, "cannot connect to database");
+		_pam_log(LOG_ERR, "cannot connect to database: %s",
+			 PQerrorMessage(pgconn));
+		PQfinish(pgconn);
 		return PAM_SERVICE_ERR;
 	}
 

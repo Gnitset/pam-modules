@@ -46,7 +46,7 @@ struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, 0, gray_wait_debug_fun },
 	{ PAM_OPTSTR(use_authtok), pam_opt_bitmask, &cntl_flags,
 	  CNTL_AUTHTOK },
-	{ PAM_OPTSTR(config_file), pam_opt_string, &config_file },
+	{ PAM_OPTSTR(config), pam_opt_string, &config_file },
 	{ NULL }
 };
 

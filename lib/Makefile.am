@@ -17,6 +17,3 @@ lib_LTLIBRARIES = libgraypam.la
 
 libgraypam_la_SOURCES = log.c mem.c slist.c transform.c converse.c parseopt.c
 noinst_HEADERS = graypam.h
-noinst_PROGRAMS = parse
-parse_LDADD = ./libgraypam.la -lpam
-parse_LDFLAGS = -static
