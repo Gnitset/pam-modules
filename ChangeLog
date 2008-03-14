@@ -1,5 +1,7 @@
 2008-03-14  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	-= Release 1.2 =-
+	
 	* lib/graypam.h: Minor change.
 	* pam_sql/pam_pgsql.c (verify_user_pass): port is optional.
 	Fix erroneous argument to PQsetdbLogin.

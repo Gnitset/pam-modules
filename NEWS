@@ -4,7 +4,7 @@ See the end of file for copying conditions.
 
 Please send radius bug reports to <bug-pam-modules@gnu.org.ua>
 
-Version 1.2, SVN
+Version 1.2, 2008-03-14
 
 * Several fixes in debugging code and pam_mysql, pam_pgsql modules.
 
