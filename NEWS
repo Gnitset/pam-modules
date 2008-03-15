@@ -1,8 +1,17 @@
-pam-modules -- history of user-visible changes. 2008-03-14
+pam-modules -- history of user-visible changes. 2008-03-15
 Copyright (C) 2001,2004,2005,2007,2008 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 Please send radius bug reports to <bug-pam-modules@gnu.org.ua>
+
+Version 1.2.90 (SVN)
+
+* pam_mysql and pam_pgsql
+
+Both modules understand passwords in LDAP form.  A special
+configuration file statement `allow-ldap-pass' is provided to control
+this feature.  By default, `allow-ldap-pass yes' is assumed.
+
 
 Version 1.2, 2008-03-14
 
