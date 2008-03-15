@@ -188,14 +188,14 @@ mu_check_mysql_4x_password (const char *scrambled, const char *message)
 	char to[2*SHA1_HASH_SIZE + 2];
 
 	/* stage 1: hash password */
-	sha1_init_ctx (&sha1_context);
-	sha1_process_bytes (message, strlen (message), &sha1_context);
-	sha1_finish_ctx (&sha1_context, to);
+	gpam_sha1_init_ctx (&sha1_context);
+	gpam_sha1_process_bytes (message, strlen (message), &sha1_context);
+	gpam_sha1_finish_ctx (&sha1_context, to);
 	
 	/* stage 2: hash stage1 output */
-	sha1_init_ctx (&sha1_context);
-	sha1_process_bytes (to, SHA1_HASH_SIZE, &sha1_context);
-	sha1_finish_ctx (&sha1_context, hash_stage2);
+	gpam_sha1_init_ctx (&sha1_context);
+	gpam_sha1_process_bytes (to, SHA1_HASH_SIZE, &sha1_context);
+	gpam_sha1_finish_ctx (&sha1_context, hash_stage2);
 	
 	/* convert hash_stage2 to hex string */
 	to[0] = '*';
@@ -282,8 +282,6 @@ check_md5_pass(const char *sqlpass, const char *userpass)
 		return PAM_AUTH_ERR;
 }
 		
-
-	
 static int
 check_query_result(MYSQL *mysql, const char *pass)
 {
