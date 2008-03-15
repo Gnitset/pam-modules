@@ -1,5 +1,11 @@
 2008-03-15  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	* pam_regex/pam_regex.c (pam_opt): Fix a typo: rename "user_name"
+	option to "user".
+	(pam_sm_authenticate): Bugfix
+
+2008-03-15  Sergey Poznyakoff  <gray@gnu.org.ua>
+	
 	-= Release 1.3 =- 
 
 2008-03-15  Sergey Poznyakoff  <gray@gnu.org.ua>

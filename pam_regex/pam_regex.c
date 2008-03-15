@@ -61,7 +61,7 @@ struct pam_opt pam_opt[] = {
 	  CNTL_AUTHTOK },
 	{ PAM_OPTSTR(sense), pam_opt_enum, &sense, sense_choice },
 	{ PAM_OPTSTR(transform), pam_opt_string, &transform },
-	{ PAM_OPTSTR(user_name), pam_opt_string, &user_name },
+	{ PAM_OPTSTR(user), pam_opt_string, &user_name },
 	{ PAM_OPTSTR(regex), pam_opt_string, &regex },
 	{ PAM_OPTSTR(extended), pam_opt_bitmask, &regex_flags,
 	  REG_EXTENDED },
@@ -173,11 +173,10 @@ pam_sm_authenticate(pam_handle_t *pamh,
 			if (retval != PAM_SUCCESS) {
 				_pam_log(LOG_NOTICE, "rejecting %s", name);
 				retval = PAM_AUTH_ERR;
-				if (user_name) 
-					retval = pam_set_item(pamh, PAM_USER,
-							      strdup(user_name));
 			} else 
 				_pam_log(LOG_NOTICE, "allowing %s", name);
+			if (user_name) 
+				pam_set_item(pamh, PAM_USER, strdup(user_name));
 			break;
 		}
 	}
