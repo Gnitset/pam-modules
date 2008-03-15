@@ -133,7 +133,6 @@ verify_user_pass(const char *username, const char *password)
 	int rc;
 	
 	hostname = find_config("host");
-	CHKVAR(hostname);
 	
 	port = find_config("port");
 
@@ -204,11 +203,9 @@ verify_user_pass(const char *username, const char *password)
 		    && check_boolean_config ("allow-ldap-pass", 1))
 			rc = gray_check_ldap_pass (p, password);
 		if (rc != PAM_SUCCESS
-		    && check_boolean_config ("allow-plaintext-pass", 0)) {
-			if (strcmp (p, pass) == 0)
-				rc = PAM_SUCCESS;
-		} else
-			rc = PAM_AUTH_ERR;
+		    && check_boolean_config ("allow-plaintext-pass", 0)
+		    && strcmp (p, pass) == 0)
+			rc = PAM_SUCCESS;
 	}
 
 	PQclear(res);
