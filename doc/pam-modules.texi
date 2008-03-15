@@ -71,7 +71,7 @@ Individual modules
 * regex::               Check if the username matches certain regular
                         expression.
 * log::                 Log arbitrary messages to syslog.
-* sql::                 Simple SQL authentication.                        
+* sql::                 Modules for SQL authentication.                        
 * Reporting Bugs::      How to Report a Bug.
 
 Appendices
@@ -117,7 +117,7 @@ description is provided in case you decide to participate in
 following diagnostics in @command{syslog} @code{auth.crit} channel:
 
 @smallexample
-WAITING FOR DEBUG AT pam_regex.c:240
+WAITING FOR DEBUG
 @end smallexample
 
 @noindent
@@ -274,7 +274,9 @@ for the user name @samp{smith} in the files
 matching their login name against a regular expression and to alter
 user names.  It may be useful, for example, in authentication stacks
 for such services as @acronym{FTP} or @acronym{HTTP}. 
-     
+
+     The following table describes command line options for this module:
+
 @table @code
 @opindex basic, @command{pam_regex} option
 @item basic
@@ -296,10 +298,9 @@ for such services as @acronym{FTP} or @acronym{HTTP}.
 
 @opindex regex, @command{pam_regex} option     
 @item regex=@var{string}
-     The user name must match the given regular expression.  This
-option is mandatory.  The default expression flavor is
-``basic, case-sensitive'', but this can be changed using other
-options (see above).
+     The user name must match the given regular expression.
+The default expression flavor is ``extended, case-sensitive'', but
+this can be changed using other options (see above).
 
 @opindex sense, @command{pam_regex} option
 @item sense=@{allow|deny@}
@@ -487,7 +488,7 @@ cvs session    required   pam_permit.so
 @end smallexample
 
 @node sql, Reporting Bugs, log, Top
-@chapter Simple SQL authentication.
+@chapter SQL authentication.
 
 @prindex pam_pgsql
 @prindex pam_mysql
@@ -524,6 +525,17 @@ not the first in the stack of authentication modules.
 lines and lines beginning with @samp{#} are ignored.  Nonempty lines
 consist of a keyword and its value, separated by any amount of 
 white space.
+
+     Long statements can be split over several lines by placing
+@samp{\} character at the end of each line, e.g.:
+
+@smallexample
+@group
+query select password \
+      from users \
+      where user_name='%s'
+@end group
+@end smallexample
 
      The keywords, common for both modules are:
 

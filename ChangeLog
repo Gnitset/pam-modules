@@ -1,5 +1,9 @@
 2008-03-15  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	-= Release 1.3 =- 
+
+2008-03-15  Sergey Poznyakoff  <gray@gnu.org.ua>
+	
 	Initial framework for LDAP-style password hashes.
 	
 	* pam_sql/pam_mysql.c, pam_sql/pam_pgsql.c: Call

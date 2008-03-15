@@ -219,6 +219,7 @@ read_config ()
 	int rc = 0;
 	int line = 0;
 	char buf[128];
+	gray_slist_t slist = NULL;
 	
 	fp = fopen (config_file, "r");
 	if (!fp) {
@@ -244,11 +245,44 @@ read_config ()
 		}
 
 		p[len-1] = 0;
-		chop(p);
+		len = chop(p);
 			
 		if (*p == 0 || *p == '#')
 			continue;
+
+		if (p[len-1] == '\\') {
+			int err = 0;
 			
+			/* Collect continuation lines */
+			if (!slist)
+				slist = gray_slist_create();
+			do {
+				gray_slist_append(slist, p, len-2);
+				p = fgets (buf, sizeof buf, fp);
+				if (!p)
+					break;
+				line++;
+				len = strlen(p);
+				if (len == 0)
+					break;
+				if (p[len-1] != '\n') {
+					_pam_log(LOG_EMERG,
+						 "%s:%d: string too long",
+						 config_file, line);
+					err = 1; 
+					break;
+				}
+				p[len-1] = 0;
+				len = chop(p);
+			} while (p[len-1] == '\\');
+			if (len)
+				gray_slist_append(slist, p, len);
+			gray_slist_append_char(slist, 0);
+			p = gray_slist_finish(slist);
+			if (err)
+				continue;
+		}
+		
 		env = malloc(sizeof *env);
 		if (!env) {
 			_pam_log(LOG_EMERG, "not enough memory");
@@ -281,7 +315,8 @@ read_config ()
 		env->next = config_env;
 		config_env = env;
 	}
-	
+
+	gray_slist_free(&slist);
 	fclose(fp);
 	return rc;
 }
