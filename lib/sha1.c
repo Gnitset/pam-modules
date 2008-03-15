@@ -27,7 +27,7 @@
 # include <config.h>
 #endif
 
-#include <mailutils/sha1.h>
+#include <sha1.h>
 
 #include <stddef.h>
 #include <string.h>

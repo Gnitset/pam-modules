@@ -142,7 +142,7 @@ chk_ssha (const char *db_pass, const char *pass)
   size = gray_base64_decode(slist, db_pass, strlen (db_pass));
   if (size <= 16)
     {
-      mu_error ("malformed SSHA1 password: %s", db_pass);
+      _pam_log (LOG_ERR, "malformed SSHA1 password: %s", db_pass);
       gray_slist_free(&slist);
       return 1;
     }

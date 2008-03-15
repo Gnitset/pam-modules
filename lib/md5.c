@@ -24,7 +24,7 @@
 # include <config.h>
 #endif
 
-#include "mailutils/md5.h"
+#include "md5.h"
 
 #include <stddef.h>
 #include <stdlib.h>
