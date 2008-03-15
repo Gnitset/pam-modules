@@ -25,7 +25,7 @@ Published by the Free Software Foundation,
 51 Franklin Street, Fifth Floor
 Boston, MA 02110-1301, USA
 
-Copyright @copyright{} 2005, 2007 Sergey Poznyakoff
+Copyright @copyright{} 2005, 2007, 2008 Sergey Poznyakoff
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
@@ -516,11 +516,6 @@ not the first in the stack of authentication modules.
 @opindex config, @command{pam_mysql} option
 @item config=@var{file}
      Read SQL access credentials from the given @var{file}.
-
-@opindex allow-plaintext-pass, @command{pam_pgsql} configuration variable
-@item allow-plaintext-pass @var{bool}
-The returned password can be plaintext.  Without this option, it is
-supposed to be encrypted using the system @code{crypt} function.
 @end table
 
 @cindex configuration file, @command{pam_pgsql}
@@ -575,6 +570,19 @@ database.  The query can contain the following meta-characters:
 @item %% @tab Literal @samp{%} character
 @end multitable
 
+@cindex allow-plaintext-pass, @command{pam_pgsql} configuration variable
+@cindex allow-plaintext-pass, @command{pam_mysql} configuration variable
+@item allow-plaintext-pass @var{bool}
+The returned password ney be plaintext.  Without this option, it is
+supposed to be encrypted using the system @code{crypt} function.
+
+@cindex allow-ldap-pass, @command{pam_pgsql} configuration variable
+@cindex allow-ldap-pass, @command{pam_mysql} configuration variable
+@item allow-plaintext-pass @var{bool}
+The returned password may be a @acronym{LDAP}-style password hash,
+i.e. the hash value encoded as base-64 and prefixed with a hashing
+algorithm name in curly braces.  This variable is @code{true} by
+default. 
 @end table
 
      Variables, specific for @command{pam_mysql}:
@@ -582,7 +590,7 @@ database.  The query can contain the following meta-characters:
 @table @code
 @opindex allow-mysql-pass, @command{pam_mysql} configuration variable
 @item allow-mysql-pass @var{bool}
-The returned password can be encrypted using MySQL @code{password}
+The returned password may be encrypted using MySQL @code{password}
 function.
 
 See also @code{allow-plaintext-pass}, above.
