@@ -172,5 +172,9 @@ struct pam_opt {
 int gray_parseopt(struct pam_opt *opt, int argc, const char **argv);
 int gray_wait_debug_fun(struct pam_opt *opt, const char *value);
 
+
+ssize_t gray_base64_decode(gray_slist_t slist, const char *iptr, size_t isize);
+int gray_check_ldap_pass (const char *db_pass, const char *pass);
+
 
 #endif

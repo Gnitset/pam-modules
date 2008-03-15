@@ -1,3 +1,16 @@
+2008-03-15  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Initial framework for LDAP-style password hashes.
+	
+	* pam_sql/pam_mysql.c, pam_sql/pam_pgsql.c: Call
+	gray_check_ldap_pass if configuration variable allow-ldap-pass is
+	set.
+	* lib/graypam.h (gray_base64_decode, gray_check_ldap_pass): New
+	prototypes.
+	* lib/Makefile.am (libgraypam_la_SOURCES): Add new files.
+	* lib/sha1.h, lib/base64.c, lib/md5.c, lib/ldappass.c, lib/md5.h,
+	lib/sha1.c: New files.
+
 2008-03-14  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	* doc/Makefile.am: Use texi2html to produce html files.

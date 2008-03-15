@@ -15,5 +15,18 @@
 
 lib_LTLIBRARIES = libgraypam.la
 
-libgraypam_la_SOURCES = log.c mem.c slist.c transform.c converse.c parseopt.c
+libgraypam_la_SOURCES = \
+ log.c\
+ mem.c\
+ slist.c\
+ transform.c\
+ converse.c\
+ parseopt.c\
+ base64.c\
+ ldappass.c\
+ md5.c\
+ md5.h\
+ sha1.c\
+ sha1.h
+
 noinst_HEADERS = graypam.h

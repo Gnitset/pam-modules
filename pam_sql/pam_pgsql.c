@@ -200,8 +200,11 @@ verify_user_pass(const char *username, const char *password)
 		
 		if (strcmp(p, crypt(password, p)) == 0)
 			rc = PAM_SUCCESS;
-		else if (rc != PAM_SUCCESS
-			 && check_boolean_config ("allow-plaintext-pass", 0)) {
+		if (rc != PAM_SUCCESS
+		    && check_boolean_config ("allow-ldap-pass", 1))
+			rc = gray_check_ldap_pass (p, password);
+		if (rc != PAM_SUCCESS
+		    && check_boolean_config ("allow-plaintext-pass", 0)) {
 			if (strcmp (p, pass) == 0)
 				rc = PAM_SUCCESS;
 		} else

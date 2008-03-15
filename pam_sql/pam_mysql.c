@@ -323,6 +323,9 @@ check_query_result(MYSQL *mysql, const char *pass)
 		    && check_boolean_config ("allow-md5-pass", 1))
 			rc = check_md5_pass (row[0], pass);
 		if (rc != PAM_SUCCESS
+		    && check_boolean_config ("allow-ldap-pass", 1))
+			rc = gray_check_ldap_pass (row[0], pass);
+		if (rc != PAM_SUCCESS
 		    && check_boolean_config ("allow-plaintext-pass", 0)) {
 			if (strcmp (row[0], pass) == 0)
 				rc = PAM_SUCCESS;
