@@ -294,6 +294,7 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 		return PAM_SERVICE_ERR;
 	}
 	
+	DEBUG(10,("Executing %s", query));
 	if (mysql_query(&mysql, query)) {
 		_pam_log(LOG_ERR, "MySQL: %s", mysql_error(&mysql));
 		mysql_close(&mysql);
@@ -358,6 +359,7 @@ sql_acct(pam_handle_t *pamh, const char *query)
 		return PAM_SERVICE_ERR;
 	}
 	
+	DEBUG(10,("Executing %s", query));
 	if (mysql_query(&mysql, query)) {
 		_pam_log(LOG_ERR, "MySQL: %s", mysql_error(&mysql));
 		mysql_close(&mysql);
@@ -372,7 +374,7 @@ sql_acct(pam_handle_t *pamh, const char *query)
 		} else {
 			size_t n = mysql_num_rows(result);
 			mysql_free_result(result);
-			DEBUG(10, ("query affected %lu tuples", n));
+			_pam_debug("query affected %lu tuples", n);
 		}
 	}
 	mysql_close(&mysql);

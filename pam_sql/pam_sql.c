@@ -73,7 +73,7 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 	struct pam_response *resp;
 	int i, replies;
 
-	DEBUG(100,("enter _pam_get_password"));
+	DEBUG(90,("enter _pam_get_password"));
 	
 	if (cntl_flags & CNTL_AUTHTOK) {
 		/*
@@ -114,7 +114,7 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 	if (resp != NULL) {
 		if (retval == PAM_SUCCESS) { 	/* a good conversation */
 			token = XSTRDUP(resp[i - replies].resp);
-			DEBUG(10,("app returned [%s]", token));
+			DEBUG(100,("app returned [%s]", token));
 			PAM_DROP_REPLY(resp, 1);
 		} else {
 			_pam_log(LOG_ERR, "conversation error: %s",
@@ -149,7 +149,7 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 			 pam_strerror(pamh, retval));
 	} 
 	
-	DEBUG(100,("exit _pam_get_password: %d", retval));
+	DEBUG(90,("exit _pam_get_password: %d", retval));
 	return retval;
 }
 
@@ -384,7 +384,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 	/* Get the username */
 	retval = pam_get_user(pamh, &username, NULL);
 	if (retval != PAM_SUCCESS || !username) {
-		_pam_log(LOG_DEBUG, "can not get the username");
+		DEBUG(1, ("can not get the username"));
 		return PAM_SERVICE_ERR;
 	}
 

@@ -112,7 +112,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
 	
 	_pam_parse(pamh, argc, argv);
 	
-	DEBUG(100,("enter pam_sm_authenticate"));
+	DEBUG(90,("enter pam_sm_authenticate"));
 
 	gray_pam_init(PAM_AUTHINFO_UNAVAIL);
 
@@ -134,7 +134,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
 		gray_set_transform_expr(transform);
 		slist = gray_slist_create();
 		gray_transform_name_to_slist(slist, name, &newname);
-		DEBUG(100,("new name: %s", newname));
+		DEBUG(90,("new name: %s", newname));
 		MAKE_STR(pamh, newname, name);
 		retval = pam_set_item(pamh, PAM_USER, name);
 		if (retval != PAM_SUCCESS) {
@@ -181,7 +181,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
 		}
 	}
 
-	DEBUG(100,("exit pam_sm_authenticate: %d", retval));
+	DEBUG(90,("exit pam_sm_authenticate: %d", retval));
 	return retval;
 }
 
