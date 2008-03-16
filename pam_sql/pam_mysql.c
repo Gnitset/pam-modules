@@ -21,97 +21,6 @@
 #include "sha1.h"
 #include "md5.h"
 
-static char *
-sql_expand_query (MYSQL *mysql,
-		  const char *query, const char *user, const char *pass)
-{
-	char *p, *q, *res;
-	int len;
-	char *esc_user = NULL;
-	char *esc_pass = NULL;
-	
-	if (!query)
-		return NULL;
-	
-	/* Compute resulting query length */
-	for (len = 0, p = (char *) query; *p; ) {
-		if (*p == '%') {
-			if (p[1] == 'u') {
-				int input_len = strlen(user);
-				int size = 2 * input_len +1;
-				esc_user = malloc(size);
-				if (!esc_user)
-					return NULL;
-				mysql_real_escape_string(mysql,
-							 esc_user,
-							 user, input_len);
-				
-				len += strlen (esc_user);
-				p += 2;
-			} if (p[1] == 'p') {
-				int input_len = strlen(pass);
-				int size = 2 * input_len + 1;
-				esc_pass = malloc(size);
-				if (!esc_pass)
-					return NULL;
-				mysql_real_escape_string(mysql,
-							 esc_pass,
-							 pass, input_len);
-				
-				len += strlen (esc_pass);
-				p += 2;
-			} else if (p[1] == '%') {
-				len++;
-				p += 2;
-			} else {
-				len++;
-				p++;
-			}
-		} else {
-			len++;
-			p++;
-		}
-	}
-
-	res = malloc (len + 1);
-	if (!res) {
-		free (esc_user);
-		free (esc_pass);
-		return res;
-	}
-
-	for (p = (char *) query, q = res; *p; ) {
-		if (*p == '%') {
-			switch (*++p) {
-			case 'u':
-				strcpy (q, esc_user);
-				q += strlen (q);
-				p++;
-				break;
-
-			case 'p':
-				strcpy (q, esc_pass);
-				q += strlen (q);
-				p++;
-				break;
-				
-			case '%':
-				*q++ = *p++;
-				break;
-				
-			default:
-				*q++ = *p++;
-			}
-		} else
-			*q++ = *p++;
-	}
-	*q = 0;
-	
-	free (esc_user);
-	free (esc_pass);
-	return res;
-}
-
 
 /* MySQL scrambled password support */
 
@@ -335,7 +244,7 @@ check_query_result(MYSQL *mysql, const char *pass)
 }
 
 static int
-verify_user_pass(const char *username, const char *password)
+verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 {
 	MYSQL mysql;
 	char *socket_path = NULL;
@@ -345,9 +254,9 @@ verify_user_pass(const char *username, const char *password)
 	char *db;
 	char *port;
 	int portno;
-	char *query, *exquery;
 	char *p;
 	int rc;
+	gray_slist_t slist;
 	
 	hostname = find_config("host");
 	CHKVAR(hostname);
@@ -376,8 +285,69 @@ verify_user_pass(const char *username, const char *password)
 	db = find_config("db");
 	CHKVAR(db);
 
-	query = find_config("query");
-	CHKVAR(query);
+	mysql_init(&mysql);
+
+	if (!mysql_real_connect(&mysql, hostname,
+				login, pass, db,
+				portno, socket_path, 0)) {
+		_pam_log(LOG_ERR, "cannot connect to MySQL");
+		return PAM_SERVICE_ERR;
+	}
+	
+	if (mysql_query(&mysql, query)) {
+		_pam_log(LOG_ERR, "MySQL: %s", mysql_error(&mysql));
+		mysql_close(&mysql);
+		return PAM_SERVICE_ERR;
+	}
+	
+	rc = check_query_result(&mysql, password);
+	
+	mysql_close(&mysql);
+
+	return rc;
+}
+
+static int
+sql_acct(pam_handle_t *pamh, const char *query)
+{
+	MYSQL mysql;
+	char *socket_path = NULL;
+	char *hostname;
+	char *login;
+	char *pass;
+	char *db;
+	char *port;
+	int portno;
+	char *p;
+	int rc;
+	gray_slist_t slist;
+	
+	hostname = find_config("host");
+	CHKVAR(hostname);
+	if (hostname[0] == '/') {
+		socket_path = hostname;
+		hostname = "localhost";
+	}
+	
+	port = find_config("port");
+	if (!port)
+		portno = 3306;
+	else {
+		portno = strtoul (port, &p, 0);
+		if (*p) {
+			_pam_log(LOG_ERR, "Invalid port number: %s", port);
+			return PAM_SERVICE_ERR;                       
+		}
+	}
+	
+	login = find_config("login");
+	CHKVAR(login);
+
+	pass = find_config("pass");
+	CHKVAR(pass);
+
+	db = find_config("db");
+	CHKVAR(db);
 
 	mysql_init(&mysql);
 
@@ -387,26 +357,24 @@ verify_user_pass(const char *username, const char *password)
 		_pam_log(LOG_ERR, "cannot connect to MySQL");
 		return PAM_SERVICE_ERR;
 	}
-
-	exquery = sql_expand_query (&mysql, query, username, password);
-	if (!exquery) {
-		mysql_close(&mysql);
-		_pam_log(LOG_ERR, "cannot expand query");
-		return PAM_SERVICE_ERR;
-	}
-		
-	if (mysql_query(&mysql, exquery)) {
+	
+	if (mysql_query(&mysql, query)) {
 		_pam_log(LOG_ERR, "MySQL: %s", mysql_error(&mysql));
 		mysql_close(&mysql);
-		free(exquery);
 		return PAM_SERVICE_ERR;
 	}
-	free(exquery);
-	
-	rc = check_query_result(&mysql, password);
-	
+
+	if (debug_level >= 10) {
+		MYSQL_RES      *result;
+		if (!(result = mysql_store_result(&mysql))) {
+			_pam_log(LOG_ERR, "MySQL: cannot get result: %s",
+				 mysql_error(&mysql));
+		} else {
+			size_t n = mysql_num_rows(result);
+			mysql_free_result(result);
+			DEBUG(10, ("query affected %lu tuples", n));
+		}
+	}
 	mysql_close(&mysql);
-
-	return rc;
+	return PAM_SUCCESS;
 }
-

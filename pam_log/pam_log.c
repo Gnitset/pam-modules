@@ -28,23 +28,6 @@ static int facility = LOG_AUTHPRIV;
 static const char *syslog_tag = MODULE_NAME;
 static int do_open = 1;
 
-struct keyword {
-	char *name;
-	int len;
-	int code;
-};
-#define DCL(n,c) { n, sizeof n - 1, c }
-
-static struct keyword *
-find_keyword(struct keyword *kwtab, const char *str, size_t len)
-{
-	for (; kwtab->name; kwtab++)
-		if (kwtab->len == len
-		    && strncmp(kwtab->name, str, kwtab->len) == 0)
-			return kwtab;
-	return NULL;
-}
-
 static struct keyword syslog_facility[] = {
         DCL("user",       LOG_USER),
 	DCL("daemon",     LOG_DAEMON),
@@ -84,7 +67,7 @@ parse_priority(struct pam_opt *opt, const char *str)
 			break;
 
 	if (len) {
-		kw = find_keyword(syslog_facility, str, len);
+		kw = gray_find_keyword(syslog_facility, str, len);
 		if (!kw) {
 			_pam_log(LOG_ERR,
 				 "unknown syslog facility: %*.*s",
@@ -96,7 +79,7 @@ parse_priority(struct pam_opt *opt, const char *str)
 	
 	if (str[len]) {
 		str += len + 1;
-		kw = find_keyword(syslog_priority, str, strlen(str));
+		kw = gray_find_keyword(syslog_priority, str, strlen(str));
 		if (!kw) {
 			_pam_log(LOG_ERR,
 				 "unknown syslog priority: %s", str);
@@ -147,147 +130,6 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 	gray_log_init(!do_open, syslog_tag, facility);
 }
 
-static struct keyword vartab[] = {
-	DCL("service", PAM_SERVICE),
-	DCL("user", PAM_USER),
-	DCL("tty", PAM_TTY),
-	DCL("rhost", PAM_RHOST),
-	DCL("ruser", PAM_RUSER),
-	DCL("prompt", PAM_USER_PROMPT),
-	DCL("password", PAM_AUTHTOK),
-	{ NULL }
-};
-
-static int
-var_tok(const char *str, const char ** pvar, size_t *plen)
-{
-	size_t len;
-
-	for (len = 0; str[len]; len++) {
-		if (str[len] == '}' || str[len] == ':') {
-			*pvar = str;
-			*plen = len;
-			return 0;
-		}
-	}
-	return 1;
-}
-
-static int
-repl_tok(const char *str, const char ** pret, size_t *plen)
-{
-	size_t len;
-
-	for (len = 0; str[len]; len++) {
-		if (str[len] == '}') {
-			*pret = str;
-			*plen = len;
-			return 0;
-		}
-	}
-	return 1;
-}
-
-static int
-get_variable(pam_handle_t *pamh, const char *str, gray_slist_t slist,
-	     const char **endp)
-{
-	const char *name;
-	size_t namelen;
-	const char *repl = NULL;
-	size_t repllen = 0;
-	const char *val;
-	size_t vallen;
-	struct keyword *kw;
-	const char *end;
-	int rc;
-	
-	str++; /* Get past the initial $ */
-	if (*str == '{') {
-		str++;
-
-		if (var_tok(str, &name, &namelen))
-			return 1;
-
-		end = str + namelen;
-		if (*end == ':') {
-			end++;
-			if (*end == '-')
-				end++;
-			if (repl_tok(end, &repl, &repllen))
-				return 1;
-			end += repllen;
-		}
-		end++;
-	} else {
-		name = str;
-		namelen = strlen(str);
-		end = str + namelen;
-	}
-
-	kw = find_keyword(vartab, name, namelen);
-	if (!kw) {
-		_pam_log(LOG_ERR,
-			 "unknown PAM variable: %*.*s",
-			 namelen, namelen, name);
-		return 1;
-	}
-
-	rc = pam_get_item(pamh, kw->code, (const void**) &val);
-	if (rc) {
-		_pam_log(LOG_ERR,
-			 "cannot obtain variable %s: %s",
-			 kw->name, pam_strerror(pamh, rc));
-		return 1;
-	}
-
-	if (!val) {
-		if (repl) {
-			val = repl;
-			vallen = repllen;
-		} else {
-			val = "";
-			vallen = 0;
-		}
-	} else
-		vallen = strlen(val);
-
-	gray_slist_append(slist, val, vallen);
-	*endp = end;
-	return 0;
-}
-
-static void
-expand_string(pam_handle_t *pamh, gray_slist_t slist)
-{
-	int i;
-
-	for (i = 0; i < xargc; i++) {
-		DEBUG(2,("%s: %d %s", __FUNCTION__, i, xargv[i]));
-		if (i > 0)
-			gray_slist_append_char(slist, ' ');
-		if (strchr(xargv[i], '$') == 0)
-			gray_slist_append(slist, xargv[i], strlen(xargv[i]));
-		else {
-			const char *p;
-			
-			for (p = xargv[i]; *p; p++) {
-				if (*p == '\\') {
-					p++;
-					gray_slist_append_char(slist, *p);
-				} else if (*p == '$') {
-					if (get_variable(pamh, p, slist, &p))
-						gray_slist_append_char(slist,
-								       *p);
-					else
-						p--;
-				} else
-					gray_slist_append_char(slist, *p);
-			}
-		}
-	}
-}
-
 static int
 echo(pam_handle_t *pamh, const char *prefix, int argc, const char **argv)
 {
@@ -300,7 +142,7 @@ echo(pam_handle_t *pamh, const char *prefix, int argc, const char **argv)
 		gray_slist_append(slist, prefix, strlen(prefix));
 		gray_slist_append(slist, ": ", 2);
 	}
-	expand_string(pamh, slist);
+	gray_expand_argv(pamh, xargc, xargv, slist);
 	gray_slist_append_char(slist, 0);
 	str = gray_slist_finish(slist);
 	_pam_log(priority, "%s", str);

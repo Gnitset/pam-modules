@@ -1,8 +1,25 @@
-pam-modules -- history of user-visible changes. 2008-03-15
+pam-modules -- history of user-visible changes. 2008-03-17
 Copyright (C) 2001,2004,2005,2007,2008 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 Please send radius bug reports to <bug-pam-modules@gnu.org.ua>
+
+Version 1.3.90 (SVN)
+
+* pam_mysql and pam_pgsql
+
+** Session management
+
+Session management is implemented for both modules.  Session
+management queries are `session-start-query' and `session-stop-query'.
+
+** Variable expansion in configuration file.
+
+Old style of variable expansion has been dropped.  The `$name'
+notation is used instead.  To convert your old configuration files,
+replace %u with $user, and %p with $password.
+
+
 
 Version 1.3, 2008-03-15
 

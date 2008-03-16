@@ -27,6 +27,8 @@ libgraypam_la_SOURCES = \
  md5.c\
  md5.h\
  sha1.c\
- sha1.h
+ sha1.h\
+ vartab.c\
+ escape.c
 
 noinst_HEADERS = graypam.h

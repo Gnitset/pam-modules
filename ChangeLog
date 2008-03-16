@@ -1,3 +1,32 @@
+2008-03-16  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Add session management to pam_sql.
+
+	* NEWS, configure.ac: Updated. Set version to 1.3.90.
+	
+	* lib/escape.c lib/vartab.c: New files.
+	* lib/graypam.h (gray_expand_argv)
+	(gray_expand_string, gray_escape_string): New functions.
+	(struct keyword): New declaration.
+	(gray_find_keyword): New function.
+	* lib/Makefile.am (libgraypam_la_SOURCES): Add vartab.c and
+	escape.c.
+
+	* pam_log/pam_log.c: Use gray_find_keyword and gray_expand_argv.
+	
+	* pam_sql/pam_mysql.c, pam_sql/pam_pgsql.c (verify_user_pass):
+	Change signature.
+	(sql_acct): New function.
+	* pam_sql/pam_sql.c (verify_user_pass): Change signature.
+	(_pam_parse): Initialize globals.
+	(free_config): Reset config_env to NULL.
+	(read_config): Set config_env to NULL.
+	(get_query,get_query2): New functions.
+	(pam_sm_authenticate): Call gray_pam_init, update call to
+	verify_user_pass.
+	(sql_session_mgmt,pam_sm_open_session,pam_sm_close_session): New
+	functions. 
+
 2008-03-15  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	* pam_regex/pam_regex.c (pam_opt): Fix a typo: rename "user_name"

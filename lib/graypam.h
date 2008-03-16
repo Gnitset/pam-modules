@@ -176,5 +176,22 @@ int gray_wait_debug_fun(struct pam_opt *opt, const char *value);
 ssize_t gray_base64_decode(gray_slist_t slist, const char *iptr, size_t isize);
 int gray_check_ldap_pass (const char *db_pass, const char *pass);
 
+
+void gray_expand_argv(pam_handle_t *pamh, int argc, const char **argv,
+		      gray_slist_t slist);
+void gray_expand_string(pam_handle_t *pamh, const char *str,
+			gray_slist_t slist);
+void gray_escape_string(gray_slist_t slist, const char *str, size_t len);
+
+struct keyword {
+	char *name;
+	int len;
+	int code;
+};
+#define DCL(n,c) { n, sizeof n - 1, c }
+
+struct keyword *gray_find_keyword(struct keyword *kwtab, const char *str,
+				  size_t len);
+
 
 #endif

@@ -19,108 +19,8 @@
 
 #include "pam_sql.c"
 
-static char *
-sql_escape_string (const char *ustr)
-{
-	char *str, *q;
-	const unsigned char *p;
-	size_t len = strlen (ustr);
-#define ESCAPABLE_CHAR "\\'\""
-  
-	for (p = (const unsigned char *) ustr; *p; p++) {
-		if (strchr (ESCAPABLE_CHAR, *p))
-			len++;
-	}
-
-	str = malloc (len + 1);
-	if (!str)
-		return NULL;
-
-	for (p = (const unsigned char *) ustr, q = str; *p; p++) {
-		if (strchr (ESCAPABLE_CHAR, *p))
-			*q++ = '\\';
-		*q++ = *p;
-	}
-	*q = 0;
-	return str;
-}
-
-static char *
-sql_expand_query (const char *query, const char *user, const char *pass)
-{
-	char *p, *q, *res;
-	int len;
-	char *esc_user = NULL;
-	char *esc_pass = NULL;
-	
-	if (!query)
-		return NULL;
-	
-	/* Compute resulting query length */
-	for (len = 0, p = (char *) query; *p; ) {
-		if (*p == '%') {
-			if (p[1] == 'u') {
-				esc_user = sql_escape_string(user);
-				len += strlen (esc_user);
-				p += 2;
-			} if (p[1] == 'p') {
-				esc_pass = sql_escape_string(pass);
-				len += strlen (esc_pass);
-				p += 2;
-			} else if (p[1] == '%') {
-				len++;
-				p += 2;
-			} else {
-				len++;
-				p++;
-			}
-		} else {
-			len++;
-			p++;
-		}
-	}
-
-	res = malloc (len + 1);
-	if (!res) {
-		free (esc_user);
-		free (esc_pass);
-		return res;
-	}
-
-	for (p = (char *) query, q = res; *p; ) {
-		if (*p == '%') {
-			switch (*++p) {
-			case 'u':
-				strcpy (q, esc_user);
-				q += strlen (q);
-				p++;
-				break;
-
-			case 'p':
-				strcpy (q, esc_pass);
-				q += strlen (q);
-				p++;
-				break;
-				
-			case '%':
-				*q++ = *p++;
-				break;
-				
-			default:
-				*q++ = *p++;
-			}
-		} else
-			*q++ = *p++;
-	}
-	*q = 0;
-	
-	free (esc_user);
-	free (esc_pass);
-	return res;
-}
-
 static int
-verify_user_pass(const char *username, const char *password)
+verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 {
 	PGconn  *pgconn;
 	PGresult *res;
@@ -129,8 +29,8 @@ verify_user_pass(const char *username, const char *password)
 	char *pass;
 	char *db;
 	char *port;
-	char *query, *exquery;
 	int rc;
+	gray_slist_t slist;
 	
 	hostname = find_config("host");
 	
@@ -144,15 +44,6 @@ verify_user_pass(const char *username, const char *password)
 	db = find_config("db");
 	CHKVAR(db);
 
-	query = find_config("query");
-	CHKVAR(query);
-	
-	exquery = sql_expand_query (query, username, password);
-	if (!exquery) {
-		_pam_log(LOG_ERR, "cannot expand query");
-		return PAM_SERVICE_ERR;
-	}
-
 	pgconn = PQsetdbLogin (hostname, port, NULL, NULL,
 			       db, login, pass);
 	if (PQstatus (pgconn) == CONNECTION_BAD) {
@@ -161,9 +52,9 @@ verify_user_pass(const char *username, const char *password)
 		PQfinish(pgconn);
 		return PAM_SERVICE_ERR;
 	}
-
-	DEBUG(10,("Executing %s", exquery));
-	res = PQexec (pgconn, exquery);
+	
+	DEBUG(10,("Executing %s", query));
+	res = PQexec (pgconn, query);
 	if (res == NULL) {
 		_pam_log(LOG_ERR, "PQexec: %s", PQerrorMessage(pgconn));
 		rc = PAM_SERVICE_ERR;
@@ -182,7 +73,7 @@ verify_user_pass(const char *username, const char *password)
 			if (n == 0) {
 				PQclear(res);
 				PQfinish(pgconn);
-				return PAM_SERVICE_ERR;
+				return PAM_USER_UNKNOWN;
 			}
 		}
 
@@ -196,7 +87,8 @@ verify_user_pass(const char *username, const char *password)
 		p = PQgetvalue(res, 0, 0);
 		chop(p);
 		DEBUG(100,("Obtained password value: %s", p));
-		
+
+		rc = PAM_AUTH_ERR;
 		if (strcmp(p, crypt(password, p)) == 0)
 			rc = PAM_SUCCESS;
 		if (rc != PAM_SUCCESS
@@ -214,3 +106,62 @@ verify_user_pass(const char *username, const char *password)
 	return rc;
 }
 
+static int
+sql_acct(pam_handle_t *pamh, const char *query)
+{
+	PGconn  *pgconn;
+	PGresult *res;
+	char *hostname;
+	char *login;
+	char *pass;
+	char *db;
+	char *port;
+	int rc;
+	gray_slist_t slist;
+	
+	hostname = find_config("host");
+	
+	port = find_config("port");
+
+	login = find_config("login");
+	CHKVAR(login);
+
+	pass = find_config("pass");
+
+	db = find_config("db");
+	CHKVAR(db);
+
+	pgconn = PQsetdbLogin (hostname, port, NULL, NULL,
+			       db, login, pass);
+	if (PQstatus (pgconn) == CONNECTION_BAD) {
+		_pam_log(LOG_ERR, "cannot connect to database: %s",
+			 PQerrorMessage(pgconn));
+		PQfinish(pgconn);
+		return PAM_SERVICE_ERR;
+	}
+	
+	DEBUG(10,("Executing %s", query));
+	res = PQexec (pgconn, query);
+	if (res == NULL) {
+                _pam_log(LOG_ERR, "PQexec: %s", PQerrorMessage(pgconn));
+		rc = PAM_SERVICE_ERR;
+        } else {
+		ExecStatusType stat;
+		stat = PQresultStatus(res);
+		
+		DEBUG(10, ("status: %s", PQresStatus(stat)));
+		if (stat != PGRES_TUPLES_OK && stat != PGRES_COMMAND_OK) {
+			PQclear(res);
+			_pam_log(LOG_ERR, "PQexec returned %s",
+			         PQresStatus(stat));
+			rc = PAM_SERVICE_ERR;
+		}
+		DEBUG(10, ("query affected %d tuples", PQntuples(res)));
+		rc = PAM_SUCCESS;
+        }
+
+	PQclear(res);
+	PQfinish(pgconn);
+	
+	return rc;
+}

@@ -16,7 +16,7 @@
 
 AC_PREREQ(2.53)
 
-AC_INIT(pam-modules, 1.3, gray@gnu.org.ua)
+AC_INIT(pam-modules, 1.3.90, gray@gnu.org.ua)
 AC_CONFIG_SRCDIR(pam_fshadow/pam_fshadow.c)
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE(no-exeext)

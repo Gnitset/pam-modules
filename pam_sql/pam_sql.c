@@ -23,6 +23,7 @@ extern char *crypt(const char *, const char *);
 
 /* indicate the following groups are defined */
 #define PAM_SM_AUTH
+#define PAM_SM_SESSION
 
 #define CHKVAR(v) \
  	if (!(v)) {                                                        \
@@ -31,8 +32,10 @@ extern char *crypt(const char *, const char *);
 	}                                                                  \
        	DEBUG(100,("Config: %s=%s", #v, v));
 
-static int verify_user_pass(const char *username, const char *password);
-
+static int verify_user_pass(pam_handle_t *pamh, const char *passwd,
+			    const char *query);
+static int sql_acct(pam_handle_t *pamh, const char *query);
+		    
 #define CNTL_AUTHTOK      0x0010
 
 static int cntl_flags;
@@ -53,6 +56,9 @@ struct pam_opt pam_opt[] = {
 static void
 _pam_parse(int argc, const char **argv)
 {
+	cntl_flags = 0;
+	debug_level = 0;
+	config_file = SYSCONFDIR "/pam_sql.conf";
 	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
 	gray_parseopt(pam_opt, argc, argv);
 }
@@ -192,6 +198,7 @@ free_config()
 		free(env);
 		env = next;
 	}
+	config_env = NULL;
 }
 
 static int
@@ -228,6 +235,7 @@ read_config ()
 		return 1;
 	}
 
+	config_env = NULL;
 	while (p = fgets (buf, sizeof buf, fp)) {
 		int len;
 		env_t *env;
@@ -320,8 +328,43 @@ read_config ()
 	fclose(fp);
 	return rc;
 }
-		
 
+
+static const char *
+get_query(pam_handle_t *pamh, const char *name, gray_slist_t *pslist)
+{
+	gray_slist_t slist;
+	const char *query = find_config(name);
+
+ 	if (!query) 
+		gray_raise("%s: %s not defined", config_file, name);
+	
+	slist = gray_slist_create();
+	gray_expand_string(pamh, query, slist);
+	gray_slist_append_char(slist, 0);
+	*pslist = slist;
+	return gray_slist_finish(slist);
+}
+
+static const char *
+get_query2(pam_handle_t *pamh, const char *name1, const char *name2,
+	   gray_slist_t *pslist)
+{
+	gray_slist_t slist;
+	const char *query = find_config(name1);
+
+	if (!query)
+		query = find_config(name2);
+	
+ 	if (!query) 
+		gray_raise("%s: %s not defined", config_file, name1);
+	
+	slist = gray_slist_create();
+	gray_expand_string(pamh, query, slist);
+	gray_slist_append_char(slist, 0);
+	*pslist = slist;
+	return gray_slist_finish(slist);
+}
 
 
 /* --- authentication management functions (only) --- */
@@ -333,9 +376,11 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 	char *password;
 	int retval = PAM_AUTH_ERR;
 
+	gray_pam_init(PAM_SERVICE_ERR);
+
 	/* parse arguments */
 	_pam_parse(argc, argv);
-
+	
 	/* Get the username */
 	retval = pam_get_user(pamh, &username, NULL);
 	if (retval != PAM_SUCCESS || !username) {
@@ -354,8 +399,14 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 
 	if (read_config()) 
 		retval = PAM_SERVICE_ERR;
-	else
-		retval = verify_user_pass(username, password);
+	else {
+		gray_slist_t slist;
+		retval = verify_user_pass(pamh, password,
+					  get_query2(pamh, "passwd-query",
+						     "query",  &slist));
+		gray_slist_free(&slist);
+	}
+	
 	free_config();
 	
 	switch (retval) {
@@ -373,20 +424,54 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 	return retval;
 }
 
-PAM_EXTERN
-int pam_sm_setcred(pam_handle_t *pamh, int flags,
-		   int argc, const char **argv)
+PAM_EXTERN int
+pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
-    return PAM_SUCCESS;
+	return PAM_SUCCESS;
 }
 
-PAM_EXTERN
-int pam_sm_acct_mgmt(pam_handle_t *pamh, int flags,
-		   int argc, const char **argv)
+static int
+sql_session_mgmt(pam_handle_t *pamh, int flags,
+		 int argc, const char **argv, const char *query_name)
 {
-    return PAM_SUCCESS;
+	int retval;
+	gray_slist_t slist;
+
+	gray_pam_init(PAM_SERVICE_ERR);
+
+	/* parse arguments */
+	_pam_parse(argc, argv);
+
+	if (read_config()) 
+		retval = PAM_SERVICE_ERR;
+	else {
+		gray_slist_t slist;
+		retval = sql_acct(pamh,
+				  get_query(pamh, query_name,
+					    &slist));
+		gray_slist_free(&slist);
+	}
+	
+	free_config();
+	
+	return retval;
 }
 
+PAM_EXTERN int
+pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, const char **argv)
+{
+	return sql_session_mgmt(pamh, flags, argc, argv,
+				"session-start-query");
+}
+
+PAM_EXTERN int
+pam_sm_close_session(pam_handle_t *pamh, int flags,
+		     int argc, const char **argv)
+{
+	return sql_session_mgmt(pamh, flags, argc, argv,
+				"session-stop-query");
+}
+	
 #ifdef PAM_STATIC
 
 /* static module data */
@@ -394,10 +479,10 @@ int pam_sm_acct_mgmt(pam_handle_t *pamh, int flags,
 struct pam_module _pam_fshadow_modstruct = {
 	MODULE_NAME,
 	pam_sm_authenticate,
+	pam_sm_setcred,
 	NULL,
-	NULL,
-	NULL,
-	NULL,
+	pam_sm_open_session,
+	pam_sm_close_session,
 	NULL,
 };
 
