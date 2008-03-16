@@ -1,5 +1,7 @@
 2008-03-17  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	* doc/pam-modules.texi: Update.
+
 	* pam_fshadow/pam_fshadow.c, pam_sql/pam_mysql.c,
 	pam_sql/pam_sql.c, pam_regex/pam_regex.c: Ensure passwords might
 	get divulged only at debugging level 100.

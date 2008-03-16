@@ -127,6 +127,34 @@ process with a debugger, set the @code{interval} variable to 0 and to
 continue execution of the module in the debugging mode. 
 @end table
 
+@cindex variable expansion
+@cindex expansion, variable
+@anchor{variable expansion}
+     Some modules perform @dfn{variable expansion} on their
+arguments.  During variable expansion, any occurrence of
+@code{$@var{variable}} in a string is replaced by the value of
+@var{variable}.  If the @var{variable} is not defined, emtpy string is
+substituted instead.  A limited support for the shell-style default
+values is available: namely, the notation
+@code{$@{@var{variable}:-@var{value}@}} expands to the value of
+@var{variable} if it is set, and to @var{value} otherwise. 
+
+     The followig table list supported variables:
+
+@multitable @columnfractions .30 .50
+@headitem Variable name @tab @acronym{PAM} variable
+@item service @tab PAM_SERVICE 
+@item user    @tab PAM_USER 
+@item tty     @tab PAM_TTY 
+@item rhost   @tab PAM_RHOST 
+@item ruser   @tab PAM_RUSER 
+@item prompt  @tab PAM_USER_PROMPT
+@item password @tab PAM_AUTHTOK
+@end multitable
+
+     Variable expansion is used by @command{pam_log},
+@command{pam_mysql} and @command{pam_pgsql}.
+
 @node fshadow, regex, Intro, Top
 @chapter Authentication against an alternative shadow file.
 
@@ -410,33 +438,16 @@ similarly to the shell @command{echo} command, outputting its
 arguments to the @command{syslog}.  The module can be used in any PAM
 service stack.
 
-     Before logging, each command line argument is subject to @dfn{variable
-substitiution}.  During this phase, any occurrence of
-@code{$@var{variable}} is substituted by the value of @var{variable}.
-If the @var{variable} is not defined, emtpy string is substituted
-instead.  A limited support for the shell-style default values is
-available: namely, the notation
-@code{$@{@var{variable}:-@var{value}@}} expands to the value of
-@var{variable} if it is set, and to @var{value} otherwise. 
-
-     The supported variables are:
-
-@multitable @columnfractions .30 .50
-@headitem Variable name @tab @acronym{PAM} variable
-@item service @tab PAM_SERVICE 
-@item user    @tab PAM_USER 
-@item tty     @tab PAM_TTY 
-@item rhost   @tab PAM_RHOST 
-@item ruser   @tab PAM_RUSER 
-@item prompt  @tab PAM_USER_PROMPT
-@item password @tab PAM_AUTHTOK
-@end multitable
-
      In order to be discerned from arguments, all @command{pam_log}'s
 options begin with a dash (@samp{-}).  They must precede any
 non-option arguments.  If the first non-option argument happens to
 begin with a dash, you can inhibit its special handling by placing
 @samp{--} before it.
+
+     After collecting all options, the module scans the rest of its
+command line arguments, performs variable expansion (@pxref{variable
+expansion}) on each of them and outputs the resulting string to the
+syslog. 
 
      The following table lists all the supported options:
 
@@ -494,14 +505,14 @@ cvs session    required   pam_permit.so
 @prindex pam_mysql
 @cindex MySQL, using for authentication
 @cindex PostreSQL, using for authentication
-     The package provides two modules for @acronym{SQL} authentication:
-@command{pam_mysql}, for MySQL and @command{pam_pgsql} for
-PostgreSQL.  Both modules share the same set of options and provide
-similar functionality.  To authenticate a user, each module connects
-to the database and issues a query which should return the user
-password.  Then the obtained password is compared with the
-authentication token, using a preconfigured algorithm.  If it matches,
-the user is authenticated successfully. 
+     The package provides two modules for @acronym{SQL} authentication
+and session management: @command{pam_mysql}, for MySQL and
+@command{pam_pgsql} for PostgreSQL.  Both modules share the same set
+of options and provide similar functionality.  To authenticate a user,
+each module connects to the database and issues a query which should
+return the user password.  Then the obtained password is compared with the
+authentication token, using a set of preconfigured algorithms.  If it
+matches, the user is authenticated successfully.
 
      The options, common for both modules are:
 
@@ -565,22 +576,24 @@ Sets the SQL user name.
 @item pass @var{password}
 Sets the SQL user password
 
-@opindex query, @command{pam_mysql} configuration variable
-@opindex query, @command{pam_pgsql} configuration variable
-@item query @var{query}
+@opindex passwd-query, @command{pam_mysql} configuration variable
+@opindex passwd-query, @command{pam_pgsql} configuration variable
+@item passwd-query @var{query}
 Defines the query used to obtain the user's password from the
-database.  The query can contain the following meta-characters:
+database.  The @var{query} is subject to variable expansion
+(@pxref{variable expansion}).
 
-@cindex meta-characters in @acronym{SQL} queries
-@cindex u, %u, a meta-character
-@cindex p, %p, a meta-character
-@cindex %, %%, a meta-character
-@multitable @columnfractions .15 .40
-@headitem Meta-char @tab Replaced by
-@item %u @tab User name
-@item %p @tab User password (authentication token)
-@item %% @tab Literal @samp{%} character
-@end multitable
+@opindex session-start-query, @command{pam_mysql} configuration variable
+@opindex session-start-query, @command{pam_pgsql} configuration variable
+@item session-start-query @var{query}
+Defines the query to be executed on session start.  The @var{query} is
+subject to variable expansion (@pxref{variable expansion}).
+
+@opindex session-stop-query, @command{pam_mysql} configuration variable
+@opindex session-stop-query, @command{pam_pgsql} configuration variable
+@item session-stop-query @var{query}
+Defines the query to be executed on session stop.  The @var{query} is
+subject to variable expansion (@pxref{variable expansion}).
 
 @cindex allow-plaintext-pass, @command{pam_pgsql} configuration variable
 @cindex allow-plaintext-pass, @command{pam_mysql} configuration variable
