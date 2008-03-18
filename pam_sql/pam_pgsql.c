@@ -20,16 +20,14 @@
 #include "pam_sql.c"
 
 static int
-verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
+pgsql_do_query(PGconn **ppgconn, PGresult **pres, const char *query)
 {
 	PGconn  *pgconn;
-	PGresult *res;
 	char *hostname;
 	char *login;
-	char *pass;
 	char *db;
 	char *port;
-	int rc;
+	char *pass;
 	gray_slist_t slist;
 	
 	hostname = find_config("host");
@@ -54,7 +52,52 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 	}
 	
 	DEBUG(10,("Executing %s", query));
-	res = PQexec (pgconn, query);
+	*pres = PQexec (pgconn, query);
+	*ppgconn = pgconn;
+	return PAM_SUCCESS;
+}
+
+static int
+pgsql_setenv(pam_handle_t *pamh, PGconn *pgconn, const char *query)
+{
+	int rc;
+	PGresult *res;
+	
+	DEBUG(10,("Executing %s", query));
+	res = PQexec(pgconn, query);
+	if (res == NULL) {
+		_pam_log(LOG_ERR, "PQexec: %s", PQerrorMessage(pgconn));
+		rc = PAM_SERVICE_ERR;
+	} else if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		_pam_log(LOG_ERR, "PQexec: query did not return tuples");
+		rc = PAM_SERVICE_ERR;
+	} else {
+		char *p;
+		int i, nf;
+
+		nf = PQnfields(res);
+		for (i = 0; i < nf; i++) {
+			p = PQgetvalue(res, 0, i);
+			chop(p);
+			pam_misc_setenv(pamh, PQfname(res, i), p, 0);
+		}
+		rc = PAM_SUCCESS;
+	}
+	PQclear(res);
+	return rc;
+}
+
+
+static int
+verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
+{
+	int rc;
+	PGconn *pgconn;
+	PGresult *res;
+
+	rc = pgsql_do_query(&pgconn, &res, query);
+	if (rc != PAM_SUCCESS)
+		return rc;
 	if (res == NULL) {
 		_pam_log(LOG_ERR, "PQexec: %s", PQerrorMessage(pgconn));
 		rc = PAM_SERVICE_ERR;
@@ -64,6 +107,7 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 	} else {
 		char *p;
 		int n;
+		gray_slist_t slist;
 
 		n = PQntuples(res);
 		DEBUG(20,("Returned %d tuples", n));
@@ -96,8 +140,14 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 			rc = gray_check_ldap_pass (p, password);
 		if (rc != PAM_SUCCESS
 		    && check_boolean_config ("allow-plaintext-pass", 0)
-		    && strcmp (p, pass) == 0)
+		    && strcmp (p, password) == 0)
 			rc = PAM_SUCCESS;
+
+		if (rc == PAM_SUCCESS
+		    && (query = get_query(pamh, "setenv-query", &slist, 0))) {
+			pgsql_setenv(pamh, pgconn, query);
+			gray_slist_free(&slist);
+		}
 	}
 
 	PQclear(res);
@@ -109,39 +159,13 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 static int
 sql_acct(pam_handle_t *pamh, const char *query)
 {
-	PGconn  *pgconn;
-	PGresult *res;
-	char *hostname;
-	char *login;
-	char *pass;
-	char *db;
-	char *port;
 	int rc;
-	gray_slist_t slist;
-	
-	hostname = find_config("host");
-	
-	port = find_config("port");
+	PGconn *pgconn;
+	PGresult *res;
 
-	login = find_config("login");
-	CHKVAR(login);
-
-	pass = find_config("pass");
-
-	db = find_config("db");
-	CHKVAR(db);
-
-	pgconn = PQsetdbLogin (hostname, port, NULL, NULL,
-			       db, login, pass);
-	if (PQstatus (pgconn) == CONNECTION_BAD) {
-		_pam_log(LOG_ERR, "cannot connect to database: %s",
-			 PQerrorMessage(pgconn));
-		PQfinish(pgconn);
-		return PAM_SERVICE_ERR;
-	}
-	
-	DEBUG(10,("Executing %s", query));
-	res = PQexec (pgconn, query);
+	rc = pgsql_do_query(&pgconn, &res, query);
+	if (rc != PAM_SUCCESS)
+		return rc;
 	if (res == NULL) {
                 _pam_log(LOG_ERR, "PQexec: %s", PQerrorMessage(pgconn));
 		rc = PAM_SERVICE_ERR;

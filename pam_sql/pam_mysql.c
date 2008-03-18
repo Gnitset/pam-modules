@@ -244,9 +244,8 @@ check_query_result(MYSQL *mysql, const char *pass)
 }
 
 static int
-verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
+mysql_do_query(MYSQL *mysql, const char *query)
 {
-	MYSQL mysql;
 	char *socket_path = NULL;
 	char *hostname;
 	char *login;
@@ -256,7 +255,6 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 	int portno;
 	char *p;
 	int rc;
-	gray_slist_t slist;
 	
 	hostname = find_config("host");
 	CHKVAR(hostname);
@@ -285,9 +283,9 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 	db = find_config("db");
 	CHKVAR(db);
 
-	mysql_init(&mysql);
+	mysql_init(mysql);
 
-	if (!mysql_real_connect(&mysql, hostname,
+	if (!mysql_real_connect(mysql, hostname,
 				login, pass, db,
 				portno, socket_path, 0)) {
 		_pam_log(LOG_ERR, "cannot connect to MySQL");
@@ -295,16 +293,61 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 	}
 	
 	DEBUG(10,("Executing %s", query));
-	if (mysql_query(&mysql, query)) {
-		_pam_log(LOG_ERR, "MySQL: %s", mysql_error(&mysql));
-		mysql_close(&mysql);
+	if (mysql_query(mysql, query)) {
+		_pam_log(LOG_ERR, "MySQL: %s", mysql_error(mysql));
+		mysql_close(mysql);
 		return PAM_SERVICE_ERR;
 	}
-	
-	rc = check_query_result(&mysql, password);
-	
-	mysql_close(&mysql);
+	return PAM_SUCCESS;
+}
 
+static int
+mysql_setenv(pam_handle_t *pamh, MYSQL *mysql, const char *query)
+{
+	MYSQL_RES *result;
+	MYSQL_ROW row;
+	MYSQL_FIELD *fields;
+	size_t nf, i;
+
+	DEBUG(10,("Executing %s", query));
+	if (mysql_query(mysql, query)) {
+		_pam_log(LOG_ERR, "MySQL: %s", mysql_error(mysql));
+		return PAM_SERVICE_ERR;
+	}
+	if (!(result = mysql_store_result(mysql))) {
+		_pam_log(LOG_ERR, "MySQL: cannot get result: %s",
+			 mysql_error(mysql));
+		return PAM_SERVICE_ERR;
+	}
+	row = mysql_fetch_row(result);
+	fields = mysql_fetch_fields(result);
+	nf = mysql_num_fields(result);
+	for (i = 0; i < nf; i++) 
+		pam_misc_setenv(pamh, fields[i].name, row[i], 0);
+	mysql_free_result(result);
+	return PAM_SUCCESS;
+}
+
+static int
+verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
+{
+	MYSQL mysql;
+	int rc;
+
+	rc = mysql_do_query(&mysql, query);
+	if (rc == PAM_SUCCESS) {
+		const char *q;
+		gray_slist_t slist;
+		
+		rc = check_query_result(&mysql, password);
+		if (rc == PAM_SUCCESS
+		    && (q = get_query(pamh, "setenv-query", &slist, 0))) {
+			mysql_setenv(pamh, &mysql, q);
+			gray_slist_free(&slist);
+		}
+		mysql_close(&mysql);
+	}
+	
 	return rc;
 }
 
@@ -312,71 +355,23 @@ static int
 sql_acct(pam_handle_t *pamh, const char *query)
 {
 	MYSQL mysql;
-	char *socket_path = NULL;
-	char *hostname;
-	char *login;
-	char *pass;
-	char *db;
-	char *port;
-	int portno;
-	char *p;
 	int rc;
-	gray_slist_t slist;
-	
-	hostname = find_config("host");
-	CHKVAR(hostname);
-	if (hostname[0] == '/') {
-		socket_path = hostname;
-		hostname = "localhost";
-	}
-	
-	port = find_config("port");
-	if (!port)
-		portno = 3306;
-	else {
-		portno = strtoul (port, &p, 0);
-		if (*p) {
-			_pam_log(LOG_ERR, "Invalid port number: %s", port);
-			return PAM_SERVICE_ERR;                       
+
+	rc = mysql_do_query(&mysql, query);
+	if (rc == PAM_SUCCESS) {
+		if (debug_level >= 10) {
+			MYSQL_RES      *result;
+			if (!(result = mysql_store_result(&mysql))) {
+				_pam_log(LOG_ERR, "MySQL: cannot get result: %s",
+					 mysql_error(&mysql));
+			} else {
+				size_t n = mysql_num_rows(result);
+				mysql_free_result(result);
+				_pam_debug("query affected %lu tuples", n);
+			}
 		}
-	}
-	
-	login = find_config("login");
-	CHKVAR(login);
-
-	pass = find_config("pass");
-	CHKVAR(pass);
-
-	db = find_config("db");
-	CHKVAR(db);
-
-	mysql_init(&mysql);
-
-	if (!mysql_real_connect(&mysql, hostname,
-				login, pass, db,
-				portno, socket_path, 0)) {
-		_pam_log(LOG_ERR, "cannot connect to MySQL");
-		return PAM_SERVICE_ERR;
-	}
-	
-	DEBUG(10,("Executing %s", query));
-	if (mysql_query(&mysql, query)) {
-		_pam_log(LOG_ERR, "MySQL: %s", mysql_error(&mysql));
 		mysql_close(&mysql);
-		return PAM_SERVICE_ERR;
 	}
-
-	if (debug_level >= 10) {
-		MYSQL_RES      *result;
-		if (!(result = mysql_store_result(&mysql))) {
-			_pam_log(LOG_ERR, "MySQL: cannot get result: %s",
-				 mysql_error(&mysql));
-		} else {
-			size_t n = mysql_num_rows(result);
-			mysql_free_result(result);
-			_pam_debug("query affected %lu tuples", n);
-		}
-	}
-	mysql_close(&mysql);
-	return PAM_SUCCESS;
+	return rc;
 }
+

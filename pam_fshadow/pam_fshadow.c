@@ -176,6 +176,7 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 	if (resp != NULL) {
 		if (retval == PAM_SUCCESS) { 	/* a good conversation */
  			token = XSTRDUP(resp[i - replies].resp);
+			pam_set_item(pamh, PAM_AUTHTOK, token);
 			DEBUG(100,("app returned [%s]", token));
 			PAM_DROP_REPLY(resp, 1);
 		} else {

@@ -115,6 +115,7 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 		if (retval == PAM_SUCCESS) { 	/* a good conversation */
 			token = XSTRDUP(resp[i - replies].resp);
 			DEBUG(100,("app returned [%s]", token));
+			pam_set_item(pamh, PAM_AUTHTOK, token);
 			PAM_DROP_REPLY(resp, 1);
 		} else {
 			_pam_log(LOG_ERR, "conversation error: %s",
@@ -331,13 +332,17 @@ read_config ()
 
 
 static const char *
-get_query(pam_handle_t *pamh, const char *name, gray_slist_t *pslist)
+get_query(pam_handle_t *pamh, const char *name, gray_slist_t *pslist,
+	  int required)
 {
 	gray_slist_t slist;
 	const char *query = find_config(name);
 
- 	if (!query) 
-		gray_raise("%s: %s not defined", config_file, name);
+ 	if (!query) {
+		if (required)
+			gray_raise("%s: %s not defined", config_file, name);
+		return NULL;
+	}
 	
 	slist = gray_slist_create();
 	gray_expand_string(pamh, query, slist);
@@ -348,7 +353,7 @@ get_query(pam_handle_t *pamh, const char *name, gray_slist_t *pslist)
 
 static const char *
 get_query2(pam_handle_t *pamh, const char *name1, const char *name2,
-	   gray_slist_t *pslist)
+	   gray_slist_t *pslist, int required)
 {
 	gray_slist_t slist;
 	const char *query = find_config(name1);
@@ -356,8 +361,11 @@ get_query2(pam_handle_t *pamh, const char *name1, const char *name2,
 	if (!query)
 		query = find_config(name2);
 	
- 	if (!query) 
-		gray_raise("%s: %s not defined", config_file, name1);
+ 	if (!query) {
+		if (required)
+			gray_raise("%s: %s not defined", config_file, name1);
+		return NULL;
+	}
 	
 	slist = gray_slist_create();
 	gray_expand_string(pamh, query, slist);
@@ -403,7 +411,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 		gray_slist_t slist;
 		retval = verify_user_pass(pamh, password,
 					  get_query2(pamh, "passwd-query",
-						     "query",  &slist));
+						     "query",  &slist, 1));
 		gray_slist_free(&slist);
 	}
 	
@@ -448,7 +456,7 @@ sql_session_mgmt(pam_handle_t *pamh, int flags,
 		gray_slist_t slist;
 		retval = sql_acct(pamh,
 				  get_query(pamh, query_name,
-					    &slist));
+					    &slist, 0));
 		gray_slist_free(&slist);
 	}
 	

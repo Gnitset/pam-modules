@@ -1,3 +1,10 @@
+2008-03-19  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* pam_sql/pam_mysql.c, pam_sql/pam_pgsql.c: Implement `setenv'
+	method.
+	* pam_sql/pam_sql.c, pam_fshadow/pam_fshadow (_pam_get_password):
+	Set PAM_AUTHTOK.
+
 2008-03-17  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	* doc/pam-modules.texi: Update.
