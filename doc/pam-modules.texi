@@ -20,7 +20,17 @@
 @ifinfo
 @dircategory System Utilities
 @direntry
-* PAM-modules: (pam-modules).       A collection of PAM modules.
+* PAM-modules: (pam-modules).          A collection of PAM modules.
+* pam_fshadow: (pam-modules)fshadow.   Authentication using an
+                                       alternative shadow file.
+* pam_regex:   (pam-modules)regex.     Access control using regular
+                                       expressions.
+* pam_mysql:   (pam-modules)sql.       MySQL authentication and
+                                       session management.
+* pam_pgsql:   (pam-modules)sql.       PostgreSQL authentication and
+                                       session management.
+* pam_log:     (pam-modules)log.       Format and log arbitrary
+                                       messages to syslog.
 @end direntry
 @end ifinfo
 
@@ -172,30 +182,40 @@ or numeric).
 
    The followig table lists @acronym{PAM} item names:
 
-@multitable @columnfractions .15 .25 .60
-@headitem Item name @tab @acronym{PAM} item @tab Meaning
-@item service @tab PAM_SERVICE @tab The service name (which identifies
+@table @samp
+@item service
+@code{PAM_SERVICE}. The service name (which identifies
 the @acronym{PAM} stack that will be used).
-@item user    @tab PAM_USER @tab The username of the entity under
-whose identity service will be given. 
-@item tty     @tab PAM_TTY @tab The terminal name: prefixed by
+
+@item user
+@code{PAM_USER}. The username of the entity under whose identity
+service will be given. 
+
+@item tty
+@code{PAM_TTY}. The terminal name: prefixed by
 @samp{/dev/} if it is a device file; for graphical, X-based,
 applications the value for this item is usually the @env{$DISPLAY}
 environment variable.
-@item rhost   @tab PAM_RHOST @tab The requesting hostname (the
-hostname of the machine from which the @code{PAM_RUSER} entity is
-requesting service). That is @samp{@code{PAM_RUSER}@@@code{PAM_RHOST}}
-identifies the requesting user. In some applications, @code{PAM_RHOST}
-may be @samp{NULL}. 
-@item ruser   @tab PAM_RUSER @tab The requesting entity: user's
-username for a locally requesting user or a remote requesting user. In
-some cases, @code{PAM_RUSER} may be @samp{NULL}.
-@item prompt  @tab PAM_USER_PROMPT @tab The string used when prompting
-for a user's name. The default value for this string is @samp{Please
-enter username: }. 
-@item password @tab PAM_AUTHTOK @tab The authentication token (often a
-password).
-@end multitable
+
+@item rhost
+@code{PAM_RHOST}. The requesting hostname (the hostname of the machine
+from which the @code{PAM_RUSER} entity is requesting service). That is
+@samp{@code{PAM_RUSER}@@@code{PAM_RHOST}} identifies the requesting
+user. In some applications, @code{PAM_RHOST} may be @samp{NULL}.
+
+@item ruser
+@code{PAM_RUSER}. The requesting entity: user's sername for a locally
+requesting user or a remote requesting user. In some cases,
+@code{PAM_RUSER} may be @samp{NULL}.
+
+@item prompt
+@code{PAM_USER_PROMPT}. The string used when prompting for a user's
+name. The default value for this string is @samp{Please enter
+username: }.
+
+@item password
+@code{PAM_AUTHTOK}. The authentication token (often a password).
+@end table
 
    Item expansion is used by @command{pam_log}, @command{pam_mysql}
 and @command{pam_pgsql}. 
@@ -355,7 +375,7 @@ for the user name @samp{smith} in files
 @file{/etc/auth/ftp/passwd} and @file{/etc/auth/ftp/shadow}.
 
 @node summary of pam_fshadow options
-@section summary of pam_fshadow options
+@section Summary of pam_fshadow options
 
 This section summarizes all @command{pam_fshadow} command line options:
 
@@ -537,7 +557,7 @@ lower case and removes anything after the @samp{@@} symbol:
 
 @smallexample
 @group
-pam_refex.so extended transform=s/.*/\L&/g;s/@.*/ 
+pam_refex.so extended transform=s/.*/\L&/g;s/@@.*/ 
 @end group
 @end smallexample
 
@@ -550,12 +570,12 @@ the expression.
 
 @smallexample
 @group
-pam_refex.so extended transform=s/.*/\L&/g;s/@.*/ \
+pam_refex.so extended transform=s/.*/\L&/g;s/@@.*/ \
              regex=^(anoncvs|anonymous)$ sense=deny
 @end group
 @end smallexample
 
-As a result, access with the following user names will be denied:
+As a result, access will be denied for the following user names:
 @samp{anoncvs},  @samp{Anoncvs}, @samp{AnonCVS@@user.org}.
 
 @node summary of pam_regex options
@@ -620,6 +640,7 @@ expansion}) and outputs the resulting string to the syslog.
 
 @table @option
 @opsummary{-audit}
+@item -audit
 Similar to @option{audit} in other modules (@pxref{Intro}).
 
 @opsummary{-debug}
@@ -681,7 +702,7 @@ and session management: @command{pam_mysql}, for MySQL and
 @command{pam_pgsql} for PostgreSQL.  Both modules share the same set
 of options and provide similar functionality.  
 
-   Connecting to an @acronym{SQL} database requires a wide set of
+   Connecting to an @acronym{SQL} database requires a set of
 credentials, which cannot be conveniently passed via the command
 line.  Therefore, both @acronym{SQL} modules use a special
 @dfn{configuration file} to obtain the necessary data.  By default,
@@ -721,7 +742,7 @@ not the first in the stack of authentication modules.
 @section Configuration File.
 @cindex configuration file, @command{pam_pgsql}
 @cindex configuration file, @command{pam_mysql}
-   The configuration file has a simple line-oriented syntax.  Empty
+   Configuration file has a simple line-oriented syntax.  Empty
 lines and lines beginning with @samp{#} are ignored.  Nonempty lines
 consist of a keyword and its value, separated by any amount of 
 white space.
@@ -764,7 +785,6 @@ needed for accessing the database:
 
 @node sql auth
 @section Using @acronym{SQL} modules in authentication stack.
-@UNREVISED{}
 @cindex SQL authentication
 @cindex authentication, SQL
 @cindex authentication, pam_mysql
@@ -794,7 +814,7 @@ password.
 @item Compare both strings literally (only if
 @code{allow-plaintext-pass} is set in the configuration file.
 @end enumerate
- 
+
    The following configuration keywords can be used to disable or
 enable particular stages of the comparison.  The value @var{bool}
 should be @samp{yes}, @samp{true} or @samp{t} to indicate
