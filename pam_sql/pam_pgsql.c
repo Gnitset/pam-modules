@@ -150,6 +150,9 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 		    && strcmp (p, password) == 0)
 			rc = PAM_SUCCESS;
 
+		/* FIXME: This comment is needed to pacify
+		   `make check-sql-config' in doc:
+		   find_config("setenv-query") */
 		if (rc == PAM_SUCCESS
 		    && (query = get_query(pamh, "setenv-query", &slist, 0))) {
 			pgsql_setenv(pamh, pgconn, query);

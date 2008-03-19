@@ -8,10 +8,14 @@
 
 @defcodeindex pr
 @defcodeindex op
+@defcodeindex kw
 @syncodeindex pr cp
 @syncodeindex op cp
+@syncodeindex kw cp
 
 @include version.texi
+@include macros.texi
+@include rendition.texi
 
 @ifinfo
 @dircategory System Utilities
@@ -79,18 +83,43 @@ Appendices
 * Copying This Manual:: The GNU Free Documentation License.
 * Concept Index::       Index of Concepts.
 
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Authentication against an alternative shadow file.
+
+* plain mode::
+* virtual domain mode::
+* summary of pam_fshadow options::
+
+Authentication using regular expressions.
+
+* access control::           Using pam_regex as access control module.
+* user name transformation:: Using pam_regex to alter user names.
+* summary of pam_regex options::
+
+SQL authentication.
+
+* config::      Configuration file.
+* sql auth::    Using @acronym{SQL} modules in authentication stack.
+* sql setenv::  Setting @acronym{PAM} environment from an
+                @acronym{SQL} database.
+* sql session:: Using @acronym{SQL} modules for session management.
+* sql summary:: Summary of configuration statements.
+
+@end detailmenu
 @end menu
 
 @node Intro, fshadow, Top, Top
 @chapter Introduction to PAM-modules
+   
+   PAM-modules is a collection of @acronym{PAM modules} for user
+authentication and logging.  This manual describes each module in
+detail.  The reader is expected to be sufficiently proficient with
+general @acronym{UNIX} administration issues and with Pluggable
+Authentication Modules (@acronym{PAM}) in particular. 
 
-     PAM-modules is a collection of @acronym{PAM
-modules} for user authentication and logging.  This manual describes
-each module in detail.  The reader is expected to be sufficiently
-proficient with general @acronym{UNIX} administration issues and with
-Pluggable Authentication Modules (@acronym{PAM}) in particular.
-
-     All modules from the package support the following command line
+   All modules from the package support the following command line
 arguments:
 
 @anchor{common options}
@@ -98,7 +127,7 @@ arguments:
 @opindex debug, common option
 @cindex debugging hints
 @item debug[=@var{level}]
-     Change debugging level (0 <= @var{level} <= 100).  The debugging
+   Change debugging level (0 <= @var{level} <= 100).  The debugging
 information will be logged via @code{syslog} channel
 @code{auth.debug}.  Notice, that debugging output can reveal
 authentication credentials (user password, in particular). 
@@ -106,14 +135,14 @@ authentication credentials (user password, in particular).
 @opindex waitdebug, common option
 @opindex enable-debug, @option{--enable-debug}, @command{configure} option
 @item waitdebug[=@var{interval}]
-     Wait for @var{interval} seconds before starting the operation.
+   Wait for @var{interval} seconds before starting the operation.
 This option is intended for the package developers and is not enabled,
 unless you configure the package with @option{--enable-debug} option.
 Most probably you will not need this option.  The following
 description is provided in case you decide to participate in
 @command{PAM-modules} development: 
 
-     When this option is present, the module displays the
+   When this option is present, the module displays the
 following diagnostics in @command{syslog} @code{auth.crit} channel:
 
 @smallexample
@@ -127,39 +156,55 @@ process with a debugger, set the @code{interval} variable to 0 and to
 continue execution of the module in the debugging mode. 
 @end table
 
-@cindex variable expansion
-@cindex expansion, variable
-@anchor{variable expansion}
-     Some modules perform @dfn{variable expansion} on their
-arguments.  During variable expansion, any occurrence of
-@code{$@var{variable}} in a string is replaced by the value of
-@var{variable}.  If the @var{variable} is not defined, emtpy string is
-substituted instead.  A limited support for the shell-style default
-values is available: namely, the notation
-@code{$@{@var{variable}:-@var{value}@}} expands to the value of
-@var{variable} if it is set, and to @var{value} otherwise. 
+@cindex PAM item expansion
+@cindex expansion, PAM item
+@anchor{item expansion}
+   Some modules perform @acronym{PAM} @dfn{item expansion} on their
+arguments.  It is a feature similar to shell's variable expansion.
+During item expansion, any occurrence of @code{$@var{name}} in a
+string is replaced by the value of the @acronym{PAM} item @var{name}.
+If the item in question is not defined, an emtpy string is substituted
+instead.  A limited support for the shell-style default values is
+available: namely, the notation @code{$@{@var{item}:-@var{value}@}}
+expands to the value of @var{item} if it is set, and to @var{value}
+otherwise.  Notice, that @var{value} must be a literal value (string
+or numeric).
 
-     The followig table list supported variables:
+   The followig table lists @acronym{PAM} item names:
 
-@multitable @columnfractions .30 .50
-@headitem Variable name @tab @acronym{PAM} variable
-@item service @tab PAM_SERVICE 
-@item user    @tab PAM_USER 
-@item tty     @tab PAM_TTY 
-@item rhost   @tab PAM_RHOST 
-@item ruser   @tab PAM_RUSER 
-@item prompt  @tab PAM_USER_PROMPT
-@item password @tab PAM_AUTHTOK
+@multitable @columnfractions .15 .25 .60
+@headitem Item name @tab @acronym{PAM} item @tab Meaning
+@item service @tab PAM_SERVICE @tab The service name (which identifies
+the @acronym{PAM} stack that will be used).
+@item user    @tab PAM_USER @tab The username of the entity under
+whose identity service will be given. 
+@item tty     @tab PAM_TTY @tab The terminal name: prefixed by
+@samp{/dev/} if it is a device file; for graphical, X-based,
+applications the value for this item is usually the @env{$DISPLAY}
+environment variable.
+@item rhost   @tab PAM_RHOST @tab The requesting hostname (the
+hostname of the machine from which the @code{PAM_RUSER} entity is
+requesting service). That is @samp{@code{PAM_RUSER}@@@code{PAM_RHOST}}
+identifies the requesting user. In some applications, @code{PAM_RHOST}
+may be @samp{NULL}. 
+@item ruser   @tab PAM_RUSER @tab The requesting entity: user's
+username for a locally requesting user or a remote requesting user. In
+some cases, @code{PAM_RUSER} may be @samp{NULL}.
+@item prompt  @tab PAM_USER_PROMPT @tab The string used when prompting
+for a user's name. The default value for this string is @samp{Please
+enter username: }. 
+@item password @tab PAM_AUTHTOK @tab The authentication token (often a
+password).
 @end multitable
 
-     Variable expansion is used by @command{pam_log},
-@command{pam_mysql} and @command{pam_pgsql}.
+   Item expansion is used by @command{pam_log}, @command{pam_mysql}
+and @command{pam_pgsql}. 
 
 @node fshadow, regex, Intro, Top
 @chapter Authentication against an alternative shadow file.
-
+@set MODULE pam_fshadow
 @prindex pam_fshadow
-     This module provides authentication against an alternative
+   This module provides authentication against an alternative
 @file{shadow} file, or @file{passwd} / @file{shadow} pair (or pairs).
 There are two main operation modes: @dfn{plain} mode, in which
 @command{pam_fshadow} uses only one @file{passwd}/@file{shadow} pair,
@@ -167,81 +212,92 @@ and @dfn{virtual domain} mode, which allows to select the pair to use
 based on the authentication token (the user name).  First, let's
 describe the plain mode. 
 
+@menu
+* plain mode::
+* virtual domain mode::
+* summary of pam_fshadow options::
+@end menu
+
+@node plain mode
+@section Using @command{pam_fshadow} in plain mode.
+
 @cindex plain mode, pam_fshadow
 @cindex pam_fshadow, plain
-     Plain mode is the default operation mode for
-@command{pam_fshadow}.  In this mode, the module uses the
-authentication token as the user name and verifies it against the
-@file{passwd}/@file{shadow} pair located in the system configuration 
-directory (which is set when configuring the package and
-defaults to @file{@var{prefix}/etc}).  This default location can be
-changed using the @option{sysconfdir} option (see below).  The
-authentication is performed as follows:
+   Plain mode is the default operation mode for @command{pam_fshadow}.
+In this mode, the module checks the supplied user name and
+authentication token against the @file{passwd}/@file{shadow} pair
+located in the system configuration directory (which is set when
+configuring the package and defaults to @file{@var{prefix}/etc}).
+This default location can be changed using the @option{sysconfdir}
+option (see below).  The authentication is performed as follows:
 
-     First, the user name is looked up in @file{passwd} file and the
+   First, the user name is looked up in @file{passwd} file and the
 corresponding record is fetched.  If this record contains a valid
 password hash (i.e. its second field is at least 2 characters long),
-the system @code{crypt} function is called on the supplied password
-with the retrieved hash as its second argument (the @code{seed}) and
-its result is compared with the hash.  If the two strings are the
-same, the user is authenticated successfully.
+the system @code{crypt} function is called on the supplied
+authentication token with the retrieved hash as its second argument
+(the @code{seed}) and its result is compared with the hash.  If the
+two strings are the same, the user is authenticated successfully.
 
-     Otherwise, if @file{passwd} contains no password, the shadow file is
+   Otherwise, if @file{passwd} contains no password, the shadow file is
 examined and the hash retrieved from there is used.  If the record
 retrieved from the shadow file has not expired, and if its password
-hash field matches the supplied password (using the algorithm
+hash field matches the authentication token (using the algorithm
 described above), the user is authenticated successfully.
 
-     Several options are provided to alter the default behavior.  All
+   Several options are provided to alter the default behavior.  All
 of them, except @command{sysconfdir}, have the same effect in the
 virtual domain mode as well.  The table below summarizes these options.
 
+@anchor{pam_fshadow common options}
 @table @option
-@opindex nopasswd, @command{pam_fshadow} option
+@xopindex{nopasswd, introduced}
 @item nopasswd
-     Do not require @file{passwd} file to be present.  Only
+   Do not require @file{passwd} file to be present.  Only
 @file{shadow} is used for authentication.
 
-@opindex sysconfdir, @command{pam_fshadow} option
+@xopindex{sysconfdir, introduced}
 @item sysconfdir=@var{dir}
-     Set full name of the directory where @file{shadow} and
+   Set full name of the directory where @file{shadow} and
 @file{passwd} are located.  By default the system configuration
 directory will be used.
 
-@opindex use_authtok, @command{pam_fshadow} option
-@item use_authtok	
-     Do not prompt the user for password, take it from the saved
+@xopindex{use_authtok, introduced}
+@item use_authtok       
+   Do not prompt the user for password, take it from the saved
 authentication tokens.  This option is useful when @command{pam_fshadow}
 is used as a non-first module in a stack of authentication modules.
 @end table
 
-     The following example illustrates the use of
-@command{pam_fshadow} in plain mode in @file{pam.conf} file:
+   The following example illustrates use of @command{pam_fshadow} in
+plain mode in @file{pam.conf} file: 
 
 @smallexample
 tuhs auth  required   pam_fshadow.so \
                       sysconfdir=/home/tuhs/tuhs/etc nopasswd use_authtok
 @end smallexample
 
+@node virtual domain mode
+@section Using @command{pam_fshadow} in virtual domain mode.
 @cindex virtual domain mode, pam_fshadow
 @cindex pam_fshadow, virtual domain
 
-     In @dfn{virtual domain} mode, @command{pam_fshadow} uses the
-authentication token to determine where to look for the
-@file{passwd}/@file{shadow} file pair.  The token is split into
+   In @dfn{virtual domain} mode, @command{pam_fshadow} uses the
+user name to determine where to look for the
+@file{passwd}/@file{shadow} file pair.  The name is split into 
 the @dfn{user name proper} and the @dfn{authentication domain}.  The
 configuration directory name is then obtained by concatenating the
 system configuration directory, a directory separator character (@samp{/}),
 and the name of the authentication domain.  Then, the authentication
-proceeds as described above for the plain mode.  If the supplied
-authentication token does not match the regular expression,
-@command{pam_fshadow} proceeds as in plain mode.
+proceeds as described above for the plain mode.  If the supplied user name
+does not match the regular expression, @command{pam_fshadow} proceeds
+as in plain mode. 
 
-@opindex regex, @command{pam_fshadow} option
+@xopindex{regex, introduced}
 @cindex enabling virtual domain mode, @command{pam_fshadow}
 @cindex virtual domain mode, enabling (@command{pam_fshadow})
-     This mode is enabled by the option @option{regex}, which supplies
-a regular expression used to split the authentication token.  This
+   This mode is enabled by the option @option{regex}, which supplies
+a regular expression used to split the user name.  This
 regular expression must contain two parenthesized @dfn{groups}.  First of
 them is used to extract the user name, and the second one is used
 to extract the authentication domain.  For example, the following option:
@@ -255,31 +311,35 @@ instructs @command{pam_fshadow} to use any characters before the
 @samp{@@} as the user name, and anything following it as the
 authentication domain.
 
-     Several options are provided, that control the flavor of the
+   Several options are provided, that control the flavor of the
 regular expression and the way of retrieving the authentication data
-from the token.  These options are: 
+from the user name.  These options are: 
 
 @table @option
-@opindex basic, @command{pam_fshadow} option
+@xopindex{basic, introduced}
 @item basic
-     Use basic regular expression. 
+   Use basic regular expression. 
 
-@opindex extended, @command{pam_fshadow} option      
+@xopindex{extended, introduced}
 @item extended
-     Use extended regular expression.  This is the default.
+   Use extended regular expression.  This is the default.
 
-@opindex ignore-case, @command{pam_fshadow} option
-@opindex icase, @command{pam_fshadow} option     
+@xopindex{ignore-case, introduced}
+@xopindex{icase, introduced}
 @item ignore-case
 @itemx icase
-     Use case-insensitive regular expression.
+   Use case-insensitive regular expression.
 
-@opindex revert-index, @command{pam_fshadow} option     
+@xopindex{case, introduced}     
+@item case
+   Use case-sensitive regular expressions (default).
+
+@xopindex{revert-index, introduced}
 @item revert-index
-     Use group 2 as the user name and group 1 as the authentication domain.
+   Use group #2 as the user name and group #1 as the authentication domain.
 @end table
 
-     To summarize, consider the following @file{pam.conf} entry:
+   As an example, consider the following @file{pam.conf} entry:
 
 @smallexample     
 check auth required pam_fshadow.so \
@@ -290,55 +350,129 @@ check auth required pam_fshadow.so \
 It instructs @command{pam_fshadow} to use @samp{@@} as the
 username/domain separator and to look up for the password databases
 under the @file{/etc/auth} directory.  For example, if the supplied
-authentication token was @samp{smith@@ftp}, then the module will look
-for the user name @samp{smith} in the files
+user name was @samp{smith@@ftp}, then the module will look
+for the user name @samp{smith} in files
 @file{/etc/auth/ftp/passwd} and @file{/etc/auth/ftp/shadow}.
+
+@node summary of pam_fshadow options
+@section summary of pam_fshadow options
+
+This section summarizes all @command{pam_fshadow} command line options:
+
+@table @option
+@opsummary{basic}
+@item basic
+   Use basic regular expressions.  @xref{virtual domain mode}.
+
+@opsummary{extended}
+@item extended
+   Use extended regular expression (default).  @xref{virtual domain mode}.
+
+@opsummary{ignore-case}
+@opsummary{icase}
+@item ignore-case
+@itemx icase
+   Use case-insensitive regular expressions.  @xref{virtual domain mode}.
+
+@opsummary{nopasswd}
+@item nopasswd
+   Use only @file{shadow} for authentication. @xref{pam_fshadow common
+options, nopasswd}.
+
+@opsummary{regex}
+@item regex=@var{expr}
+   Define a regular expression for splitting user name into the proper
+name and authentication domain.
+
+@opsummary{revert-index}
+@item revert-index
+   In the regular expression introduced by @code{regex}, group #1
+selects authentication domain, and group #2 selects user name.
+@xref{virtual domain mode, revert-index}.
+
+@opsummary{sysconfdir}
+@item sysconfdir=@var{dir}
+   Assume @var{dir} as the system configuration directory.
+@xref{pam_fshadow common options, sysconfdir}.
+
+@opsummary{use_authtok}
+@item use_authtok
+   Do not prompt the user for password, take it from the saved
+authentication tokens.
+
+@xref{pam_fshadow common options, use_authtok}.
+
+@end table
 
 @node regex, log, fshadow, Top
 @chapter Authentication using regular expressions.
+@set MODULE pam_regex
 
 @prindex pam_regex
-     The module @command{pam_regex} allows to control user access by
-matching their login name against a regular expression and to alter
-user names.  It may be useful, for example, in authentication stacks
-for such services as @acronym{FTP} or @acronym{HTTP}. 
+   The module @command{pam_regex} is a general-purpose tool for 
+authentication using regular expressions.  You can use it, for
+example, to allow or deny access depending on whether user name
+matches a given regular expression.  Another possible use is to
+modify user names following a predefined pattern (as in
+@command{sed}), to supply modules that follow it in the @acronym{PAM}
+stack with a normalized user name.
 
-     The following table describes command line options for this module:
+  As a quick start, the following @file{pam.conf} entry forbids access
+for any user names that look like email addresses:
 
-@table @code
-@opindex basic, @command{pam_regex} option
-@item basic
-     Use basic regular expression.
+@smallexample
+httpd auth  required  pam_regex.so sense=deny regex=.*@@.*
+@end smallexample
 
-@opindex case, @command{pam_regex} option     
-@item case
-     Use case-insensitive regular expression.
+@menu
+* access control::           Using pam_regex as access control module.
+* user name transformation:: Using pam_regex to alter user names.
+* summary of pam_regex options::
+@end menu
 
-@opindex extended, @command{pam_regex} option     
-@item extended
-     Use extended regular expression.
+@node access control
+@section Using @command{pam_regex} to control access.
 
-@opindex icase, @command{pam_regex} option
-@opindex ignore-case, @command{pam_regex} option
-@item ignore-case
-@itemx icase
-     Use case-insensitive regular expression.
+@xopindex{regex, described}
+   To control access depending on the supplied user name, two options
+are provided.  The option @option{regex} introduces a regular
+expression with which to compare a user name:
 
-@opindex regex, @command{pam_regex} option     
-@item regex=@var{string}
-     The user name must match the given regular expression.
-The default expression flavor is ``extended, case-sensitive'', but
-this can be changed using other options (see above).
+@table @option
+@item regex=@var{expression}
+   Compare user name with @var{expression}.  By default, extended
+regular expressions with case-sensitive matching are used, but 
+this can be changed using other options (see below).
+@end table
 
-@opindex sense, @command{pam_regex} option
+   When this option is used, @command{pam_regex} allow only login
+attempts with user names that match @var{expression}.  The
+@option{sense} command line option is provided to control that
+behavior:
+
+@table @option
+@xopindex{sense, described}
 @item sense=@{allow|deny@}
-     What to do if user name matches the regexp.  Default is @samp{allow}.
+   What to do if user name matches the @var{expression}.  The value
+@samp{allow} means to return @code{PAM_SUCCESS}, @samp{deny} means to
+return @code{PAM_AUTH_ERR}.  Default is @samp{allow}.
+@end table
 
-@opindex transform, @command{pam_regex} option
+@node user name transformation
+@section Using @command{pam_regex} to alter user names.
+
+  Another common use for @command{pam_regex} is to alter user names.
+This mode is enabled when the @option{transfer} option is used in the
+command line:
+
+@table @option
+@xopindex{transform, described}
 @item transform=@var{expression}
-     Transform the user name using given expression.  The argument
-@var{expression} is a @command{sed}-like replace expression of the 
-form:
+   Transform the user name using given regular expression.
+@end table
+
+   Its argument, @var{expression}, is a @command{sed}-like replace
+expression of the form:
 
 @smallexample
 s/@var{regexp}/@var{replace}/[@var{flags}]
@@ -356,13 +490,16 @@ separated by a semicolon.
 Supported @var{flags} are:
 
 @table @samp
+@cindex g, @option{transform} flag, @command{@value{MODULE}}
 @item g
 Apply the replacement to @emph{all} matches to the @var{regexp}, not
 just the first.
 
+@cindex i, @option{transform} flag, @command{@value{MODULE}}
 @item i
 Use case-insensitive matching
 
+@cindex x, @option{transform} flag, @command{@value{MODULE}}
 @item x
 @var{regexp} is an @dfn{extended regular expression} (@pxref{Extended
 regexps, Extended regular expressions, Extended regular expressions,
@@ -391,80 +528,113 @@ s,one,two,
 @end group
 @end smallexample
 
-Changing delimiters is often useful when the @var{regex} contains
+  Changing delimiters is often useful when the @var{regex} contains
 slashes.  For instance, it is more convenient to write @code{s,/,-,} than
 @code{s/\//-/}.
 
-The following example converts the user name to
-lower case and removes anything after the @samp{@@} symbol.  It allows
-allows only user names @samp{anoncvs} and @samp{anonymous}.  As a
-result, the following user names will pass the module: @samp{anoncvs},
-@samp{Anoncvs}, @samp{AnonCVS@@user.org}.
+  The following example converts the user name to
+lower case and removes anything after the @samp{@@} symbol:
+
+@smallexample
+@group
+pam_refex.so extended transform=s/.*/\L&/g;s/@.*/ 
+@end group
+@end smallexample
+
+  Both @option{transform} and @option{regex} can be used
+simultaneously.  For example, the following command line first
+converts the user name to lower case and removes anything after the
+@samp{@@} symbol, and then compares it to the given regular
+expression.  The login is denied if the resulting user name matches
+the expression.  
 
 @smallexample
 @group
 pam_refex.so extended transform=s/.*/\L&/g;s/@.*/ \
-             regex=^(anoncvs|anonymous)$ sense=allow 
+             regex=^(anoncvs|anonymous)$ sense=deny
 @end group
 @end smallexample
-     
-@opindex use_authtok, @command{pam_regex} option     
-@item use_authtok	
-     Do not prompt the user for password, take it from the saved
-authentication tokens instead.  This option is useful when
-@command{pam_fshadow} is used as a non-first module in a stack of
-authentication modules. 
 
+As a result, access with the following user names will be denied:
+@samp{anoncvs},  @samp{Anoncvs}, @samp{AnonCVS@@user.org}.
+
+@node summary of pam_regex options
+@section Summary of @command{pam_regex} options:
+
+@table @option
+@opsummary{basic}
+@item basic
+   Use basic regular expressions.
+
+@opsummary{case}     
+@item case
+   Use case-sensitive regular expressions (default).
+
+@opsummary{extended}     
+@item extended
+   Use extended regular expressions (default).
+
+@opsummary{icase}
+@opsummary{ignore-case}
+@item ignore-case
+@itemx icase
+   Use case-insensitive regular expressions.
+
+@opsummary{regex}
+@item regex=@var{expression}
+   Compare user name with @var{expression}.  
+
+@opsummary{sense}
+@item sense=@{allow|deny@}
+   What to do if user name matches the @var{expression}.  The value
+@samp{allow} means to return @code{PAM_SUCCESS}, @samp{deny} means to
+return @code{PAM_AUTH_ERR}.  Default is @samp{allow}.
+
+@opsummary{user}
 @item user=@var{string}
-     Upon successful matching, set @acronym{PAM} user name to @var{string}.
+   Upon successful matching, set @acronym{PAM} user name to @var{string}.
 
 @end table
 
-     Here's an example of using this module:
-     
-@smallexample
-httpd auth  required  pam_regex.so sense=deny regex=.*@@.*
-@end smallexample
-
-This example denies login for users whose login names contain the
-@samp{@@} character.
-
 @node log, sql, regex, Top
 @chapter Log arbitrary messages to syslog.
+@set MODULE pam_log
 
 @prindex pam_log
-     The @command{pam_log} module is a diagnostic tool.  It works
+   The @command{pam_log} module is a diagnostic tool.  It works
 similarly to the shell @command{echo} command, outputting its
-arguments to the @command{syslog}.  The module can be used in any PAM
-service stack.
+arguments to the @command{syslog}.  The module can be used in any
+@acronym{PAM} service stack.
 
-     In order to be discerned from arguments, all @command{pam_log}'s
+   In order to be discerned from arguments, all @command{pam_log}'s
 options begin with a dash (@samp{-}).  They must precede any
 non-option arguments.  If the first non-option argument happens to
 begin with a dash, you can inhibit its special handling by placing
 @samp{--} before it.
 
-     After collecting all options, the module scans the rest of its
-command line arguments, performs variable expansion (@pxref{variable
-expansion}) on each of them and outputs the resulting string to the
-syslog. 
+   After collecting all options, the module scans the rest of its
+command line arguments, performs item expansion (@pxref{item
+expansion}) and outputs the resulting string to the syslog. 
 
      The following table lists all the supported options:
 
 @table @option
-@opindex -debug, @command{pam_log} option
+@opsummary{-audit}
+Similar to @option{audit} in other modules (@pxref{Intro}).
+
+@opsummary{-debug}
 @item -debug[=@var{level}]
 Similar to @option{debug} in other modules (@pxref{Intro}).
 
-@opindex -no-open, @command{pam_log} option
-@item -no-open
+@opsummary{-noopen}
+@item -noopen
 Reserved for future use.
 
-@opindex -waitdebug, @command{pam_log} option
+@opsummary{-waitdebug}
 @item -waitdebug[=@var{interval}]
 Similar to @option{waitdebug} in other modules (@pxref{Intro}).
 
-@opindex -pri, @command{pam_regex} option
+@opsummary{-pri}
 @item -pri=@var{facility}.@var{priority}
 Requests to send log messages to the given syslog facility and
 priority.  The @var{facility} part can be any of: @samp{user},
@@ -472,25 +642,25 @@ priority.  The @var{facility} part can be any of: @samp{user},
 @samp{local2}, @samp{local3}, @samp{local4}, @samp{local5}, @samp{local6},
 @samp{local7}. 
 
-     The @var{priority} is any of the following: @samp{emerg}, @samp{alert}, 
+   The @var{priority} is any of the following: @samp{emerg}, @samp{alert}, 
 @samp{crit}, @samp{err}, @samp{warning}, @samp{notice}, @samp{info},
 @samp{debug}. 
 
-     Either @var{facility} or @var{priority} can be omitted, in which case
+   Either @var{facility} or @var{priority} can be omitted, in which case
 the following defaults are used: @var{facility}=@code{authpriv},
 @var{priority}=@code{info}.
 
-@opindex -tag, @command{pam_log} option
+@opsummary{-tag}
 @item -tag=@var{label}
 Use @var{label} as the syslog tag, instead of the module name.
 @end table
 
-     The following example illustrates the use of this module:
+   The following example illustrates the use of this module:
 
 @smallexample
 @group
 cvs auth       required  pam_regex.so extended \
-    regex=(anoncvs|anonymous) sense=allow 
+    regex=^(anoncvs|anonymous)$ sense=allow 
 cvs account    requisite pam_log.so -tag CVS-ACCESS \
     -pri=daemon.info User $@{user:-unknown@} is granted CVS access
 cvs account    required   pam_permit.so
@@ -500,12 +670,13 @@ cvs session    required   pam_permit.so
 
 @node sql, Reporting Bugs, log, Top
 @chapter SQL authentication.
-
+@set MODULE pam_sql
 @prindex pam_pgsql
 @prindex pam_mysql
 @cindex MySQL, using for authentication
 @cindex PostreSQL, using for authentication
-     The package provides two modules for @acronym{SQL} authentication
+@UNREVISED{}
+   The package provides two modules for @acronym{SQL} authentication
 and session management: @command{pam_mysql}, for MySQL and
 @command{pam_pgsql} for PostgreSQL.  Both modules share the same set
 of options and provide similar functionality.  To authenticate a user,
@@ -514,89 +685,130 @@ return the user password.  Then the obtained password is compared with the
 authentication token, using a set of preconfigured algorithms.  If it
 matches, the user is authenticated successfully.
 
-     The options, common for both modules are:
+   Connecting to an @acronym{SQL} database requires a wide set of
+credentials, which cannot be conveniently passed via the command
+line.  Therefore, both @acronym{SQL} modules use a special
+@dfn{configuration file} to obtain the necessary data.  By default,
+this file is located in the system configuration directory (usually,
+@file{/usr/local/etc}), and is named @file{pam_sql.conf}.  However,
+another location can be specified in the command line, using
+@option{config} command line option.
+
+  The command line options understood by both modules are:
 
 @table @option
-@opindex use_authtok, @command{pam_mysql} option
-@opindex use_authtok, @command{pam_pgsql} option
-@item use_authtok	
-     Do not prompt the user for password, take it from the saved
-authentication tokens.  This option is useful when this module is
-not the first in the stack of authentication modules.
-
+@opindex config, @command{pam_sql} option
 @opindex config, @command{pam_pgsql} option
 @opindex config, @command{pam_mysql} option
 @item config=@var{file}
      Read SQL access credentials from the given @var{file}.
+
+@opindex use_authtok, @command{pam_sql} option
+@opindex use_authtok, @command{pam_pgsql} option
+@opindex use_authtok, @command{pam_mysql} option
+@item use_authtok       
+   Do not prompt the user for password, take it from the saved
+authentication tokens.  This option is useful when this module is
+not the first in the stack of authentication modules.
 @end table
 
+@menu
+* config::      Configuration file.
+* sql auth::    Using @acronym{SQL} modules in authentication stack.
+* sql setenv::  Setting @acronym{PAM} environment from an
+                @acronym{SQL} database.
+* sql session:: Using @acronym{SQL} modules for session management.
+* sql summary:: Summary of configuration statements.
+@end menu
+
+@node config
+@section Configuration File.
 @cindex configuration file, @command{pam_pgsql}
 @cindex configuration file, @command{pam_mysql}
-     The configuration file has a simple line-oriented syntax.  Empty
+   The configuration file has a simple line-oriented syntax.  Empty
 lines and lines beginning with @samp{#} are ignored.  Nonempty lines
 consist of a keyword and its value, separated by any amount of 
 white space.
 
-     Long statements can be split over several lines by placing
+   Long statements can be split over several lines by placing
 @samp{\} character at the end of each line, e.g.:
 
 @smallexample
 @group
 query select password \
       from users \
-      where user_name='%s'
+      where user_name='$user'
 @end group
 @end smallexample
 
-     The keywords, common for both modules are:
+   Basic configuration statements provide @acronym{SQL} credentials
+needed for accessing the database:
 
 @table @code
-@opindex host, @command{pam_mysql} configuration variable
-@opindex host, @command{pam_pgsql} configuration variable
+@xkwindex{host, described}
 @item host @var{hostname}
-Defines the host where the database is running.
+   Defines the host where the database is running.
 
-@opindex port, @command{pam_mysql} configuration variable
-@opindex port, @command{pam_pgsql} configuration variable
+@xkwindex{port, described}
 @item port @var{number}
-Defines the SQL port number.
+   Defines the SQL port number.
 
-@opindex db, @command{pam_mysql} configuration variable
-@opindex db, @command{pam_pgsql} configuration variable
+@xkwindex{db, described}
 @item db @var{database}
-Sets the database name.
+   Sets database name.
 
-@opindex login, @command{pam_mysql} configuration variable
-@opindex login, @command{pam_pgsql} configuration variable
+@xkwindex{login, described}
 @item login @var{string}
-Sets the SQL user name.
+   Sets @acronym{SQL} user name.
 
-@opindex pass, @command{pam_mysql} configuration variable
-@opindex pass, @command{pam_pgsql} configuration variable
+@xkwindex{pass, described}
 @item pass @var{password}
-Sets the SQL user password
+   Sets @acronym{SQL} user password.
+@end table
 
-@opindex passwd-query, @command{pam_mysql} configuration variable
-@opindex passwd-query, @command{pam_pgsql} configuration variable
+   Another set of keywords controls the way user passwords are
+handled:
+
+@table @code
+@xkwindex{allow-plaintext-pass, described}
+@item allow-plaintext-pass @var{bool}
+The returned password may be plaintext.  Without this option, it is
+supposed to be encrypted using the system @code{crypt} function.
+
+@xkwindex{allow-ldap-pass, described}
+@item allow-ldap-pass @var{bool}
+The returned password may be a @acronym{LDAP}-style password hash,
+i.e. the hash value encoded as base-64 and prefixed with a hashing
+algorithm name in curly braces.  This variable is @code{true} by
+default. 
+
+@kwindex allow-mysql-pass, @command{pam_mysql} configuration keyword
+@item allow-mysql-pass @var{bool}
+The returned password may be encrypted using MySQL @code{password}
+function.  This keyword is specific for @command{pam_mysql}.
+
+@kwindex allow-md5-pass, @command{pam_mysql} configuration keyword
+@item allow-md5l-pass @var{bool}
+The returned password may be encrypted using MySQL @code{md5}
+function.  This keyword is specific for @command{pam_mysql}.
+@end table
+
+@node sql auth
+@section Using @acronym{SQL} modules in authentication stack.
+@UNREVISED{}
+
+@table @code
+@xkwindex{passwd-query, described}
 @item passwd-query @var{query}
 Defines the query used to obtain the user's password from the
-database.  The @var{query} is subject to variable expansion
-(@pxref{variable expansion}).
+database.  The @var{query} is subject to item expansion
+(@pxref{item expansion}).
+@end table
 
-@opindex session-start-query, @command{pam_mysql} configuration variable
-@opindex session-start-query, @command{pam_pgsql} configuration variable
-@item session-start-query @var{query}
-Defines the query to be executed on session start.  The @var{query} is
-subject to variable expansion (@pxref{variable expansion}).
+@node sql setenv
+@section Setting @acronym{PAM} environment from an @acronym{SQL} database.
 
-@opindex session-stop-query, @command{pam_mysql} configuration variable
-@opindex session-stop-query, @command{pam_pgsql} configuration variable
-@item session-stop-query @var{query}
-Defines the query to be executed on session stop.  The @var{query} is
-subject to variable expansion (@pxref{variable expansion}).
-
-@opindex setenv-query, @command{pam_mysql} configuration variable
-@opindex setenv-query, @command{pam_pgsql} configuration variable
+@table @command
 @item setenv-query @var{query}
 This query is available when the package is compiled with @code{Linux
 PAM} implementation.  It allows to select arbitrary data from the
@@ -605,30 +817,90 @@ first tuple returned from @var{query} is selected, the column names
 are used as environment variable names, and column values as their
 values. 
 
-@cindex allow-plaintext-pass, @command{pam_pgsql} configuration variable
-@cindex allow-plaintext-pass, @command{pam_mysql} configuration variable
-@item allow-plaintext-pass @var{bool}
-The returned password ney be plaintext.  Without this option, it is
-supposed to be encrypted using the system @code{crypt} function.
+The @var{query} is subject to item expansion (@pxref{item expansion}).
+@end table
 
-@cindex allow-ldap-pass, @command{pam_pgsql} configuration variable
-@cindex allow-ldap-pass, @command{pam_mysql} configuration variable
-@item allow-plaintext-pass @var{bool}
-The returned password may be a @acronym{LDAP}-style password hash,
+@node sql session
+@section Using @acronym{SQL} modules for session management.
+@UNREVISED{}
+
+@table @command
+@xkwindex{session-start-query, described}
+@item session-start-query @var{query}
+Defines the query to be executed on session start.  The @var{query} is
+subject to item expansion (@pxref{item expansion}).
+
+@xkwindex{session-stop-query, described}
+@item session-stop-query @var{query}
+Defines the query to be executed on session stop.  The @var{query} is
+subject to item expansion (@pxref{item expansion}).
+@end table
+
+@node sql summary
+@section Summary of configuration statements.
+@UNREVISED{}
+
+@table @code
+@kwsummary{allow-ldap-pass}
+@item allow-ldap-pass @var{bool}
+   The returned password may be a @acronym{LDAP}-style password hash,
 i.e. the hash value encoded as base-64 and prefixed with a hashing
 algorithm name in curly braces.  This variable is @code{true} by
 default. 
-@end table
 
-     Variables, specific for @command{pam_mysql}:
-     
-@table @code
-@opindex allow-mysql-pass, @command{pam_mysql} configuration variable
+@kwsummary{allow-mysql-pass}
 @item allow-mysql-pass @var{bool}
 The returned password may be encrypted using MySQL @code{password}
-function.
+function.  This keyword can be used only in @command{pam_mysql}
+configuration.
 
-See also @code{allow-plaintext-pass}, above.
+@kwsummary{allow-plaintext-pass}
+@item allow-plaintext-pass @var{bool}
+   The returned password ney be plaintext.  Without this option, it is
+supposed to be encrypted using the system @code{crypt} function.
+
+@kwsummary{db}
+@item db @var{database}
+   Sets the database name.
+
+@kwsummary{host}
+@item port @var{number}
+   Defines the SQL port number.
+
+@kwsummary{login}
+@item login @var{string}
+   Sets the SQL user name.
+
+@kwsummary{pass}
+@item pass @var{password}
+   Sets the SQL user password
+
+@kwsummary{passwd-query}
+@item passwd-query @var{query}
+   Defines the query used to obtain the user's password from the
+database.  The @var{query} is subject to item expansion
+(@pxref{item expansion}).
+
+@kwsummary{session-start-query}
+@item session-start-query @var{query}
+   Defines the query to be executed on session start.  The @var{query} is
+subject to item expansion (@pxref{item expansion}).
+
+@kwsummary{session-stop-query}
+@item session-stop-query @var{query}
+   Defines the query to be executed on session stop.  The @var{query} is
+subject to item expansion (@pxref{item expansion}).
+
+@kwsummary{setenv-query}
+@item setenv-query @var{query}
+   This query is available when the package is compiled with @code{Linux
+PAM} implementation.  It allows to select arbitrary data from the
+database and to store them in @acronym{PAM} environment.  The
+first tuple returned from @var{query} is selected, the column names
+are used as environment variable names, and column values as their
+values. 
+
+The @var{query} is subject to item expansion (@pxref{item expansion}).
 @end table
 
 @node Reporting Bugs, Copying This Manual, sql, Top

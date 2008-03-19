@@ -418,6 +418,9 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 		retval = PAM_SERVICE_ERR;
 	else {
 		gray_slist_t slist;
+		/* FIXME: This comment is needed to pacify
+		   `make check-sql-config' in doc:
+		   find_config("passwd-query") */
 		retval = verify_user_pass(pamh, password,
 					  get_query2(pamh, "passwd-query",
 						     "query",  &slist, 1));
@@ -477,6 +480,9 @@ sql_session_mgmt(pam_handle_t *pamh, int flags,
 PAM_EXTERN int
 pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
+	/* FIXME: This comment is needed to pacify `make check-sql-config'
+	   in doc:
+	   find_config("session-start-query") */
 	return sql_session_mgmt(pamh, flags, argc, argv,
 				"session-start-query");
 }
@@ -485,6 +491,9 @@ PAM_EXTERN int
 pam_sm_close_session(pam_handle_t *pamh, int flags,
 		     int argc, const char **argv)
 {
+	/* FIXME: This comment is needed to pacify `make check-sql-config'
+	   in doc:
+	   find_config("session-stop-query") */
 	return sql_session_mgmt(pamh, flags, argc, argv,
 				"session-stop-query");
 }

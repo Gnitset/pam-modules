@@ -38,8 +38,6 @@
 #endif				/* LINUX_PAM */
 #include <security/pam_modules.h>
 
-#define CNTL_AUTHTOK       0x0010
-
 #define SENSE_ALLOW   0
 #define SENSE_DENY    1
 const char *sense_choice[] = { "allow", "deny", NULL };
@@ -57,8 +55,6 @@ struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, 1 },
 	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, CNTL_AUDIT },
 	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, 0, gray_wait_debug_fun },
-	{ PAM_OPTSTR(use_authtok), pam_opt_bitmask, &cntl_flags,
-	  CNTL_AUTHTOK },
 	{ PAM_OPTSTR(sense), pam_opt_enum, &sense, sense_choice },
 	{ PAM_OPTSTR(transform), pam_opt_string, &transform },
 	{ PAM_OPTSTR(user), pam_opt_string, &user_name },

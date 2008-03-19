@@ -346,6 +346,9 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 		gray_slist_t slist;
 		
 		rc = check_query_result(&mysql, password);
+		/* FIXME: This comment is needed to pacify
+		   `make check-sql-config' in doc:
+		   find_config("setenv-query") */
 		if (rc == PAM_SUCCESS
 		    && (q = get_query(pamh, "setenv-query", &slist, 0))) {
 			mysql_setenv(pamh, &mysql, q);
