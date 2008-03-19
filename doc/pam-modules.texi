@@ -75,7 +75,7 @@ Individual modules
 * regex::               Check if the username matches certain regular
                         expression.
 * log::                 Log arbitrary messages to syslog.
-* sql::                 Modules for SQL authentication.                        
+* sql::                 Modules for SQL authentication and session management.
 * Reporting Bugs::      How to Report a Bug.
 
 Appendices
@@ -98,7 +98,7 @@ Authentication using regular expressions.
 * user name transformation:: Using pam_regex to alter user names.
 * summary of pam_regex options::
 
-SQL authentication.
+SQL Authentication and Session Management.
 
 * config::      Configuration file.
 * sql auth::    Using @acronym{SQL} modules in authentication stack.
@@ -669,7 +669,7 @@ cvs session    required   pam_permit.so
 @end smallexample
 
 @node sql, Reporting Bugs, log, Top
-@chapter SQL authentication.
+@chapter SQL Authentication and Session Management.
 @set MODULE pam_sql
 @prindex pam_pgsql
 @prindex pam_mysql
@@ -679,11 +679,7 @@ cvs session    required   pam_permit.so
    The package provides two modules for @acronym{SQL} authentication
 and session management: @command{pam_mysql}, for MySQL and
 @command{pam_pgsql} for PostgreSQL.  Both modules share the same set
-of options and provide similar functionality.  To authenticate a user,
-each module connects to the database and issues a query which should
-return the user password.  Then the obtained password is compared with the
-authentication token, using a set of preconfigured algorithms.  If it
-matches, the user is authenticated successfully.
+of options and provide similar functionality.  
 
    Connecting to an @acronym{SQL} database requires a wide set of
 credentials, which cannot be conveniently passed via the command
@@ -766,8 +762,43 @@ needed for accessing the database:
    Sets @acronym{SQL} user password.
 @end table
 
-   Another set of keywords controls the way user passwords are
-handled:
+@node sql auth
+@section Using @acronym{SQL} modules in authentication stack.
+@UNREVISED{}
+@cindex SQL authentication
+@cindex authentication, SQL
+@cindex authentication, pam_mysql
+@cindex authentication, pam_pgsql
+@cindex pam_mysql authentication
+@cindex pam_pgsql authentication
+@xkwindex{passwd-query, described}
+When used in the @code{auth} stack, @acronym{SQL} modules work as
+follows.  First, the module connects to the database using credentials
+supplied in the configuration file (see the previous section).  Then,
+it retrieves the value of @code{passwd-query} from the configuration
+file and performs @acronym{PAM} item expansion over it (@pxref{item
+expansion}).  The resulting string is issued to the @acronym{SQL}
+server as a query.  If this query produces a non-empty result, the
+first column from the first tuple is used as encrypted user password.
+This password is compared with the supplied authentication token.  If
+it matches, the user is authenticated successfully.  The comparison
+consists of the following set of checks, performed in that order until
+one of them returns match or the list is exhausted:
+
+@enumerate 1
+@item System @code{crypt} function.
+@item MySQL password encoding algorithm (for MySQL only)
+@item Compare @acronym{MD5} sum of the token with the encrypted
+password.
+@item Compare passwords using @acronym{LDAP} algorithm.
+@item Compare both strings literally (only if
+@code{allow-plaintext-pass} is set in the configuration file.
+@end enumerate
+ 
+   The following configuration keywords can be used to disable or
+enable particular stages of the comparison.  The value @var{bool}
+should be @samp{yes}, @samp{true} or @samp{t} to indicate
+@code{true}.  Any other value is taken to mean @code{false}.
 
 @table @code
 @xkwindex{allow-plaintext-pass, described}
@@ -782,31 +813,20 @@ i.e. the hash value encoded as base-64 and prefixed with a hashing
 algorithm name in curly braces.  This variable is @code{true} by
 default. 
 
-@kwindex allow-mysql-pass, @command{pam_mysql} configuration keyword
-@item allow-mysql-pass @var{bool}
-The returned password may be encrypted using MySQL @code{password}
-function.  This keyword is specific for @command{pam_mysql}.
-
 @kwindex allow-md5-pass, @command{pam_mysql} configuration keyword
 @item allow-md5l-pass @var{bool}
 The returned password may be encrypted using MySQL @code{md5}
 function.  This keyword is specific for @command{pam_mysql}.
-@end table
 
-@node sql auth
-@section Using @acronym{SQL} modules in authentication stack.
-@UNREVISED{}
-
-@table @code
-@xkwindex{passwd-query, described}
-@item passwd-query @var{query}
-Defines the query used to obtain the user's password from the
-database.  The @var{query} is subject to item expansion
-(@pxref{item expansion}).
+@kwindex allow-mysql-pass, @command{pam_mysql} configuration keyword
+@item allow-mysql-pass @var{bool}
+The returned password may be encrypted using MySQL @code{password}
+function.  This keyword is specific for @command{pam_mysql}.
 @end table
 
 @node sql setenv
 @section Setting @acronym{PAM} environment from an @acronym{SQL} database.
+@UNREVISED{}
 
 @table @command
 @item setenv-query @var{query}

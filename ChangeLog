@@ -1,5 +1,7 @@
 2008-03-19  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	* doc/pam-modules.texi: Improve docs.
+
 	Documentation checking framework:
 	
 	* doc/macros.texi, doc/check-docs.sh, doc/mastermenu.el,
