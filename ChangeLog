@@ -1,5 +1,15 @@
 2008-03-19  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	Documentation checking framework:
+	
+	* doc/macros.texi, doc/check-docs.sh, doc/mastermenu.el,
+	doc/untabify.el, doc/rendition.texi: New files.
+	* pam_regex/pam_regex.c: Remove useless use_authtok option.
+	* pam_sql/pam_mysql.c, pam_sql/pam_pgsql.c,
+	pam_sql/pam_sql.c: Pacify `make check-sql-config' in doc.
+	* doc/Makefile.am: Add check-* rules.
+	* doc/pam-modules.texi: Update.
+
 	* configure.ac: Check for pam libraries and header files.
 	* pam_sql/pam_mysql.c (mysql_setenv): Protect by #ifdef
 	HAVE_PAM_MISC_SETENV.  Prevent coredumps on NULL values.
