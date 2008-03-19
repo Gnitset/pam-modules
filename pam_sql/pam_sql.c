@@ -248,9 +248,18 @@ read_config ()
 		if (len == 0)
 			continue;
 		if (p[len-1] != '\n') {
-			_pam_log(LOG_EMERG, "%s:%d: string too long",
-				 config_file, line);
-			continue;
+			if (!slist)
+				slist = gray_slist_create();
+			gray_slist_append(slist, p, len);
+			while (p = fgets(buf, sizeof buf, fp)) {
+				len = strlen(p);
+				gray_slist_append(slist, p, len);
+				if (p[len - 1] == '\n')
+					break;
+			} 
+			gray_slist_append_char(slist, 0);
+			p = gray_slist_finish(slist);
+			len = strlen(p);
 		}
 
 		p[len-1] = 0;
@@ -266,7 +275,7 @@ read_config ()
 			if (!slist)
 				slist = gray_slist_create();
 			do {
-				gray_slist_append(slist, p, len-2);
+				gray_slist_append(slist, p, len - 1);
 				p = fgets (buf, sizeof buf, fp);
 				if (!p)
 					break;

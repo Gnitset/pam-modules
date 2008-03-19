@@ -15,9 +15,9 @@ EXTRA_PROGRAMS = pam_mysql.la pam_pgsql.la
 EXTRA_DIST = sha1.h sha1.c pam_sql.c md5.c md5.h
 LDADD = ../lib/libgraypam.la
 pam_mysql_la_SOURCES = pam_mysql.c pam_sql.c
-pam_mysql_la_LDADD = -lpam @MYSQLLIBS@
+pam_mysql_la_LDADD = -lpam @PAM_MISC@ @MYSQLLIBS@
 pam_pgsql_la_SOURCES = pam_pgsql.c pam_sql.c
-pam_pgsql_la_LDADD = -lpam @PGSQLLIBS@
+pam_pgsql_la_LDADD = -lpam @PAM_MISC@ @PGSQLLIBS@
 AM_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 
 AM_CPPFLAGS=-DSYSCONFDIR=\"${sysconfdir}\" 

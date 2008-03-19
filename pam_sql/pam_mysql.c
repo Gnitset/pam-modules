@@ -304,10 +304,8 @@ mysql_do_query(MYSQL *mysql, const char *query)
 static int
 mysql_setenv(pam_handle_t *pamh, MYSQL *mysql, const char *query)
 {
+#ifdef HAVE_PAM_MISC_SETENV
 	MYSQL_RES *result;
-	MYSQL_ROW row;
-	MYSQL_FIELD *fields;
-	size_t nf, i;
 
 	DEBUG(10,("Executing %s", query));
 	if (mysql_query(mysql, query)) {
@@ -319,13 +317,21 @@ mysql_setenv(pam_handle_t *pamh, MYSQL *mysql, const char *query)
 			 mysql_error(mysql));
 		return PAM_SERVICE_ERR;
 	}
-	row = mysql_fetch_row(result);
-	fields = mysql_fetch_fields(result);
-	nf = mysql_num_fields(result);
-	for (i = 0; i < nf; i++) 
-		pam_misc_setenv(pamh, fields[i].name, row[i], 0);
+	if (mysql_num_rows(result)) {
+		MYSQL_ROW row = mysql_fetch_row(result);
+		MYSQL_FIELD *fields = mysql_fetch_fields(result);
+		size_t i, nf = mysql_num_fields(result);
+		for (i = 0; i < nf; i++)
+			if (row[i])
+				pam_misc_setenv(pamh, fields[i].name,
+						row[i], 0);
+	}
 	mysql_free_result(result);
 	return PAM_SUCCESS;
+#else
+	_pam_log(LOG_ERR, "MySQL: PAM setenv is not available.");
+	return PAM_SERVICE_ERR;
+#endif
 }
 
 static int

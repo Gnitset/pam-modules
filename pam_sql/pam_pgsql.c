@@ -60,6 +60,7 @@ pgsql_do_query(PGconn **ppgconn, PGresult **pres, const char *query)
 static int
 pgsql_setenv(pam_handle_t *pamh, PGconn *pgconn, const char *query)
 {
+#ifdef HAVE_PAM_MISC_SETENV	
 	int rc;
 	PGresult *res;
 	
@@ -71,20 +72,26 @@ pgsql_setenv(pam_handle_t *pamh, PGconn *pgconn, const char *query)
 	} else if (PQresultStatus(res) != PGRES_TUPLES_OK) {
 		_pam_log(LOG_ERR, "PQexec: query did not return tuples");
 		rc = PAM_SERVICE_ERR;
-	} else {
+	} else if (PQntuples(res) > 0) {
 		char *p;
 		int i, nf;
 
 		nf = PQnfields(res);
 		for (i = 0; i < nf; i++) {
 			p = PQgetvalue(res, 0, i);
-			chop(p);
-			pam_misc_setenv(pamh, PQfname(res, i), p, 0);
+			if (p) {
+				chop(p);
+				pam_misc_setenv(pamh, PQfname(res, i), p, 0);
+			}
 		}
 		rc = PAM_SUCCESS;
 	}
 	PQclear(res);
 	return rc;
+#else
+	_pam_log(LOG_ERR, "MySQL: PAM setenv is not available.");
+	return PAM_SERVICE_ERR;
+#endif
 }
 
 

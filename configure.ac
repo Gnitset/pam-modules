@@ -34,11 +34,21 @@ AC_PROG_INSTALL
 AM_PROG_LIBTOOL
 
 dnl Checks for libraries.
+AC_CHECK_LIB(pam, pam_get_item,:,
+		  [AC_MSG_ERROR([Required library libpam is not found])])
 AC_CHECK_LIB(crypt, crypt)
-		    
+AC_SUBST(PAM_MISC)
+AH_TEMPLATE([HAVE_PAM_MISC_SETENV],[Define if pam_misc_setenv is available.])
+AC_CHECK_LIB(pam_misc, pam_misc_setenv,
+             [PAM_MISC=-lpam_misc
+	      AC_DEFINE([HAVE_PAM_MISC_SETENV],1)],:,[-lpam])
+			    
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS(fcntl.h syslog.h unistd.h crypt.h)
+AC_CHECK_HEADERS(security/pam_appl.h security/pam_modules.h,
+                 :,
+		 AC_MSG_ERROR([Required PAM header files not found]))
+AC_CHECK_HEADERS(fcntl.h syslog.h unistd.h crypt.h security/_pam_aconf.h)
 AC_CHECK_HEADER(shadow.h,
                 [],
                 [AC_MSG_ERROR(shadow.h is not present on your system)])
