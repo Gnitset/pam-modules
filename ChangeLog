@@ -1,5 +1,13 @@
 2008-03-19  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	* configure.ac: Check for pam libraries and header files.
+	* pam_sql/pam_mysql.c (mysql_setenv): Protect by #ifdef
+	HAVE_PAM_MISC_SETENV.  Prevent coredumps on NULL values.
+	* pam_sql/pam_pgsql.c (pgsql_setenv): Likewise.
+	* pam_sql/Makefile.am (pam_mysql_la_LDADD,pam_pgsql_la_LDADD): Add
+	@PAM_MISC@.
+	* pam_sql/pam_sql.c (read_config): Read lines of arbitrary length.
+
 	* pam_sql/pam_mysql.c, pam_sql/pam_pgsql.c: Implement `setenv'
 	method.
 	* pam_sql/pam_sql.c, pam_fshadow/pam_fshadow (_pam_get_password):
@@ -19,7 +27,7 @@
 
 	* NEWS, configure.ac: Updated. Set version to 1.3.90.
 	
-	* lib/escape.c lib/vartab.c: New files.
+	* lib/escape.c, lib/vartab.c: New files.
 	* lib/graypam.h (gray_expand_argv)
 	(gray_expand_string, gray_escape_string): New functions.
 	(struct keyword): New declaration.

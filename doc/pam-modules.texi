@@ -595,6 +595,16 @@ subject to variable expansion (@pxref{variable expansion}).
 Defines the query to be executed on session stop.  The @var{query} is
 subject to variable expansion (@pxref{variable expansion}).
 
+@opindex setenv-query, @command{pam_mysql} configuration variable
+@opindex setenv-query, @command{pam_pgsql} configuration variable
+@item setenv-query @var{query}
+This query is available when the package is compiled with @code{Linux
+PAM} implementation.  It allows to select arbitrary data from the
+database and to store them in @acronym{PAM} environment.  The
+first tuple returned from @var{query} is selected, the column names
+are used as environment variable names, and column values as their
+values. 
+
 @cindex allow-plaintext-pass, @command{pam_pgsql} configuration variable
 @cindex allow-plaintext-pass, @command{pam_mysql} configuration variable
 @item allow-plaintext-pass @var{bool}

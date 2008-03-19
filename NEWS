@@ -1,4 +1,4 @@
-pam-modules -- history of user-visible changes. 2008-03-17
+pam-modules -- history of user-visible changes. 2008-03-19
 Copyright (C) 2001,2004,2005,2007,2008 Sergey Poznyakoff
 See the end of file for copying conditions.
 
@@ -19,6 +19,9 @@ Old style of variable expansion has been dropped.  The `$name'
 notation is used instead.  To convert your old configuration files,
 replace %u with $user, and %p with $password.
 
+** setenv-query
+
+This new query allows to store arbitrary data in PAM environment.
 
 
 Version 1.3, 2008-03-15
