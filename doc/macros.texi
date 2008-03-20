@@ -3,10 +3,6 @@
 @end macro
 
 @macro opsummary{option}
-@ifclear ANCHOR-@value{MODULE}-\option\
-@set ANCHOR-@value{MODULE}-\option\ 1
-@anchor{\option\-@value{MODULE}}
-@end ifclear
 @xopindex{\option\, summary}
 @end macro
 
@@ -15,10 +11,6 @@
 @end macro
 
 @macro kwsummary{keyword}
-@ifclear ANCHOR-kw-@value{MODULE}-\keyword\
-@set ANCHOR-kw-@value{MODULE}-\keyword\ 1
-@anchor{\keyword\-kw-@value{MODULE}}
-@end ifclear
 @xkwindex{\keyword\, summary}
 @end macro
 
