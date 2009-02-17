@@ -1,5 +1,5 @@
 # This file is part of pam-modules.       -*- autoconf -*-
-# Copyright (C) 2005, 2006, 2007, 2008 Sergey Poznyakoff
+# Copyright (C) 2005, 2006, 2007, 2008, 2009 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 
 AC_PREREQ(2.53)
 
-AC_INIT(pam-modules, 1.4, gray@gnu.org.ua)
+AC_INIT(pam-modules, 1.5, bug-pam-modules@gnu.org.ua)
 AC_CONFIG_SRCDIR(pam_fshadow/pam_fshadow.c)
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE(no-exeext)
@@ -27,7 +27,13 @@ AC_SUBST(VI_CURRENT,1)
 AC_SUBST(VI_REVISION,0)
 AC_SUBST(VI_AGE,0)
 AC_SUBST(PAM_COMMON_INCLUDES, '-I${top_builddir} -I${top_srcdir} -I${top_srcdir}/lib')
-	
+
+dnl Modules
+build_fshadow=probe
+build_regex=probe
+build_log=probe
+build_pgsql=probe
+
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
@@ -51,7 +57,7 @@ AC_CHECK_HEADERS(security/pam_appl.h security/pam_modules.h,
 AC_CHECK_HEADERS(fcntl.h syslog.h unistd.h crypt.h security/_pam_aconf.h)
 AC_CHECK_HEADER(shadow.h,
                 [],
-                [AC_MSG_ERROR(shadow.h is not present on your system)])
+                [build_fshadow=no])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -60,48 +66,51 @@ dnl Checks for library functions.
 AC_CHECK_FUNCS(strerror)
 AC_CHECK_FUNC(fgetspent,
               [],
-              [AC_MSG_ERROR(fgetspent is not present on your system)])
+              [build_fshadow=no])
 AC_CHECK_FUNC(fgetpwent,
               [],
-              [AC_MSG_ERROR(fgetspent is not present on your system)])
+              [build_fshadow=no])
+
+PM_ENABLE(fshadow)
+PM_ENABLE(log)
+PM_ENABLE(regex)
 
 # Check for SQL support	      
-MYSQL=probe
-PGSQL=probe
 
 AC_ARG_WITH(mysql,
             AC_HELP_STRING([--without-mysql],
 	                   [Configure to work without MySQL]),
-	    [MYSQL=$withval])	
+	    [build_mysql=$withval])	
 AC_ARG_WITH(pgsql,
             AC_HELP_STRING([--without-pgsql],
 	                   [Configure to work without Postgres]),
-	    [PGSQL=$withval])
+	    [build_pgsql=$withval])
 AC_ARG_WITH(postgres,
             AC_HELP_STRING([--without-postgres],
 	                   [Same as --without-pgsql]),
-	  [PGSQL=$withval])
+ 	    [build_pgsql=$withval])
 AC_ARG_WITH(sql,
 	    AC_HELP_STRING([--without-sql],
 	                   [Do not build SQL dependent modules]),
-	  [MYSQL=$withval	
-	   PGSQL=$withval])	
+	  [build_mysql=$withval	
+	   build_pgsql=$withval])	
 	   
-if test "$MYSQL" != no; then
-  RA_CHECK_LIB(mysqlclient, mysql_real_connect, "-lm",
+if test "$build_mysql" != no; then
+  PM_CHECK_LIB(mysqlclient, mysql_real_connect, "-lm",
               [ AC_DEFINE(USE_SQL_MYSQL,1,
                           [Define this if you are going to use MySQL])
                 AC_DEFINE(HAVE_LIBMYSQL,1,
                           [Define this if you have mysqlclient library])
-                MYSQLLIBS="$ra_cv_lib_mysqlclient"
-		SQL_MODULES="$SQL_MODULES pam_mysql.la" ],
-              [ test "$MYSQL" = yes && AC_MSG_ERROR([MySQL libraries required, but not present])
-	         MYSQL=no ],
-              [/usr/local/lib/mysql /usr/lib/mysql])
+                MYSQLLIBS="$pm_cv_lib_mysqlclient"
+		SQL_MODULES="$SQL_MODULES pam_mysql.la"
+		build_mysql=yes ],
+              [ test "$build_mysql" = yes && AC_MSG_ERROR([MySQL libraries required, but not present])
+	        build_mysql=no ],
+              [/usr/lib/mysql /usr/local/lib/mysql])
 fi
 
-if test "$PGSQL" != no; then
-  RA_CHECK_LIB(pq, PQconnectStart, [],
+if test "$build_pgsql" != no; then
+  PM_CHECK_LIB(pq, PQconnectStart, [],
   	      [ save_CPPFLAGS=$CPPFLAGS
 	        for dir in /usr/local/pgsql/include /usr/pgsql/include
 		do
@@ -112,12 +121,13 @@ if test "$PGSQL" != no; then
 	        AC_DEFINE(USE_SQL_PGSQL,1,
                           [Define this if you are going to use PostgreSQL])
                 AC_DEFINE(HAVE_LIBPQ,1,
-                          [Define this if you have libp]) 
-                PGSQLLIBS="$ra_cv_lib_pq"
-		SQL_MODULES="$SQL_MODULES pam_pgsql.la" ],
-              [ test "$PGSQL" = yes && AC_MSG_ERROR([PostgreSQL libraries required, but not present])
-	        PGSQL=no ],
-              [/usr/local/pgsql/lib /usr/pgsql/lib])
+                          [Define this if you have libpq]) 
+                PGSQLLIBS="$pm_cv_lib_pq"
+		SQL_MODULES="$SQL_MODULES pam_pgsql.la"
+		build_pgsql=yes ],
+              [ test "$build_pgsql" = yes && AC_MSG_ERROR([PostgreSQL libraries required, but not present])
+	        build_pgsql=no ],
+              [/usr/pgsql/lib /usr/local/pgsql/lib])
 fi
 
 AC_SUBST(MYSQLLIBS)	
@@ -165,30 +175,29 @@ AC_CONFIG_COMMANDS([status],[
 echo ""
 delim="-------------------------------------------------------------------"
 echo $delim | tr '-' '*'
-echo "Modules to build:"     
+echo "Modules to build:"
+res=
 for module in fshadow regex log pgsql mysql
 do
 	modname=pam_$module
-	eval enable=\${enable_$module}
+	eval enable=\${build_$module}
 	str=`echo ${modname}" yes" | sed 's/./-/g'`
 	dstr=`echo $delim | sed "s/^$str//" | tr '-' '.'`
 	echo ${modname}$dstr $enable
+	res="$res$enable"
 done
 echo $delim | tr '-' '*'
+case "$res" in
+*yes*) ;;
+*)
+       AC_MSG_ERROR([Nothing to build?])
+esac
 ],[
-enable_fshadow=yes
-enable_regex=yes
-enable_log=yes
-if test "$PGSQL" = no; then	
-  enable_pgsql=no
-else
-  enable_pgsql=yes
-fi
-if test "$MYSQL" = no; then
-  enable_mysql=no
-else
-  enable_mysql=yes
-fi])  	  
+build_fshadow=$build_fshadow
+build_regex=$build_regex
+build_log=$build_log
+build_pgsql=$build_pgsql
+build_mysql=$build_mysql])  	  
 		
 AC_OUTPUT(Makefile
           doc/Makefile

@@ -1,5 +1,5 @@
 PAM-modules README
-Copyright (C) 2001, 2004, 2005, 2007 Sergey Poznyakoff
+Copyright (C) 2001, 2004, 2005, 2007, 2009 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 * Introduction
@@ -32,7 +32,16 @@ The applications-specific options are:
 	
  --with-pamdir=DIR
 	Set installation directory for PAM loadable files.
-	Default is PREFIX/lib/security
+	Default is PREFIX/lib/security.
+
+ --disable-fshadow
+        Disable pam_fshadow module.
+	
+ --disable-log
+        Disable pam_log module.
+	
+ --disable-regex
+        Disable pam_regex module.  
 	
  --without-mysql
         Do not build pam_mysql
@@ -64,7 +73,7 @@ Send bug reports to <bug-pam-modules@gnu.org.ua>. Read the chapter
 
 * Copyright information:
 
-Copyright (C) 2001, 2004, 2005, 2007 Sergey Poznyakoff
+Copyright (C) 2001, 2004, 2005, 2007, 2009 Sergey Poznyakoff
 
    Permission is granted to anyone to make or distribute verbatim copies
    of this document as received, in any medium, provided that the

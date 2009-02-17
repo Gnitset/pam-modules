@@ -1,4 +1,4 @@
-# Copyright (C) 2001, 2006, 2007, 2008 Sergey Poznyakoff
+# Copyright (C) 2001, 2006, 2007, 2008, 2009 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,7 +14,9 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 pamdir=@PAMDIR@
-pam_PROGRAMS = pam_fshadow.la
+PAM_FSHADOW = pam_fshadow.la
+pam_PROGRAMS = @BUILD_PAM_FSHADOW@
+EXTRA_PROGRAMS = pam_fshadow.la
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT = pam_fshadow.la
 pam_fshadow_la_SOURCES = pam_fshadow.c
 LDADD = -lpam @LIBS@ ../lib/libgraypam.la
