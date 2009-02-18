@@ -1,4 +1,4 @@
-# Copyright (C) 2005, 2006, 2008 Sergey Poznyakoff
+# Copyright (C) 2005, 2006, 2008, 2009 Sergey Poznyakoff
 #
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
@@ -36,12 +36,12 @@ pam_pgsql.lo: $(srcdir)/pam_sql.c
 pam_mysql.lo: $(srcdir)/pam_mysql.c 
 	$(LIBTOOL) --mode=compile $(CC) -o$@ -c -DHAVE_CONFIG_H \
 		$(CFLAGS) $(AM_CFLAGS) $(INCLUDES) $(CPPFLAGS) $(AM_CPPFLAGS) \
-		-DMODULE_NAME=\"pam_mysql\" $<
+		-DMODULE_NAME=\"pam_mysql\" $(srcdir)/pam_mysql.c
 
 pam_pgsql.lo: $(srcdir)/pam_pgsql.c
 	$(LIBTOOL) --mode=compile $(CC) -o$@ -c -DHAVE_CONFIG_H \
 		$(CFLAGS) $(AM_CFLAGS) $(INCLUDES) $(CPPFLAGS) $(AM_CPPFLAGS) \
-		-DMODULE_NAME=\"pam_pgsql\" $<
+		-DMODULE_NAME=\"pam_pgsql\" $(srcdir)/pam_pgsql.c
 
 pam_mysql.la$(EXEEXT): pam_mysql.lo sha1.lo md5.lo
 	$(LIBTOOL) --mode=link $(CC) -module -export-dynamic \
@@ -52,5 +52,5 @@ pam_mysql.la$(EXEEXT): pam_mysql.lo sha1.lo md5.lo
 pam_pgsql.la$(EXEEXT): pam_pgsql.lo
 	$(LIBTOOL) --mode=link $(CC) -module -export-dynamic \
 		$(AM_LDFLAGS) $(pam_pgsql_la_LDFLAGS) $(LDFLAGS) \
-		-o $@ $< $(pam_pgsql_la_LDADD) $(AM_LDADD) $(LDADD) \
+		-o $@ pam_pgsql.lo $(pam_pgsql_la_LDADD) $(AM_LDADD) $(LDADD) \
 		-rpath $(pamdir)

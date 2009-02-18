@@ -566,7 +566,7 @@ lower case and removes any suffix starting from the @samp{@@} symbol:
 
 @smallexample
 @group
-pam_refex.so extended transform=s/.*/\L&/g;s/@@.*/ 
+pam_regex.so extended transform=s/.*/\L&/g;s/@@.*/ 
 @end group
 @end smallexample
 
@@ -579,7 +579,7 @@ the expression.
 
 @smallexample
 @group
-pam_refex.so extended transform=s/.*/\L&/g;s/@@.*/ \
+pam_regex.so extended transform=s/.*/\L&/g;s/@@.*/ \
              regex=^(anoncvs|anonymous)$ sense=deny
 @end group
 @end smallexample
