@@ -31,6 +31,7 @@
                                        session management.
 * pam_log:     (pam-modules)log.       Format and log arbitrary
                                        messages to syslog.
+* pamck:       (pam-modules)pamck.     Verify PAM Access.                                       
 @end direntry
 @end ifinfo
 
@@ -39,7 +40,7 @@ Published by the Free Software Foundation,
 51 Franklin Street, Fifth Floor
 Boston, MA 02110-1301, USA
 
-Copyright @copyright{} 2005, 2007, 2008 Sergey Poznyakoff
+Copyright @copyright{} 2005, 2007, 2008, 2009 Sergey Poznyakoff
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.2 or
@@ -67,16 +68,17 @@ Software Foundation raise funds for GNU development.''
 @page
 @contents
 
-@node Top, Intro, (dir), (dir)
+@ifnottex
+@node Top
+@top PAM modules
 
-@ifinfo
-@chapter PAM-modules
 This edition of the @cite{PAM-modules Manual}, last updated @value{UPDATED},
 documents PAM-modules Version @value{VERSION}.
-@end ifinfo
+@end ifnottex
 
 @menu
 * Intro::               Introduction to PAM-modules
+* pamck::               Verify PAM Authentication
 
 Individual modules
 
@@ -86,6 +88,7 @@ Individual modules
                         expression.
 * log::                 Log arbitrary messages to syslog.
 * sql::                 Modules for SQL authentication and session management.
+
 * Reporting Bugs::      How to Report a Bug.
 
 Appendices
@@ -120,7 +123,7 @@ SQL Authentication and Session Management.
 @end detailmenu
 @end menu
 
-@node Intro, fshadow, Top, Top
+@node Intro
 @chapter Introduction to PAM-modules
    
    PAM-modules is a collection of various pluggable authentication
@@ -225,7 +228,85 @@ username: }.
    Item expansion is used by @command{pam_log}, @command{pam_mysql}
 and @command{pam_pgsql}. 
 
-@node fshadow, regex, Intro, Top
+@node pamck
+@chapter Verify PAM Access
+@prindex pamck
+
+The @command{pamck} utility checks if a user can be authenticated using
+@acronym{PAM}.  The user name is specified in the command line, so the
+simplest invocation is:
+
+@smallexample
+$ pamck user
+@end smallexample
+
+When used this way, @command{pamck} first authenticates @samp{user},
+by calling @code{pam_authenticate}, and then performs account
+management (@code{pam_acct_mgmt}).  If both functions return success,
+the utility prints @samp{OK} on the standard output and exits with
+zero code.  In case of failure, it displays diagnostics on standard
+error and exits with error code 2.
+
+It exits with code 1 in case of usage error (e.g. wrong command line
+option).
+
+If password is required, the utility asks about it, and waits for the
+user input.  When reading user input, terminal echo is turned off to
+prevent password compromising.
+
+Alternatively, the password may be given on the command line, as the
+second argument:
+
+@smallexample
+$ pamck user pass
+@end smallexample
+
+By default, @command{pamck} uses @acronym{PAM} service @samp{check}.
+Another service name may be supplied using the @option{-s} command
+line option:
+
+@smallexample
+$ pamck -s login user
+@end smallexample
+
+The @option{-g} command line option allows to select the @acronym{PAM}
+management group to check.  It takes the name of the group as an
+argument.  Allowed group names are:
+
+@table @asis
+@item auth
+Authentication group.  Call @code{pam_authenticate}.
+
+@item acct
+Account management.  Call @code{pam_acct_mgmt}.
+
+@item open
+Session management.  Call @code{pam_open_session}.
+
+@item close
+Session management.  Call @code{pam_close_session}.
+
+@item pass
+Password management.  Call @code{pam_chauthtok}.
+@end table
+
+The following table summarizes available command line options:
+
+@table @option
+@item -s @var{service}
+Select service name to use.
+
+@item -g @var{group}
+Select @acronym{PAM} management group to check.
+
+@item -h
+Print short help summary and exit.
+
+@item -v
+Print program version and copyright information and exit.
+@end table
+
+@node fshadow
 @chapter Authentication against an alternative shadow file.
 @set MODULE pam_fshadow
 @prindex pam_fshadow
@@ -429,7 +510,7 @@ authentication tokens.
 
 @end table
 
-@node regex, log, fshadow, Top
+@node regex
 @chapter Authentication using regular expressions.
 @set MODULE pam_regex
 
@@ -622,7 +703,7 @@ return @code{PAM_AUTH_ERR}.  Default is @samp{allow}.
 
 @end table
 
-@node log, sql, regex, Top
+@node log
 @chapter Log arbitrary messages to syslog.
 @set MODULE pam_log
 
@@ -695,7 +776,7 @@ cvs session    required   pam_permit.so
 @end group
 @end smallexample
 
-@node sql, Reporting Bugs, log, Top
+@node sql
 @chapter SQL Authentication and Session Management.
 @set MODULE pam_sql
 @prindex pam_pgsql
@@ -1050,7 +1131,7 @@ The @var{query} is subject to item expansion (@pxref{item expansion}).
 @xref{sql setenv}, for a detailed description.
 @end table
 
-@node Reporting Bugs, Copying This Manual, sql, Top
+@node Reporting Bugs
 @chapter How to Report a Bug
 
 Email bug reports to @email{bug-pam-modules@@gnu.org.ua}.
@@ -1065,10 +1146,11 @@ The information needed is:
 @item Conditions under which the bug appears.
 @end itemize
 
-@node Copying This Manual, Concept Index, Reporting Bugs, Top
+@node Copying This Manual
+@appendix GNU Free Documentation License
 @include fdl.texi
 
-@node Concept Index,  , Copying This Manual, Top
+@node Concept Index, 
 @comment node-name,  next,  previous,  up
 @unnumbered Concept Index
 

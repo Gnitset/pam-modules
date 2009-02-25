@@ -1,4 +1,4 @@
-# Copyright (C) 2001, 2006, 2008, 2009 Sergey Poznyakoff
+# Copyright (C) 2009 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,5 +13,6 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-AUTOMAKE_OPTIONS = gnits 1.8
-SUBDIRS = doc lib pam_fshadow pam_regex pam_log pam_sql pamck
+bin_PROGRAMS = pamck
+LDADD = -lpam
+pamck_SOURCES=pamck.c pamck.h conv.c

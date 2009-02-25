@@ -16,7 +16,7 @@
 
 AC_PREREQ(2.53)
 
-AC_INIT(pam-modules, 1.5, bug-pam-modules@gnu.org.ua)
+AC_INIT(pam-modules, 1.6, bug-pam-modules@gnu.org.ua)
 AC_CONFIG_SRCDIR(pam_fshadow/pam_fshadow.c)
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE(no-exeext)
@@ -54,7 +54,7 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS(security/pam_appl.h security/pam_modules.h,
                  :,
 		 AC_MSG_ERROR([Required PAM header files not found]))
-AC_CHECK_HEADERS(fcntl.h syslog.h unistd.h crypt.h security/_pam_aconf.h)
+AC_CHECK_HEADERS(fcntl.h syslog.h unistd.h crypt.h security/_pam_aconf.h termios.h)
 AC_CHECK_HEADER(shadow.h,
                 [],
                 [build_fshadow=no])
@@ -63,7 +63,7 @@ dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS(strerror)
+AC_CHECK_FUNCS(strerror tcgetattr)
 AC_CHECK_FUNC(fgetspent,
               [],
               [build_fshadow=no])
@@ -205,4 +205,5 @@ AC_OUTPUT(Makefile
 	  pam_fshadow/Makefile
           pam_regex/Makefile
 	  pam_log/Makefile
-	  pam_sql/Makefile)
+	  pam_sql/Makefile
+	  pamck/Makefile)
