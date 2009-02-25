@@ -27,13 +27,13 @@
 # define TCSASOFT 0
 #endif
 
-#define DELTA 1
+#define DELTA 128
 
 static char *
 readline (FILE *in)
 {
 	char *buf;
-	size_t bufsize = 1;
+	size_t bufsize = 128;
 	size_t len = 0;
 	int c;
 	
