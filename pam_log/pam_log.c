@@ -92,9 +92,10 @@ parse_priority(struct pam_opt *opt, const char *str)
 
 struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(debug), pam_opt_long, &debug_level },
-	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, 1 },
-	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, CNTL_AUDIT },
-	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, 0, gray_wait_debug_fun },
+	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, { 1 } },
+	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, { CNTL_AUDIT } },
+	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, { 0 },
+	  gray_wait_debug_fun },
 	{ PAM_OPTSTR(tag), pam_opt_string, &syslog_tag },
 	{ PAM_OPTSTR(pri), pam_opt_null, NULL, 0, parse_priority },
 	{ PAM_OPTSTR(open), pam_opt_bool, &do_open },

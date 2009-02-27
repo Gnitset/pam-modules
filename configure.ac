@@ -55,7 +55,8 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS(security/pam_appl.h security/pam_modules.h,
                  :,
 		 AC_MSG_ERROR([Required PAM header files not found]))
-AC_CHECK_HEADERS(fcntl.h syslog.h unistd.h crypt.h security/_pam_aconf.h termios.h)
+AC_CHECK_HEADERS(fcntl.h syslog.h unistd.h crypt.h security/_pam_aconf.h \
+                 security/pam_misc.h termios.h)
 AC_CHECK_HEADER(shadow.h,
                 [],
                 [build_fshadow=no])

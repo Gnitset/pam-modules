@@ -23,6 +23,9 @@
 #else
 extern char *crypt(const char *, const char *);
 #endif
+#if HAVE_SECURITY_PAM_MISC_H
+# include <security/pam_misc.h>
+#endif
 #include <md5.h>
 #include <sha1.h>
 

@@ -90,7 +90,7 @@ gray_wait_debug_fun (struct pam_opt *opt, const char *value)
 			 opt->name, value);
 		return 1;
 	}
-	gray_wait_debug(0, NULL, 0);
+	gray_wait_debug(n, NULL, 0);
 	return 0;
 }
 

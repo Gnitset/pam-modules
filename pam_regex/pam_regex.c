@@ -52,23 +52,24 @@ static const char *user_name;
 
 struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(debug), pam_opt_long, &debug_level },
-	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, 1 },
-	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, CNTL_AUDIT },
-	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, 0, gray_wait_debug_fun },
-	{ PAM_OPTSTR(sense), pam_opt_enum, &sense, sense_choice },
+	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, { 1 } },
+	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, { CNTL_AUDIT } },
+	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, { 0 },
+	  gray_wait_debug_fun },
+	{ PAM_OPTSTR(sense), pam_opt_enum, &sense, { sense_choice } },
 	{ PAM_OPTSTR(transform), pam_opt_string, &transform },
 	{ PAM_OPTSTR(user), pam_opt_string, &user_name },
 	{ PAM_OPTSTR(regex), pam_opt_string, &regex },
 	{ PAM_OPTSTR(extended), pam_opt_bitmask, &regex_flags,
-	  REG_EXTENDED },
+	  { REG_EXTENDED } },
 	{ PAM_OPTSTR(basic), pam_opt_bitmask_rev, &regex_flags,
-	  REG_EXTENDED },
+	  { REG_EXTENDED } },
 	{ PAM_OPTSTR(icase), pam_opt_bitmask, &regex_flags,
-	  REG_ICASE },
+	  { REG_ICASE } },
 	{ PAM_OPTSTR(ignore-case), pam_opt_bitmask, &regex_flags,
-	  REG_ICASE },
+	  { REG_ICASE } },
 	{ PAM_OPTSTR(case), pam_opt_bitmask_rev, &regex_flags,
-	  REG_ICASE },
+	  { REG_ICASE } },
 	
 	{ NULL }
 };
@@ -141,7 +142,6 @@ pam_sm_authenticate(pam_handle_t *pamh,
 
 	if (regex) {
 		for (;;) {
-
 			if (rc = regcomp(&rx, regex, regex_flags)) {
 				char errbuf[512];
 				regerror (rc, &rx, errbuf, sizeof (errbuf));
