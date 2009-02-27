@@ -1,5 +1,12 @@
 2009-02-27  Sergey Poznyakoff  <gray@gnu.org.ua>
 
+	Minor changes
+	
+	* pam_fshadow/pam_fshadow.c: Protect shadow-related code with
+	ifdefs.
+	* configure.ac: Check for shadow.h, struct spwd and fgetspent. Do
+	not disable pam_fshadow.c if they are not present.
+
 	Rewrite Makefile.am's in a clearer and simpler way
 	
 	* configure.ac: Require libtool 2.2.5a

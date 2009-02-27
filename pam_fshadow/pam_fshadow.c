@@ -20,8 +20,10 @@
 #include <graypam.h>
 #include <time.h>
 #include <pwd.h>
+#ifdef HAVE_SHADOW_H
 #include <shadow.h>
-
+#endif
+  
 #if defined(HAVE_CRYPT_H)
 # include <crypt.h>
 #else
@@ -278,6 +280,7 @@ int
 verify_user_pass(const char *confdir, const char *username,
 		 const char *password)
 {
+#if defined(HAVE_FGETSPENT) && defined(HAVE_STRUCT_SPWD)
 	struct spwd *sp = NULL;
 	time_t curdays;
 	FILE *fp;
@@ -321,10 +324,12 @@ verify_user_pass(const char *confdir, const char *username,
 		 && curdays > sp->sp_lstchg + sp->sp_max + sp->sp_inact)
 		/* Password is too old */
 		retval = PAM_ACCT_EXPIRED;
+#if defined(HAVE_STRUCT_SPWD_SP_EXPIRE)
 	else if (sp->sp_expire != -1 && sp->sp_lstchg != 0
 		 && curdays > sp->sp_expire)
 		/* Account has expired */
 		retval = PAM_ACCT_EXPIRED;
+#endif
 	else if (strcmp(sp->sp_pwdp, crypt(password, sp->sp_pwdp)) == 0)
 		retval = PAM_SUCCESS;
 	else
@@ -332,6 +337,9 @@ verify_user_pass(const char *confdir, const char *username,
 
 	free(shadow);
 	return retval;
+#else
+	return PAM_AUTH_ERR;
+#endif
 }
 
 static int

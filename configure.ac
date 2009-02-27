@@ -64,11 +64,16 @@ AC_CHECK_HEADER(shadow.h,
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
+AC_CHECK_HEADERS([shadow.h])
+AC_CHECK_FUNCS(fgetspent)
+AC_CHECK_TYPES(struct spwd, , ,
+    [ #include <shadow.h> ])
+AC_CHECK_MEMBERS([struct spwd.sp_expire], , ,
+    [ #include <shadow.h> ])
+
 dnl Checks for library functions.
 AC_CHECK_FUNCS(strerror tcgetattr)
-AC_CHECK_FUNC(fgetspent,
-              [],
-              [build_fshadow=no])
+
 AC_CHECK_FUNC(fgetpwent,
               [],
               [build_fshadow=no])
