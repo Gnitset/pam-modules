@@ -14,10 +14,10 @@
    You should have received a copy of the GNU General Public License along
    with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-#include <graypam.h>
+#include "pam_sql.h"
 #include <libpq-fe.h>
 
-#include "pam_sql.c"
+char *gpam_sql_module_name = "pam_pgsql";
 
 static int
 pgsql_do_query(PGconn **ppgconn, PGresult **pres, const char *query)
@@ -28,18 +28,17 @@ pgsql_do_query(PGconn **ppgconn, PGresult **pres, const char *query)
 	char *db;
 	char *port;
 	char *pass;
-	gray_slist_t slist;
 	
-	hostname = find_config("host");
+	hostname = gpam_sql_find_config("host");
 	
-	port = find_config("port");
+	port = gpam_sql_find_config("port");
 
-	login = find_config("login");
+	login = gpam_sql_find_config("login");
 	CHKVAR(login);
 
-	pass = find_config("pass");
+	pass = gpam_sql_find_config("pass");
 
-	db = find_config("db");
+	db = gpam_sql_find_config("db");
 	CHKVAR(db);
 
 	pgconn = PQsetdbLogin (hostname, port, NULL, NULL,
@@ -80,7 +79,7 @@ pgsql_setenv(pam_handle_t *pamh, PGconn *pgconn, const char *query)
 		for (i = 0; i < nf; i++) {
 			p = PQgetvalue(res, 0, i);
 			if (p) {
-				chop(p);
+				gray_trim_ws(p);
 				pam_misc_setenv(pamh, PQfname(res, i), p, 0);
 			}
 		}
@@ -95,8 +94,9 @@ pgsql_setenv(pam_handle_t *pamh, PGconn *pgconn, const char *query)
 }
 
 
-static int
-verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
+int
+gpam_sql_verify_user_pass(pam_handle_t *pamh, const char *password,
+			  const char *query)
 {
 	int rc;
 	PGconn *pgconn;
@@ -136,25 +136,27 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 		}
 
 		p = PQgetvalue(res, 0, 0);
-		chop(p);
+		gray_trim_ws(p);
 		DEBUG(100,("Obtained password value: %s", p));
 
 		rc = PAM_AUTH_ERR;
 		if (strcmp(p, crypt(password, p)) == 0)
 			rc = PAM_SUCCESS;
 		if (rc != PAM_SUCCESS
-		    && check_boolean_config ("allow-ldap-pass", 1))
+		    && gpam_sql_check_boolean_config ("allow-ldap-pass", 1))
 			rc = gray_check_ldap_pass (p, password);
 		if (rc != PAM_SUCCESS
-		    && check_boolean_config ("allow-plaintext-pass", 0)
+		    && gpam_sql_check_boolean_config ("allow-plaintext-pass", 0)
 		    && strcmp (p, password) == 0)
 			rc = PAM_SUCCESS;
 
 		/* FIXME: This comment is needed to pacify
 		   `make check-sql-config' in doc:
-		   find_config("setenv-query") */
+		   gpam_sql_find_config("setenv-query") */
 		if (rc == PAM_SUCCESS
-		    && (query = get_query(pamh, "setenv-query", &slist, 0))) {
+		    && (query = gpam_sql_get_query(pamh,
+						   "setenv-query",
+						   &slist, 0))) {
 			pgsql_setenv(pamh, pgconn, query);
 			gray_slist_free(&slist);
 		}
@@ -166,8 +168,8 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 	return rc;
 }
 
-static int
-sql_acct(pam_handle_t *pamh, const char *query)
+int
+gpam_sql_acct(pam_handle_t *pamh, const char *query)
 {
 	int rc;
 	PGconn *pgconn;
@@ -199,3 +201,20 @@ sql_acct(pam_handle_t *pamh, const char *query)
 	
 	return rc;
 }
+
+	
+#ifdef PAM_STATIC
+
+/* static module data */
+
+struct pam_module _pam_fshadow_modstruct = {
+	"pam_pgsql",
+	pam_sm_authenticate,
+	pam_sm_setcred,
+	NULL,
+	pam_sm_open_session,
+	pam_sm_close_session,
+	NULL,
+};
+
+#endif

@@ -15,17 +15,9 @@
 
 pamdir=@PAMDIR@
 PAM_LOG = pam_log.la
-pam_PROGRAMS = @BUILD_PAM_LOG@
-EXTRA_PROGRAMS = pam_log.la
-AM_INSTALLCHECK_STD_OPTIONS_EXEMPT = pam_log.la
+pam_LTLIBRARIES = @BUILD_PAM_LOG@
+EXTRA_LTLIBRARIES = pam_log.la
 pam_log_la_SOURCES = pam_log.c
-LDADD = -lpam ../lib/libgraypam.la
-AM_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 AM_CPPFLAGS=-DMODULE_NAME=\"pam_log\" -DSYSCONFDIR=\"${sysconfdir}\"
-INCLUDES=@PAM_COMMON_INCLUDES@
-NORMAL_UNINSTALL = -rm -f $(DESTDIR)$(pamdir)/pam_log.a $(DESTDIR)$(pamdir)/pam_log.so.@VI_CURRENT@.@VI_REVISION@.@VI_AGE@
 
 include $(top_srcdir)/Make.rules
-
-pam_log.lo: pam_log.c
-pam_log.la: pam_log.lo

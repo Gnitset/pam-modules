@@ -15,11 +15,11 @@
    with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
 #include <graypam.h>
+#include <string.h>
 #include <mysql/mysql.h>
+#include "pam_sql.h"
 
-#include "pam_sql.c"
-#include "sha1.h"
-#include "md5.h"
+char *gpam_sql_module_name = "pam_mysql";
 
 
 /* MySQL scrambled password support */
@@ -177,13 +177,13 @@ static int
 check_md5_pass(const char *sqlpass, const char *userpass)
 {
 	char md5str[33];
-	struct md5_ctx ctx;
+	struct gpam_md5_ctx ctx;
 	unsigned char digest[16];
 
 	md5str[0] = 0;
-	md5_init_ctx (&ctx);
-	md5_process_bytes (userpass, strlen (userpass), &ctx);
-	md5_finish_ctx (&ctx, digest);
+	gpam_md5_init_ctx (&ctx);
+	gpam_md5_process_bytes (userpass, strlen (userpass), &ctx);
+	gpam_md5_finish_ctx (&ctx, digest);
 	make_digest (md5str, digest);
 	if (strcmp (sqlpass, md5str) == 0)
 		return PAM_SUCCESS;
@@ -219,21 +219,21 @@ check_query_result(MYSQL *mysql, const char *pass)
 		}
 		
 		row = mysql_fetch_row(result);
-		chop(row[0]);
+		gray_trim_ws(row[0]);
 		DEBUG(100,("Obtained password value: %s", row[0]));
 		if (strcmp(row[0], crypt(pass, row[0])) == 0)
 			rc = PAM_SUCCESS;
 		if (rc != PAM_SUCCESS
-		    && check_boolean_config ("allow-mysql-pass", 1))
+		    && gpam_sql_check_boolean_config ("allow-mysql-pass", 1))
 			rc = check_mysql_pass (row[0], pass);
 		if (rc != PAM_SUCCESS
-		    && check_boolean_config ("allow-md5-pass", 1))
+		    && gpam_sql_check_boolean_config ("allow-md5-pass", 1))
 			rc = check_md5_pass (row[0], pass);
 		if (rc != PAM_SUCCESS
-		    && check_boolean_config ("allow-ldap-pass", 1))
+		    && gpam_sql_check_boolean_config ("allow-ldap-pass", 1))
 			rc = gray_check_ldap_pass (row[0], pass);
 		if (rc != PAM_SUCCESS
-		    && check_boolean_config ("allow-plaintext-pass", 0)) {
+		    && gpam_sql_check_boolean_config ("allow-plaintext-pass", 0)) {
 			if (strcmp (row[0], pass) == 0)
 				rc = PAM_SUCCESS;
 		}
@@ -254,16 +254,15 @@ mysql_do_query(MYSQL *mysql, const char *query)
 	char *port;
 	int portno;
 	char *p;
-	int rc;
 	
-	hostname = find_config("host");
+	hostname = gpam_sql_find_config("host");
 	CHKVAR(hostname);
 	if (hostname[0] == '/') {
 		socket_path = hostname;
 		hostname = "localhost";
 	}
 	
-	port = find_config("port");
+	port = gpam_sql_find_config("port");
 	if (!port)
 		portno = 3306;
 	else {
@@ -274,13 +273,13 @@ mysql_do_query(MYSQL *mysql, const char *query)
 		}
 	}
 	
-	login = find_config("login");
+	login = gpam_sql_find_config("login");
 	CHKVAR(login);
 
-	pass = find_config("pass");
+	pass = gpam_sql_find_config("pass");
 	CHKVAR(pass);
 
-	db = find_config("db");
+	db = gpam_sql_find_config("db");
 	CHKVAR(db);
 
 	mysql_init(mysql);
@@ -334,8 +333,9 @@ mysql_setenv(pam_handle_t *pamh, MYSQL *mysql, const char *query)
 #endif
 }
 
-static int
-verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
+int
+gpam_sql_verify_user_pass(pam_handle_t *pamh, const char *password,
+			  const char *query)
 {
 	MYSQL mysql;
 	int rc;
@@ -348,9 +348,10 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 		rc = check_query_result(&mysql, password);
 		/* FIXME: This comment is needed to pacify
 		   `make check-sql-config' in doc:
-		   find_config("setenv-query") */
+		   gpam_sql_find_config("setenv-query") */
 		if (rc == PAM_SUCCESS
-		    && (q = get_query(pamh, "setenv-query", &slist, 0))) {
+		    && (q = gpam_sql_get_query(pamh, "setenv-query", 
+                                               &slist, 0))) {
 			mysql_setenv(pamh, &mysql, q);
 			gray_slist_free(&slist);
 		}
@@ -360,8 +361,8 @@ verify_user_pass(pam_handle_t *pamh, const char *password, const char *query)
 	return rc;
 }
 
-static int
-sql_acct(pam_handle_t *pamh, const char *query)
+int
+gpam_sql_acct(pam_handle_t *pamh, const char *query)
 {
 	MYSQL mysql;
 	int rc;
@@ -384,3 +385,19 @@ sql_acct(pam_handle_t *pamh, const char *query)
 	return rc;
 }
 
+	
+#ifdef PAM_STATIC
+
+/* static module data */
+
+struct pam_module _pam_fshadow_modstruct = {
+	"pam_mysql",
+	pam_sm_authenticate,
+	pam_sm_setcred,
+	NULL,
+	pam_sm_open_session,
+	pam_sm_close_session,
+	NULL,
+};
+
+#endif

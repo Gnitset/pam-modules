@@ -15,17 +15,9 @@
 
 pamdir=@PAMDIR@
 PAM_FSHADOW = pam_fshadow.la
-pam_PROGRAMS = @BUILD_PAM_FSHADOW@
-EXTRA_PROGRAMS = pam_fshadow.la
-AM_INSTALLCHECK_STD_OPTIONS_EXEMPT = pam_fshadow.la
+pam_LTLIBRARIES = @BUILD_PAM_FSHADOW@
+EXTRA_LTLIBRARIES = pam_fshadow.la
 pam_fshadow_la_SOURCES = pam_fshadow.c
-LDADD = -lpam @LIBS@ ../lib/libgraypam.la
-AM_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 AM_CPPFLAGS=-DMODULE_NAME=\"pam_fshadow\" -DSYSCONFDIR=\"${sysconfdir}\"
-INCLUDES=@PAM_COMMON_INCLUDES@
-NORMAL_UNINSTALL = -rm -f $(DESTDIR)$(pamdir)/pam_fshadow.a $(DESTDIR)$(pamdir)/pam_fshadow.so.@VI_CURRENT@.@VI_REVISION@.@VI_AGE@
 
 include $(top_srcdir)/Make.rules
-
-pam_fshadow.lo: pam_fshadow.c
-pam_fshadow.la: pam_fshadow.lo

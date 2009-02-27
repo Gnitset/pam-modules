@@ -1,3 +1,23 @@
+2009-02-27  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Rewrite Makefile.am's in a clearer and simpler way
+	
+	* configure.ac: Require libtool 2.2.5a
+	* Make.rules (.c.lo, .lo.la): Remove
+	(AM_LDFLAGS, INCLUDES, LIBS): New assignments.
+	* pam_sql/Makefile.am, pam_fshadow/Makefile.am,
+	pam_sql/Makefile.am, pam_regex/Makefile.am,
+	pam_log/Makefile.am: Rewrite.
+	* pam_sql/pam_sql.h, pam_sql/pam_mysql.c, pam_sql/pam_pgsql.c.
+	pam_sql/pam_sql.c: Rewrite.
+	* pam_sql/sha1.h, pam_sql/md5.c, pam_sql/md5.h, pam_sql/sha1.c
+	* pam_fshadow/pam_fshadow.c: New option [no]shadow
+	* doc/pam-modules.texi: Update.
+
+	* lib/graypam.h (gray_trim_ws): New proto
+	* lib/strutil.c: New file.
+	* lib/Makefile.am: Add strutil.c
+
 2009-02-17  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	* pam_fshadow/Makefile.am: Build the module conditionally.

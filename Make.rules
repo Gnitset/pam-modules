@@ -13,14 +13,6 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-.c.lo:
-	$(LIBTOOL) --mode=compile $(CC) -c -DHAVE_CONFIG_H \
-                $(CFLAGS) $(AM_CFLAGS) $(INCLUDES) $(CPPFLAGS) \
-                $(AM_CPPFLAGS) $<
-
-.lo.la: 
-	$(LIBTOOL) --mode=link $(CC) -module -export-dynamic \
-                   $(AM_LDFLAGS) \
-                 -o $@ $< $(AM_LDADD) $(LDADD) \
-                 -rpath $(pamdir) -shared
-
+AM_LDFLAGS = -module -export-dynamic -avoid-version -rpath '$(pamdir)'
+INCLUDES=-I. -I${top_builddir} -I${top_srcdir} -I${top_srcdir}/lib
+LIBS = -lpam ../lib/libgraypam.la @LIBS@

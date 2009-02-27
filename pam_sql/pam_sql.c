@@ -14,42 +14,27 @@
    You should have received a copy of the GNU General Public License along
    with this program.  If not, see <http://www.gnu.org/licenses/>. */
 
-#include <graypam.h>
-#if defined(HAVE_CRYPT_H)
-# include <crypt.h>
-#else
-extern char *crypt(const char *, const char *);
-#endif
+#include "pam_sql.h"
 
 /* indicate the following groups are defined */
 #define PAM_SM_AUTH
 #define PAM_SM_SESSION
 
-#define CHKVAR(v) \
- 	if (!(v)) {                                                        \
-	        _pam_log(LOG_ERR, "%s: %s not defined", config_file, #v);  \
-		return PAM_SERVICE_ERR;                                    \
-	}                                                                  \
-       	DEBUG(100,("Config: %s=%s", #v, v));
-
-static int verify_user_pass(pam_handle_t *pamh, const char *passwd,
-			    const char *query);
-static int sql_acct(pam_handle_t *pamh, const char *query);
-		    
 #define CNTL_AUTHTOK      0x0010
 
 static int cntl_flags;
-static long debug_level;
-char *config_file = SYSCONFDIR "/pam_sql.conf";
+long gpam_sql_debug_level;
+char *gpam_sql_config_file = SYSCONFDIR "/pam_sql.conf";
 
 struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(debug), pam_opt_long, &debug_level },
-	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, 1 },
-	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, CNTL_AUDIT },
-	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, 0, gray_wait_debug_fun },
+	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, { 1 } },
+	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, { CNTL_AUDIT } },
+	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, { 0 },
+	  gray_wait_debug_fun },
 	{ PAM_OPTSTR(use_authtok), pam_opt_bitmask, &cntl_flags,
-	  CNTL_AUTHTOK },
-	{ PAM_OPTSTR(config), pam_opt_string, &config_file },
+	  { CNTL_AUTHTOK } },
+	{ PAM_OPTSTR(config), pam_opt_string, &gpam_sql_config_file },
 	{ NULL }
 };
 
@@ -58,8 +43,8 @@ _pam_parse(int argc, const char **argv)
 {
 	cntl_flags = 0;
 	debug_level = 0;
-	config_file = SYSCONFDIR "/pam_sql.conf";
-	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
+	gpam_sql_config_file = SYSCONFDIR "/pam_sql.conf";
+	gray_log_init(0, gpam_sql_module_name, LOG_AUTHPRIV);
 	gray_parseopt(pam_opt, argc, argv);
 }
 
@@ -164,22 +149,8 @@ struct config_env {
 };
 static env_t *config_env;	
 
-/*
- * Chop off trailing whitespace. Return length of the resulting string
- */
-static int
-chop(char *str)
-{
-	int len;
-
-	for (len = strlen(str); len > 0 && isspace(str[len-1]); len--)
-		;
-	str[len] = 0;
-	return len;
-}
-
 char *
-find_config(const char *name)
+gpam_sql_find_config(const char *name)
 {
 	env_t *env;
 
@@ -189,7 +160,7 @@ find_config(const char *name)
 	return NULL;
 }
 
-void
+static void
 free_config()
 {
 	env_t *env = config_env;
@@ -210,10 +181,10 @@ boolean_true_p(const char *value)
 		|| strcmp(value, "t") == 0;
 }
 
-static int
-check_boolean_config(const char *name, int defval)
+int
+gpam_sql_check_boolean_config(const char *name, int defval)
 {
-	const char *value = find_config(name);
+	const char *value = gpam_sql_find_config(name);
 	if (value)
 		defval = boolean_true_p(value);
 	return defval;
@@ -229,10 +200,10 @@ read_config ()
 	char buf[128];
 	gray_slist_t slist = NULL;
 	
-	fp = fopen (config_file, "r");
+	fp = fopen (gpam_sql_config_file, "r");
 	if (!fp) {
 		_pam_log(LOG_ERR, "cannot open configuration file `%s': %s",
-			 config_file, strerror (errno));
+			 gpam_sql_config_file, strerror (errno));
 		return 1;
 	}
 
@@ -263,7 +234,7 @@ read_config ()
 		}
 
 		p[len-1] = 0;
-		len = chop(p);
+		len = gray_trim_ws(p);
 			
 		if (*p == 0 || *p == '#')
 			continue;
@@ -286,12 +257,12 @@ read_config ()
 				if (p[len-1] != '\n') {
 					_pam_log(LOG_EMERG,
 						 "%s:%d: string too long",
-						 config_file, line);
+						 gpam_sql_config_file, line);
 					err = 1; 
 					break;
 				}
 				p[len-1] = 0;
-				len = chop(p);
+				len = gray_trim_ws(p);
 			} while (p[len-1] == '\\');
 			if (len)
 				gray_slist_append(slist, p, len);
@@ -324,7 +295,7 @@ read_config ()
 			;
 		if (!*p) {
 			_pam_log(LOG_EMERG, "%s:%d: not enough fields",
-				 config_file, line);
+				 gpam_sql_config_file, line);
 			free(env->name);
 			free(env);
 			continue;
@@ -340,16 +311,16 @@ read_config ()
 }
 
 
-static const char *
-get_query(pam_handle_t *pamh, const char *name, gray_slist_t *pslist,
-	  int required)
+const char *
+gpam_sql_get_query(pam_handle_t *pamh, const char *name, gray_slist_t *pslist,
+		   int required)
 {
 	gray_slist_t slist;
-	const char *query = find_config(name);
+	const char *query = gpam_sql_find_config(name);
 
  	if (!query) {
 		if (required)
-			gray_raise("%s: %s not defined", config_file, name);
+			gray_raise("%s: %s not defined", gpam_sql_config_file, name);
 		return NULL;
 	}
 	
@@ -365,14 +336,15 @@ get_query2(pam_handle_t *pamh, const char *name1, const char *name2,
 	   gray_slist_t *pslist, int required)
 {
 	gray_slist_t slist;
-	const char *query = find_config(name1);
+	const char *query = gpam_sql_find_config(name1);
 
 	if (!query)
-		query = find_config(name2);
+		query = gpam_sql_find_config(name2);
 	
  	if (!query) {
 		if (required)
-			gray_raise("%s: %s not defined", config_file, name1);
+			gray_raise("%s: %s not defined", 
+			           gpam_sql_config_file, name1);
 		return NULL;
 	}
 	
@@ -420,10 +392,10 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 		gray_slist_t slist;
 		/* FIXME: This comment is needed to pacify
 		   `make check-sql-config' in doc:
-		   find_config("passwd-query") */
-		retval = verify_user_pass(pamh, password,
-					  get_query2(pamh, "passwd-query",
-						     "query",  &slist, 1));
+		   gpam_sql_find_config("passwd-query") */
+		retval = gpam_sql_verify_user_pass(pamh, password,
+					     get_query2(pamh, "passwd-query",
+					     "query",  &slist, 1));
 		gray_slist_free(&slist);
 	}
 	
@@ -455,7 +427,6 @@ sql_session_mgmt(pam_handle_t *pamh, int flags,
 		 int argc, const char **argv, const char *query_name)
 {
 	int retval;
-	gray_slist_t slist;
 
 	gray_pam_init(PAM_SERVICE_ERR);
 
@@ -466,9 +437,9 @@ sql_session_mgmt(pam_handle_t *pamh, int flags,
 		retval = PAM_SERVICE_ERR;
 	else {
 		gray_slist_t slist;
-		retval = sql_acct(pamh,
-				  get_query(pamh, query_name,
-					    &slist, 0));
+		retval = gpam_sql_acct(pamh,
+				       gpam_sql_get_query(pamh, query_name,
+							  &slist, 0));
 		gray_slist_free(&slist);
 	}
 	
@@ -482,7 +453,7 @@ pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
 	/* FIXME: This comment is needed to pacify `make check-sql-config'
 	   in doc:
-	   find_config("session-start-query") */
+	   gpam_sql_find_config("session-start-query") */
 	return sql_session_mgmt(pamh, flags, argc, argv,
 				"session-start-query");
 }
@@ -493,23 +464,7 @@ pam_sm_close_session(pam_handle_t *pamh, int flags,
 {
 	/* FIXME: This comment is needed to pacify `make check-sql-config'
 	   in doc:
-	   find_config("session-stop-query") */
+	   gpam_sql_find_config("session-stop-query") */
 	return sql_session_mgmt(pamh, flags, argc, argv,
 				"session-stop-query");
 }
-	
-#ifdef PAM_STATIC
-
-/* static module data */
-
-struct pam_module _pam_fshadow_modstruct = {
-	MODULE_NAME,
-	pam_sm_authenticate,
-	pam_sm_setcred,
-	NULL,
-	pam_sm_open_session,
-	pam_sm_close_session,
-	NULL,
-};
-
-#endif

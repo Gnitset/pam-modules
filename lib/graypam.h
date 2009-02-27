@@ -193,5 +193,7 @@ struct keyword {
 struct keyword *gray_find_keyword(struct keyword *kwtab, const char *str,
 				  size_t len);
 
+
+int gray_trim_ws(char *str);
 
 #endif

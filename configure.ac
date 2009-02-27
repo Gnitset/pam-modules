@@ -26,7 +26,6 @@ dnl Library versioning
 AC_SUBST(VI_CURRENT,1)
 AC_SUBST(VI_REVISION,0)
 AC_SUBST(VI_AGE,0)
-AC_SUBST(PAM_COMMON_INCLUDES, '-I${top_builddir} -I${top_srcdir} -I${top_srcdir}/lib')
 
 dnl Modules
 build_fshadow=probe
@@ -37,7 +36,9 @@ build_pgsql=probe
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
-AM_PROG_LIBTOOL
+
+LT_PREREQ(2.2.5a)
+LT_INIT
 
 dnl Checks for libraries.
 AC_CHECK_LIB(pam, pam_get_item,:,

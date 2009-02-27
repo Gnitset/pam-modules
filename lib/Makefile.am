@@ -28,6 +28,7 @@ libgraypam_la_SOURCES = \
  md5.h\
  sha1.c\
  sha1.h\
+ strutil.c\
  vartab.c\
  escape.c
 

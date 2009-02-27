@@ -35,11 +35,12 @@ extern char *crypt(const char *, const char *);
 
 #define CNTL_AUTHTOK       0x0010 
 #define CNTL_PASSWD        0x0020
-#define CNTL_REGEX         0x0040
-#define CNTL_REVERT_INDEX  0x0080
+#define CNTL_SHADOW        0x0040
+#define CNTL_REGEX         0x0080
+#define CNTL_REVERT_INDEX  0x0100
 
 char *sysconfdir = SYSCONFDIR;
-static int cntl_flags = CNTL_PASSWD;
+static int cntl_flags = CNTL_PASSWD|CNTL_SHADOW;
 static long debug_level = 0;
 
 static regex_t rexp;
@@ -68,9 +69,10 @@ struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(case), pam_opt_bitmask_rev, &regex_flags,
 	  REG_ICASE },
 	{ PAM_OPTSTR(passwd), pam_opt_bool, &cntl_flags, CNTL_PASSWD },
+	{ PAM_OPTSTR(shadow), pam_opt_bool, &cntl_flags, CNTL_SHADOW },
 	{ PAM_OPTSTR(revert-index), pam_opt_bool, &cntl_flags,
 	  CNTL_REVERT_INDEX },
-	{ NULL }
+ 	{ NULL }
 };
 
 static int
@@ -82,6 +84,11 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 	if (gray_parseopt(pam_opt, argc, argv))
 		return PAM_AUTHINFO_UNAVAIL;
 
+	if ((cntl_flags & (CNTL_PASSWD|CNTL_SHADOW)) == 0) {
+		_pam_log(LOG_CRIT,
+			 "either passwd or shadow must be true");
+		return PAM_AUTHINFO_UNAVAIL;
+	}
 	if (cntl_flags & CNTL_REVERT_INDEX) {
 		username_index = 2;
 		domain_index = 1;
@@ -430,7 +437,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 			else
 				retval = PAM_AUTH_ERR;
 			free(pwstr);
-		} else
+		} else if (!(cntl_flags & CNTL_SHADOW))
 			retval = verify_user_pass(confdir, username, password);
 	}
 	

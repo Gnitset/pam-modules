@@ -362,6 +362,12 @@ virtual domain mode as well.  The table below summarizes these options.
    Do not require @file{passwd} file to be present.  Only
 @file{shadow} is used for authentication.
 
+@xopindex{noshadow, introduced}
+@item noshadow
+   Do not require @file{shadow} file to be present.  Only
+@file{passwd} is used for authentication.  Notice, that it is an error
+to specify both @code{nopasswd} and @code{noshadow}.
+
 @xopindex{sysconfdir, introduced}
 @item sysconfdir=@var{dir}
    Set full name of the directory where @file{shadow} and
@@ -484,6 +490,11 @@ This section summarizes all @command{pam_fshadow} command line options:
 @item nopasswd
    Use only @file{shadow} for authentication. @xref{pam_fshadow common
 options, nopasswd}.
+
+@opsummary{noshadow}
+@item nopasswd
+   Use only @file{passwd} for authentication. @xref{pam_fshadow common
+options, noshadow}.
 
 @opsummary{regex}
 @item regex=@var{expr}
@@ -647,7 +658,7 @@ lower case and removes any suffix starting from the @samp{@@} symbol:
 
 @smallexample
 @group
-pam_regex.so extended transform=s/.*/\L&/g;s/@@.*/ 
+pam_regex.so extended transform=s/.*/\L&/g;s/@@.*// 
 @end group
 @end smallexample
 
@@ -660,7 +671,7 @@ the expression.
 
 @smallexample
 @group
-pam_regex.so extended transform=s/.*/\L&/g;s/@@.*/ \
+pam_regex.so extended transform=s/.*/\L&/g;s/@@.*// \
              regex=^(anoncvs|anonymous)$ sense=deny
 @end group
 @end smallexample

@@ -15,18 +15,9 @@
 
 pamdir=@PAMDIR@
 PAM_REGEX = pam_regex.la
-pam_PROGRAMS = @BUILD_PAM_REGEX@
-EXTRA_PROGRAMS = pam_regex.la
+pam_LTLIBRARIES = @BUILD_PAM_REGEX@
+EXTRA_LTLIBRARIES = pam_regex.la
 pam_regex_la_SOURCES = pam_regex.c
-pam_regex_la_LDADD = ../lib/libgraypam.la
-AM_INSTALLCHECK_STD_OPTIONS_EXEMPT = pam_regex.la
-LDADD = -lpam ../lib/libgraypam.la
-AM_LDFLAGS = -version-info @VI_CURRENT@:@VI_REVISION@:@VI_AGE@
 AM_CPPFLAGS=-DMODULE_NAME=\"pam_regex\" -DSYSCONFDIR=\"${sysconfdir}\"
-INCLUDES=-I. @PAM_COMMON_INCLUDES@
-NORMAL_UNINSTALL = -rm -f $(DESTDIR)$(pamdir)/pam_regex.a $(DESTDIR)$(pamdir)/pam_regex.so.@VI_CURRENT@.@VI_REVISION@.@VI_AGE@
 
 include $(top_srcdir)/Make.rules
-
-pam_regex.lo: pam_regex.c
-pam_regex.la: pam_regex.lo
