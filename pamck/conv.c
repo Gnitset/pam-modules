@@ -92,7 +92,8 @@ read_string(const char *prompt, int echo)
 	fputs(prompt, out);
 	fflush(out);
 	str = readline(in);
-	fputc('\n', out);
+	if (!echo)
+		fputc('\n', out);
 
 	fseek(out, 0, SEEK_CUR);
 
@@ -123,14 +124,17 @@ pamck_conv(int num_msg, const struct pam_message **msg,
 		
 		switch (msg[i]->msg_style) {
 		case PAM_PROMPT_ECHO_OFF:
-			str = read_string(msg[i]->msg, 0);
-			break;
-			
-		case PAM_PROMPT_ECHO_ON:
 			if (pass)
 				str = strdup(pass);
 			else 
-				str = pass = read_string(msg[i]->msg, 1);
+				str = read_string(msg[i]->msg, 0);
+			break;
+			
+		case PAM_PROMPT_ECHO_ON:
+			if (user)
+				str = strdup(user);
+			else
+				str = read_string(msg[i]->msg, 1);
 			break;
 
 		case PAM_ERROR_MSG:

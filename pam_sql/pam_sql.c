@@ -96,7 +96,7 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 	token = NULL;
 	retval = gray_converse(pamh, i, pmsg, &resp);
 
-	if (resp != NULL) {
+	if (resp != NULL && resp[i - replies].resp) {
 		if (retval == PAM_SUCCESS) { 	/* a good conversation */
 			token = XSTRDUP(resp[i - replies].resp);
 			DEBUG(100,("app returned [%s]", token));

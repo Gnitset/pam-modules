@@ -185,14 +185,17 @@ main (int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-	if (!argc || argc > 3) {
+	switch (argc) {
+	case 2:
+		pass = argv[1];
+	case 1:
+		user = argv[0];
+		break;
+	default:
 		usage();
 		exit(1);
 	}
 
-	user = argv[0];
-	pass = argv[1];
-	
 	rc = pam_start(service, user, &conv, &pamh);
 	if (rc) 
 		error(2, "pam_start failed");
