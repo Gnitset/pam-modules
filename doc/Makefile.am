@@ -131,9 +131,16 @@ TEXI2DVI=texi2dvi -t '@set $(RENDITION)' -E
 
 # Make sure you set TEXINPUTS.
 # TEXINPUTS=/usr/share/texmf/pdftex/plain/misc/ is ok for most distributions
+.PHONY: manual
 manual:
 	TEXINPUTS=$(srcdir):$(top_srcdir)/build-aux:$(TEXINPUTS) \
 	 MAKEINFO="$(MAKEINFO) $(MAKEINFOFLAGS)" \
 	 TEXI2DVI="$(TEXI2DVI) -t @finalout" \
 	 $(GENDOCS) --texi2html $(PACKAGE) '$(PACKAGE_NAME) manual'
+
+
+manual.tar.bz2: manual
+	tar cfj manual.tar.bz2 manual
+
+man-tar: manual.tar.bz2
 

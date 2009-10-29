@@ -2,7 +2,7 @@
 @smallbook
 @c %**start of header
 @setfilename pam-modules.info
-@settitle pam-modules
+@settitle PAM-modules Manual
 @c %**end of header
 @setchapternewpage odd
 
@@ -63,9 +63,11 @@ Software Foundation raise funds for GNU development.''
 @insertcopying
 @end titlepage
 
+@ifnothtml
 @page
 @summarycontents
 @page
+@end ifnothtml
 @contents
 
 @ifnottex
@@ -310,9 +312,9 @@ Print program version and copyright information and exit.
 @chapter Authentication against an alternative shadow file.
 @set MODULE pam_fshadow
 @prindex pam_fshadow
-   This module provides authentication against an alternative
-@file{shadow} file, or @file{passwd} / @file{shadow} pair (or pairs).
-There are two main operation modes: @dfn{plain} mode, in which
+   The @command{pam_fshadow} module provides authentication against an
+alternative @file{shadow} file, or @file{passwd} / @file{shadow} pair
+(or pairs). There are two main operation modes: @dfn{plain} mode, in which
 @command{pam_fshadow} uses only one @file{passwd}/@file{shadow} pair,
 and @dfn{virtual domain} mode, which allows to select the pair to use
 based on the authentication token (the user name).  First, let's
