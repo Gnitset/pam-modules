@@ -1,3 +1,13 @@
+2011-04-05  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Allow for the use of `CALL proc' in MySQL queries.
+
+	* pam_sql/pam_mysql.c (flush_result): New static.
+	(mysql_do_query): Call mysql_real_connect with the 
+	CLIENT_MULTI_RESULTS flag.
+	(check_query_result, mysql_setenv, gpam_sql_acct): Call flush_result
+	after freeing the result.
+
 2009-02-27  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	Minor changes
