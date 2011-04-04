@@ -191,6 +191,20 @@ check_md5_pass(const char *sqlpass, const char *userpass)
 		return PAM_AUTH_ERR;
 }
 		
+static void
+flush_result(MYSQL *mysql)
+{
+        while (mysql_next_result(mysql) == 0) {
+                MYSQL_RES *result = mysql_store_result(mysql);
+                if (!result)
+                        break;
+                if (mysql_field_count(mysql))
+                        while (mysql_fetch_row(result))
+                                ;
+                mysql_free_result(result);
+        }
+}
+
 static int
 check_query_result(MYSQL *mysql, const char *pass)
 {
@@ -209,6 +223,7 @@ check_query_result(MYSQL *mysql, const char *pass)
 				 "MySQL: query returned %d tuples", n);
 			if (n == 0) {
 				mysql_free_result(result);
+				flush_result(mysql);
 				return PAM_AUTH_ERR;
 			}
 		}
@@ -239,7 +254,7 @@ check_query_result(MYSQL *mysql, const char *pass)
 		}
 	}
 	mysql_free_result(result);
-	
+	flush_result(mysql);
 	return rc;
 }
 
@@ -286,7 +301,7 @@ mysql_do_query(MYSQL *mysql, const char *query)
 
 	if (!mysql_real_connect(mysql, hostname,
 				login, pass, db,
-				portno, socket_path, 0)) {
+				portno, socket_path, CLIENT_MULTI_RESULTS)) {
 		_pam_log(LOG_ERR, "cannot connect to MySQL");
 		return PAM_SERVICE_ERR;
 	}
@@ -326,6 +341,7 @@ mysql_setenv(pam_handle_t *pamh, MYSQL *mysql, const char *query)
 						row[i], 0);
 	}
 	mysql_free_result(result);
+	flush_result(mysql);
 	return PAM_SUCCESS;
 #else
 	_pam_log(LOG_ERR, "MySQL: PAM setenv is not available.");
@@ -377,6 +393,7 @@ gpam_sql_acct(pam_handle_t *pamh, const char *query)
 			} else {
 				size_t n = mysql_num_rows(result);
 				mysql_free_result(result);
+				flush_result(&mysql);
 				_pam_debug("query affected %lu tuples", n);
 			}
 		}
