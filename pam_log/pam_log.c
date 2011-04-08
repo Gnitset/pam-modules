@@ -97,7 +97,7 @@ struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, { 0 },
 	  gray_wait_debug_fun },
 	{ PAM_OPTSTR(tag), pam_opt_string, &syslog_tag },
-	{ PAM_OPTSTR(pri), pam_opt_null, NULL, 0, parse_priority },
+	{ PAM_OPTSTR(pri), pam_opt_null, NULL, { 0 }, parse_priority },
 	{ PAM_OPTSTR(open), pam_opt_bool, &do_open },
 	{ NULL }
 };

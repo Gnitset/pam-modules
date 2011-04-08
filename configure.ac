@@ -14,13 +14,16 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-AC_PREREQ(2.53)
+AC_PREREQ(2.63)
 
-AC_INIT(pam-modules, 1.6, bug-pam-modules@gnu.org.ua)
+AC_INIT(pam-modules, 1.7, bug-pam-modules@gnu.org.ua)
 AC_CONFIG_SRCDIR(pam_fshadow/pam_fshadow.c)
 AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE(no-exeext)
+AM_INIT_AUTOMAKE([1.11 no-exeext tar-ustar dist-xz silent-rules])
 AM_CONFIG_HEADER(config.h)
+
+# Enable silent rules by default:
+AM_SILENT_RULES([yes])
 
 dnl Library versioning
 AC_SUBST(VI_CURRENT,1)
