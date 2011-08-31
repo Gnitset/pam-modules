@@ -1,3 +1,17 @@
+2011-08-31  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Various bugfixes.
+	
+	* pam_fshadow/pam_fshadow.c (pam_sm_authenticate): Fix
+	erroneous conditional, which allowed for logins with
+	arbitrary passwords if `nopasswd' option was given.
+	* lib/graypam.h (gray_free_transform_expr): New proto.
+	* lib/transform.c (transform) <has_regex>: New member.
+	(free_transform,free_segment): New statics.
+	(gray_free_transform_expr): New function.
+	* pam_regex/pam_regex.c (pam_sm_authenticate): Free slist and
+	transform expression.
+
 2011-04-08  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	Version 1.7

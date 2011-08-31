@@ -438,7 +438,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 	if (cntl_flags & CNTL_PASSWD)
 		retval = verify_user_acct(confdir, username, &pwstr);
 	else
-		retval = 0;
+		retval = PAM_SUCCESS;
 	if (retval == PAM_SUCCESS) {
 		if (pwstr) {
 			if (strcmp(pwstr, crypt(password, pwstr)) == 0)
@@ -446,7 +446,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 			else
 				retval = PAM_AUTH_ERR;
 			free(pwstr);
-		} else if (!(cntl_flags & CNTL_SHADOW))
+		} else if (cntl_flags & CNTL_SHADOW)
 			retval = verify_user_pass(confdir, username, password);
 	}
 	

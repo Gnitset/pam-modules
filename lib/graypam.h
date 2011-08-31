@@ -130,6 +130,7 @@ void gray_wait_debug(size_t interval, const char *file, size_t line);
 
 int gray_transform_name_to_slist (gray_slist_t slist, char *input, char **output);
 void gray_set_transform_expr (const char *expr);
+void gray_free_transform_expr (void);
 
 
 int gray_converse(pam_handle_t *pamh, int nargs,

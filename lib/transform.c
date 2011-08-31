@@ -62,6 +62,7 @@ struct transform
   enum transform_type transform_type;
   unsigned match_number;
   regex_t regex;
+  int has_regex;
   /* Compiled replacement expression */
   struct replace_segm *repl_head, *repl_tail;
   size_t segm_count; /* Number of elements in the above list */
@@ -82,6 +83,22 @@ new_transform ()
   return p;
 }
 
+static void free_segment (struct replace_segm *segm);
+
+static void
+free_transform (struct transform *tr)
+{
+  struct replace_segm *segm;
+  if (tr->has_regex)
+    regfree (&tr->regex);
+  for (segm = tr->repl_head; segm; )
+    {
+      struct replace_segm *next = segm->next;
+      free_segment (segm);
+      segm = next;
+    }
+}
+
 static struct replace_segm *
 add_segment (struct transform *tf)
 {
@@ -94,6 +111,14 @@ add_segment (struct transform *tf)
   tf->repl_tail = segm;
   tf->segm_count++;
   return segm;
+}
+
+static void
+free_segment (struct replace_segm *segm)
+{
+  if (segm->type == segm_literal)
+    free (segm->v.literal.ptr);
+  free (segm);
 }
 
 static void
@@ -212,7 +237,7 @@ parse_transform_expr (const char *expr)
       regerror (rc, &tf->regex, errbuf, sizeof (errbuf));
       gray_raise("Invalid transform expression: %s", errbuf);
     }
-
+  tf->has_regex = 1;
   if (str[0] == '^' || str[strlen (str) - 1] == '$')
     tf->transform_type = transform_first;
   
@@ -351,6 +376,18 @@ gray_set_transform_expr (const char *expr)
 {
   while (*expr)
     expr = parse_transform_expr (expr);
+}
+
+void
+gray_free_transform_expr ()
+{
+  while (transform_head)
+    {
+      struct transform *next = transform_head;
+      free_transform (transform_head);
+      transform_head = next;
+    }
+  transform_tail = NULL;
 }
 
 /* Run case conversion specified by CASE_CTL on array PTR of SIZE
