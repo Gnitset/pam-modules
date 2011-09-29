@@ -34,6 +34,25 @@ The applications-specific options are:
 	Set installation directory for PAM loadable files.
 	Default is PREFIX/lib/security.
 
+ --with-crypt-lib=NAME
+        Use libNAME instead of libcrypt.  Use this if you wish to use
+        an external implementation of crypt(3).  For example, a common
+        approach is to use libxcrypt, which provides a wider range of
+	encryption algorithms than the native crypt.  To use it, one
+	would do the following:
+
+	   ./configure --with-crypt-lib=xcrypt
+
+--without-crypt-lib
+        Do not link libcrypt.  This option is provided for the sake of
+	really hard cases, when the user wants to supply an
+        alternative implementation of crypt, yet finds that
+	--with-crypt-lib is not enough for this.  It is supposed that
+	the necessary libraries will be given in LDFLAGS variable,
+        e.g.:
+
+	   ./configure --without-crypt-lib LDFLAGS=...
+	   
  --disable-fshadow
         Disable pam_fshadow module.
 	

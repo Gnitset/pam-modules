@@ -46,7 +46,16 @@ LT_INIT
 dnl Checks for libraries.
 AC_CHECK_LIB(pam, pam_get_item,:,
 		  [AC_MSG_ERROR([Required library libpam is not found])])
-AC_CHECK_LIB(crypt, crypt)
+
+AC_ARG_WITH(crypt-lib,
+            AC_HELP_STRING([--with-crypt-lib=LIB],
+	                   [use -lLIB instead of -lcrypt]),
+	    [cryptlib=$withval],
+	    [cryptlib=crypt])	
+
+if test "x$cryptlib" != xno; then	    
+  AC_CHECK_LIB($cryptlib, crypt)
+fi  
 AC_SUBST(PAM_MISC)
 AH_TEMPLATE([HAVE_PAM_MISC_SETENV],[Define if pam_misc_setenv is available.])
 AC_CHECK_LIB(pam_misc, pam_misc_setenv,
