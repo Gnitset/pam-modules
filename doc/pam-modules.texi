@@ -31,6 +31,8 @@
                                        session management.
 * pam_log:     (pam-modules)log.       Format and log arbitrary
                                        messages to syslog.
+* pam_ldaphome (pam-modules)ldaphome   Maintain home directories and
+                                       SSH keys od LDAP users.
 * pamck:       (pam-modules)pamck.     Verify PAM Access.                                       
 @end direntry
 @end ifinfo
@@ -90,6 +92,7 @@ Individual modules
                         expression.
 * log::                 Log arbitrary messages to syslog.
 * sql::                 Modules for SQL authentication and session management.
+* ldaphome::            Maintain home directories and SSH keys of LDAP users.
 
 * Reporting Bugs::      How to Report a Bug.
 
@@ -836,6 +839,72 @@ not the first in the stack of authentication modules.
 * sql session:: Using @acronym{SQL} modules for session management.
 * sql summary:: Summary of configuration statements.
 @end menu
+
+@node ldaphome
+@chapter pam_ldaphome
+@c Maintain home directories and SSH keys of LDAP users.
+@set MODULE pam_ldaphome
+@UNREVISED
+
+@table @option
+@opindex config, @command{pam_ldaphome} option
+@item config=@var{file}
+     Read configuration from @var{file}.  Default is
+@file{pam_ldaphome.conf} in @var{sysconfdir}.
+@end table
+
+@deffn {pam_ldaphome config} skel dir
+@FIXME{}
+@end deffn
+
+@deffn {pam_ldaphome config} uri arg
+@FIXME{}
+@example
+uri ldap://127.0.0.1/
+@end example
+@end deffn
+
+@deffn {pam_ldaphome config} base dn
+@FIXME{}
+@example
+base dc=gnu,dc=org,dc=ua
+@end example
+@end deffn
+
+@deffn {pam_ldaphome config} binddn dn
+@FIXME{}
+@example
+binddn cn=Manager,dc=gnu,dc=org,dc=ua
+@end example
+@end deffn
+
+@deffn {pam_ldaphome config} bindpw secret
+@FIXME{}
+@end deffn
+
+@deffn {pam_ldaphome config} tls bool
+@FIXME{}
+@end deffn
+
+@deffn {pam_ldaphome config} min-uid n
+@FIXME{}
+@end deffn
+
+@deffn {pam_ldaphome config} min-gid n
+@FIXME{}
+@end deffn
+
+@deffn {pam_ldaphome config} allow-groups group [group...]
+@FIXME{}
+@end deffn
+
+@deffn {pam_ldaphome config} filter text
+@FIXME{}
+@end deffn
+
+@deffn {pam_ldaphome config} pubkey-attr text
+@FIXME{}
+@end deffn
 
 @node config
 @section Configuration File.
