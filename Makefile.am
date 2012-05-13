@@ -21,7 +21,7 @@ if PAM_COND_REGEX
   REGEX_DIR=pam_regex
 endif
 if PAM_COND_LOG
-  LOG_DIR=pam_regex
+  LOG_DIR=pam_log
 endif
 if PAM_COND_LDAPHOME
   LDAPHOME_DIR=pam_ldaphome
