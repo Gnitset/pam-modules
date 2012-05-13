@@ -14,4 +14,24 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 AUTOMAKE_OPTIONS = gnits 1.8
-SUBDIRS = doc lib pam_fshadow pam_regex pam_log pam_sql pamck
+if PAM_COND_FSHADOW
+  FSHADOW_DIR=pam_fshadow
+endif
+if PAM_COND_REGEX
+  REGEX_DIR=pam_regex
+endif
+if PAM_COND_LOG
+  LOG_DIR=pam_regex
+endif
+if PAM_COND_LDAPHOME
+  LDAPHOME_DIR=pam_ldaphome
+endif
+SUBDIRS = \
+ doc\
+ lib\
+ $(FSHADOW_DIR)\
+ $(REGEX_DIR)\
+ $(LOG_DIR)\
+ pam_sql\
+ $(LDAPHOME_DIR)\
+ pamck

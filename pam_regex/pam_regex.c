@@ -194,7 +194,7 @@ pam_sm_setcred(pam_handle_t *pamh,
 
 #ifdef PAM_STATIC
 
-struct pam_module _pam_radius_modstruct = {
+struct pam_module _pam_regex_modstruct = {
 	"pam_regex",                      /* name of the module */
 	pam_sm_authenticate,                 
 	pam_sm_setcred,

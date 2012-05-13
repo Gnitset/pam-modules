@@ -1,3 +1,32 @@
+2012-05-13  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Revamp build system. Add pam_ldaphome module.
+	
+	* configure.ac: Test for ldap.
+	(AC_OUTPUT): Create pam_ldaphome/Makefile.
+	* acinclude.m4 (PM_ENABLE): Declare PAM_COND_<item>
+	conditional in addition to BUILD_PAM_<item> substitution
+	variable.
+	* Makefile.am (SUBDIRS): Include most modules via
+	conditionally defined Makefile variables.
+	
+	* lib/graypam.h (gray_env): New struct.
+	(gray_env_get,gray_env_free,gray_env_read)
+	(gray_boolean_true_p): New protos.
+	* lib/env.c: New file.
+	* lib/Makefile.am (libgraypam_la_SOURCES): Add env.c
+	
+	* pam_fshadow/Makefile.am: Remove BUILD_PAM_FSHADOW
+	substitution.
+	* pam_regex/Makefile.am: Remove BUILD_PAM_REGEX
+	substitution.
+	* pam_sql/pam_sql.c (free_config, boolean_true_p)
+	(read_config): Remove. Use gray_env_* functions
+	instead. All uses updated.
+	* pam_regex/pam_regex.c: Fix typo.
+
+	* pam_ldaphome/Makefile.am: New file.
+
 2011-09-29  Sergey Poznyakoff  <gray@gnu.org.ua>
 
 	Allow installers to link modules with alternative crypt(3)

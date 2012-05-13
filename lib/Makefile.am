@@ -16,6 +16,7 @@
 lib_LTLIBRARIES = libgraypam.la
 
 libgraypam_la_SOURCES = \
+ env.c\
  log.c\
  mem.c\
  slist.c\

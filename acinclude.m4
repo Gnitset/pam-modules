@@ -1,4 +1,4 @@
-# Copyright (C) 2001, 2006, 2008-2011 Sergey Poznyakoff
+# Copyright (C) 2001, 2006, 2008-2012 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,13 +18,17 @@ AC_DEFUN([PM_ENABLE],[
                 AC_HELP_STRING([--disable-$1], [Disable pam_$1]),
                 [if test $build_$1 = probe; then
 		   build_$1=$enableval
-	         fi])
+	         fi],
+		[build_$1=probe])
+  m4_pushdef([upmodname],translit($1, [a-z.-], [A-Z__]))
   if test $build_$1 != no; then
     build_$1=yes
-    m4_pushdef([upmodname],[PAM_]translit($1, [a-z.-], [A-Z__]))
-    AC_SUBST([BUILD_]upmodname, ['$(]upmodname[)'])
+    AC_SUBST([BUILD_PAM_]upmodname, ['$(]upmodname[)'])
     $2
-  fi])
+  fi
+  AM_CONDITIONAL([PAM_COND_]upmodname, [test "$[]build_$1" = "yes"])
+  m4_popdef([upmodname])
+])
 
 dnl PM_FLUSHLEFT -- remove all whitespace at the beginning of lines
 dnl This is useful for c-code which may include cpp statements

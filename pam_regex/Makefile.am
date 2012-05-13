@@ -14,9 +14,8 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 pamdir=@PAMDIR@
-PAM_REGEX = pam_regex.la
-pam_LTLIBRARIES = @BUILD_PAM_REGEX@
-EXTRA_LTLIBRARIES = pam_regex.la
+PAM_REGEX = 
+pam_LTLIBRARIES = pam_regex.la
 pam_regex_la_SOURCES = pam_regex.c
 AM_CPPFLAGS=-DMODULE_NAME=\"pam_regex\" -DSYSCONFDIR=\"${sysconfdir}\"
 

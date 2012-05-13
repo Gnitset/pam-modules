@@ -14,9 +14,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 pamdir=@PAMDIR@
-PAM_FSHADOW = pam_fshadow.la
-pam_LTLIBRARIES = @BUILD_PAM_FSHADOW@
-EXTRA_LTLIBRARIES = pam_fshadow.la
+pam_LTLIBRARIES = pam_fshadow.la
 pam_fshadow_la_SOURCES = pam_fshadow.c
 AM_CPPFLAGS=-DMODULE_NAME=\"pam_fshadow\" -DSYSCONFDIR=\"${sysconfdir}\"
 

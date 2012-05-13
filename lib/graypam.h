@@ -196,5 +196,19 @@ struct keyword *gray_find_keyword(struct keyword *kwtab, const char *str,
 
 
 int gray_trim_ws(char *str);
+
+/* configuration file support */
+
+struct gray_env {
+	struct gray_env *next;
+	char *name;
+	char *value;
+};
+
+char *gray_env_get(struct gray_env *env, const char *name);
+void gray_env_free(struct gray_env *env);
+int gray_env_read(const char *file_name, struct gray_env **penv);
+
+int gray_boolean_true_p(const char *value);
 
 #endif

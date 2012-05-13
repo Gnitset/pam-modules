@@ -30,12 +30,6 @@ AC_SUBST(VI_CURRENT,1)
 AC_SUBST(VI_REVISION,0)
 AC_SUBST(VI_AGE,0)
 
-dnl Modules
-build_fshadow=probe
-build_regex=probe
-build_log=probe
-build_pgsql=probe
-
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_INSTALL
@@ -153,6 +147,14 @@ AC_SUBST(MYSQLLIBS)
 AC_SUBST(PGSQLLIBS)
 AC_SUBST(SQL_MODULES)
 
+# LDAP support
+PM_ENABLE(ldaphome)
+if test $build_ldaphome = probe; then
+  AC_CHECK_LIB(ldap, ldap_bind,
+               [build_ldaphome=yes]
+               [build_ldaphome=no])
+fi
+
 ## *****************
 ## debugging support
 ## *****************
@@ -196,7 +198,7 @@ delim="-------------------------------------------------------------------"
 echo $delim | tr '-' '*'
 echo "Modules to build:"
 res=
-for module in fshadow regex log pgsql mysql
+for module in fshadow regex log pgsql mysql ldaphome
 do
 	modname=pam_$module
 	eval enable=\${build_$module}
@@ -216,7 +218,8 @@ build_fshadow=$build_fshadow
 build_regex=$build_regex
 build_log=$build_log
 build_pgsql=$build_pgsql
-build_mysql=$build_mysql])  	  
+build_mysql=$build_mysql
+build_ldaphome=$build_ldaphome])
 		
 AC_OUTPUT(Makefile
           doc/Makefile
@@ -225,4 +228,5 @@ AC_OUTPUT(Makefile
           pam_regex/Makefile
 	  pam_log/Makefile
 	  pam_sql/Makefile
+	  pam_ldaphome/Makefile
 	  pamck/Makefile)

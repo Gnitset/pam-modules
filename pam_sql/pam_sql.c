@@ -141,44 +141,12 @@ _pam_get_password(pam_handle_t *pamh, char **password, const char *prompt)
 
 
 /* Configuration */
-typedef struct config_env env_t;
-struct config_env {
-	env_t *next;
-	char *name;
-	char *value;
-};
-static env_t *config_env;	
+static struct gray_env *config_env;
 
 char *
 gpam_sql_find_config(const char *name)
 {
-	env_t *env;
-
-	for (env = config_env; env; env = env->next)
-		if (strcmp(env->name, name) == 0)
-			return env->value;
-	return NULL;
-}
-
-static void
-free_config()
-{
-	env_t *env = config_env;
-	while (env) {
-		env_t *next = env->next;
-		free(env->name);
-		free(env);
-		env = next;
-	}
-	config_env = NULL;
-}
-
-static int
-boolean_true_p(const char *value)
-{
-	return strcmp(value, "yes") == 0
-		|| strcmp(value, "true") == 0
-		|| strcmp(value, "t") == 0;
+	return gray_env_get(config_env, name);
 }
 
 int
@@ -186,128 +154,8 @@ gpam_sql_check_boolean_config(const char *name, int defval)
 {
 	const char *value = gpam_sql_find_config(name);
 	if (value)
-		defval = boolean_true_p(value);
+		defval = gray_boolean_true_p(value);
 	return defval;
-}
-
-static int
-read_config ()
-{
-	FILE *fp;
-	char *p;
-	int rc = 0;
-	int line = 0;
-	char buf[128];
-	gray_slist_t slist = NULL;
-	
-	fp = fopen (gpam_sql_config_file, "r");
-	if (!fp) {
-		_pam_log(LOG_ERR, "cannot open configuration file `%s': %s",
-			 gpam_sql_config_file, strerror (errno));
-		return 1;
-	}
-
-	config_env = NULL;
-	while (p = fgets (buf, sizeof buf, fp)) {
-		int len;
-		env_t *env;
-
-		line++;
-		while (*p && isspace(*p))
-			p++;
-		len = strlen(p);
-		if (len == 0)
-			continue;
-		if (p[len-1] != '\n') {
-			if (!slist)
-				slist = gray_slist_create();
-			gray_slist_append(slist, p, len);
-			while (p = fgets(buf, sizeof buf, fp)) {
-				len = strlen(p);
-				gray_slist_append(slist, p, len);
-				if (p[len - 1] == '\n')
-					break;
-			} 
-			gray_slist_append_char(slist, 0);
-			p = gray_slist_finish(slist);
-			len = strlen(p);
-		}
-
-		p[len-1] = 0;
-		len = gray_trim_ws(p);
-			
-		if (*p == 0 || *p == '#')
-			continue;
-
-		if (p[len-1] == '\\') {
-			int err = 0;
-			
-			/* Collect continuation lines */
-			if (!slist)
-				slist = gray_slist_create();
-			do {
-				gray_slist_append(slist, p, len - 1);
-				p = fgets (buf, sizeof buf, fp);
-				if (!p)
-					break;
-				line++;
-				len = strlen(p);
-				if (len == 0)
-					break;
-				if (p[len-1] != '\n') {
-					_pam_log(LOG_EMERG,
-						 "%s:%d: string too long",
-						 gpam_sql_config_file, line);
-					err = 1; 
-					break;
-				}
-				p[len-1] = 0;
-				len = gray_trim_ws(p);
-			} while (p[len-1] == '\\');
-			if (len)
-				gray_slist_append(slist, p, len);
-			gray_slist_append_char(slist, 0);
-			p = gray_slist_finish(slist);
-			if (err)
-				continue;
-		}
-		
-		env = malloc(sizeof *env);
-		if (!env) {
-			_pam_log(LOG_EMERG, "not enough memory");
-			rc = 1;
-			break;
-		}
-
-		env->name = strdup(p);
-		if (!env->name) {
-			_pam_log(LOG_EMERG, "not enough memory");
-			free(env);
-			rc = 1;
-			break;
-		}
-
-		for (p = env->name; *p && !isspace(*p); p++) 
-			;
-		if (*p)
-			*p++ = 0;
-		for (; *p && isspace(*p); p++)
-			;
-		if (!*p) {
-			_pam_log(LOG_EMERG, "%s:%d: not enough fields",
-				 gpam_sql_config_file, line);
-			free(env->name);
-			free(env);
-			continue;
-		}
-		env->value = p;
-		env->next = config_env;
-		config_env = env;
-	}
-
-	gray_slist_free(&slist);
-	fclose(fp);
-	return rc;
 }
 
 
@@ -364,7 +212,6 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 	const char *username;
 	char *password;
 	int retval = PAM_AUTH_ERR;
-
 	gray_pam_init(PAM_SERVICE_ERR);
 
 	/* parse arguments */
@@ -386,7 +233,7 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 		return PAM_SERVICE_ERR;
 	}
 
-	if (read_config()) 
+	if (gray_env_read(gpam_sql_config_file, &config_env)) 
 		retval = PAM_SERVICE_ERR;
 	else {
 		gray_slist_t slist;
@@ -399,7 +246,8 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 		gray_slist_free(&slist);
 	}
 	
-	free_config();
+	gray_env_free(config_env);
+	config_env = NULL;
 	
 	switch (retval) {
 	case PAM_ACCT_EXPIRED:
@@ -433,7 +281,7 @@ sql_session_mgmt(pam_handle_t *pamh, int flags,
 	/* parse arguments */
 	_pam_parse(argc, argv);
 
-	if (read_config()) 
+	if (gray_env_read(gpam_sql_config_file, &config_env)) 
 		retval = PAM_SERVICE_ERR;
 	else {
 		gray_slist_t slist;
@@ -443,7 +291,8 @@ sql_session_mgmt(pam_handle_t *pamh, int flags,
 		gray_slist_free(&slist);
 	}
 	
-	free_config();
+	gray_env_free(config_env);
+	config_env = NULL;
 	
 	return retval;
 }
