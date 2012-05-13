@@ -35,3 +35,21 @@ SUBDIRS = \
  pam_sql\
  $(LDAPHOME_DIR)\
  pamck
+
+EXTRA_DIST=ChangeLog.svn
+#  Name of the previous ChangeLog file.
+prev_change_log = ChangeLog.svn
+#  Start Git ChangeLog from this date. 
+gen_start_date = 2012-05-13
+
+.PHONY: ChangeLog
+ChangeLog:
+	$(AM_V_GEN)if test -d .git; then                                     \
+          git log --pretty='format:%ct  %an  <%ae>%n%n%s%n%n%b%n' |          \
+	    awk -f $(top_srcdir)/git2chg.awk                                 \
+              -vsince="$(gen_start_date)" -vappend="$(prev_change_log)"      \
+              > ChangeLog.tmp;                                               \
+          cmp ChangeLog ChangeLog.tmp > /dev/null 2>&1 ||                    \
+            mv ChangeLog.tmp ChangeLog;                                      \
+          rm -f ChangeLog.tmp;                                               \
+	fi
