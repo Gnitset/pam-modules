@@ -19,6 +19,7 @@ AC_PREREQ(2.63)
 AC_INIT(pam-modules, 1.7, bug-pam-modules@gnu.org.ua)
 AC_CONFIG_SRCDIR(pam_fshadow/pam_fshadow.c)
 AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([1.11 no-exeext tar-ustar dist-xz silent-rules])
 AM_CONFIG_HEADER(config.h)
 
@@ -187,6 +188,11 @@ AC_ARG_WITH(pamdir,
 	                   [install PAM modiles in DIR (PREFIX/lib/security)]),
 	    [PAMDIR=$withval])
 AC_SUBST(PAMDIR)
+
+## **************
+## Imprimatur
+## **************
+IMPRIMATUR_INIT
 
 ## **************
 ## Summary

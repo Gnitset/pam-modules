@@ -14,6 +14,8 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 AUTOMAKE_OPTIONS = gnits 1.8
+ACLOCAL_AMFLAGS = -I m4 -I imprimatur
+
 if PAM_COND_FSHADOW
   FSHADOW_DIR=pam_fshadow
 endif
@@ -27,6 +29,7 @@ if PAM_COND_LDAPHOME
   LDAPHOME_DIR=pam_ldaphome
 endif
 SUBDIRS = \
+ imprimatur\
  doc\
  lib\
  $(FSHADOW_DIR)\

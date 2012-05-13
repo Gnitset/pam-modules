@@ -173,7 +173,7 @@ WAITING FOR DEBUG
 and waits for @var{interval} seconds (default 3600) before actually
 starting to do anything.  The developer is supposed to attach to the
 process with a debugger, set the @code{interval} variable to 0 and to
-continue execution of the module in the debugging mode. 
+continue execution of the module in the debugging mode.
 @end table
 
 @cindex PAM item expansion
@@ -194,37 +194,37 @@ or numeric).
 
 @table @samp
 @item service
-@code{PAM_SERVICE}. The service name (which identifies
+@code{PAM_SERVICE}.  The service name (which identifies
 the @acronym{PAM} stack that will be used).
 
 @item user
-@code{PAM_USER}. The username of the entity under whose identity
+@code{PAM_USER}.  The username of the entity under whose identity
 service will be given. 
 
 @item tty
-@code{PAM_TTY}. The terminal name: prefixed by
+@code{PAM_TTY}.  The terminal name: prefixed by
 @samp{/dev/} if it is a device file; for graphical, X-based,
 applications the value for this item is usually the @env{$DISPLAY}
 environment variable.
 
 @item rhost
-@code{PAM_RHOST}. The requesting hostname (the hostname of the machine
-from which the @code{PAM_RUSER} entity is requesting service). That is
+@code{PAM_RHOST}.  The requesting hostname (the hostname of the machine
+from which the @code{PAM_RUSER} entity is requesting service).  That is
 @samp{@code{PAM_RUSER}@@@code{PAM_RHOST}} identifies the requesting
-user. In some applications, @code{PAM_RHOST} may be @samp{NULL}.
+user.  In some applications, @code{PAM_RHOST} may be @samp{NULL}.
 
 @item ruser
-@code{PAM_RUSER}. The requesting entity: user's sername for a locally
-requesting user or a remote requesting user. In some cases,
+@code{PAM_RUSER}.  The requesting entity: user's sername for a locally
+requesting user or a remote requesting user.  In some cases,
 @code{PAM_RUSER} may be @samp{NULL}.
 
 @item prompt
-@code{PAM_USER_PROMPT}. The string used when prompting for a user's
-name. The default value for this string is @samp{Please enter
+@code{PAM_USER_PROMPT}.  The string used when prompting for a user's
+name.  The default value for this string is @samp{Please enter
 username: }.
 
 @item password
-@code{PAM_AUTHTOK}. The authentication token (often a password).
+@code{PAM_AUTHTOK}.  The authentication token (often a password).
 @end table
 
    Item expansion is used by @command{pam_log}, @command{pam_mysql}
@@ -314,7 +314,7 @@ Print program version and copyright information and exit.
 @prindex pam_fshadow
    The @command{pam_fshadow} module provides authentication against an
 alternative @file{shadow} file, or @file{passwd} / @file{shadow} pair
-(or pairs). There are two main operation modes: @dfn{plain} mode, in which
+(or pairs).  There are two main operation modes: @dfn{plain} mode, in which
 @command{pam_fshadow} uses only one @file{passwd}/@file{shadow} pair,
 and @dfn{virtual domain} mode, which allows to select the pair to use
 based on the authentication token (the user name).  First, let's
@@ -490,12 +490,12 @@ This section summarizes all @command{pam_fshadow} command line options:
 
 @opsummary{nopasswd}
 @item nopasswd
-   Use only @file{shadow} for authentication. @xref{pam_fshadow common
+   Use only @file{shadow} for authentication.  @xref{pam_fshadow common
 options, nopasswd}.
 
 @opsummary{noshadow}
 @item nopasswd
-   Use only @file{passwd} for authentication. @xref{pam_fshadow common
+   Use only @file{passwd} for authentication.  @xref{pam_fshadow common
 options, noshadow}.
 
 @opsummary{regex}
@@ -641,7 +641,7 @@ the interaction is defined to be: ignore matches before the
 @end table
 
 Any delimiter can be used in lieue of @samp{/}, the only requirement being
-that it be used consistently throughout the expression. For example,
+that it be used consistently throughout the expression.  For example,
 the following two expressions are equivalent:
 
 @smallexample
