@@ -70,9 +70,18 @@ argcv_free(int wc, char **wv)
 {
 	int i;
 
-	for (i = 0; i < wc; i++) {
+	for (i = 0; i < wc; i++)
 		free(wv[i]);
-	}
+	free(wv);
+}
+
+static void
+argcvz_free(char **wv)
+{
+	int i;
+
+	for (i = 0; wv[i]; i++)
+		free(wv[i]);
 	free(wv);
 }
 
@@ -422,6 +431,15 @@ ldap_unbind(LDAP *ld)
 	}
 }
 
+static void
+trimnl(char *s)
+{
+	size_t len = strlen(s);
+	while (len > 0 && s[len-1] == '\n')
+		--len;
+	s[len] = 0;
+}
+
 static char *
 get_ldap_attr(LDAP *ld, LDAPMessage *msg, const char *attr)
 {
@@ -447,20 +465,28 @@ get_ldap_attr(LDAP *ld, LDAPMessage *msg, const char *attr)
 	val = strdup(values[0]->bv_val);
 	if (!val)
 		_pam_log(LOG_ERR, "%s", strerror(errno));
-	else
+	else {
+		trimnl(val);
 		DEBUG(1, ("pubkey: %s", val));
+	}
 	ldap_value_free_len(values);
 	return val;
 }
 
-static char *
-ldap_search(LDAP *ld, const char *base, const char *filter, const char *attr)
+static int
+keycmp(const void *a, const void *b)
+{
+	return strcmp(a, b);
+}
+
+static char **
+get_pubkeys(LDAP *ld, const char *base, const char *filter, const char *attr)
 {
 	int rc;
 	LDAPMessage *res, *msg;
 	ber_int_t msgid;
 	char *attrs[2];
-	char *ret;
+	char **ret;
 	
 	attrs[0] = (char*) attr;
 	attrs[1] = NULL;
@@ -480,16 +506,29 @@ ldap_search(LDAP *ld, const char *base, const char *filter, const char *attr)
 	}
 
 	rc = ldap_count_entries(ld, res);
-	if (rc == 0) {
-		_pam_log(LOG_ERR, "not enough entires");
-		return NULL;
+
+	ret = calloc(rc + 1, sizeof(ret[0]));
+	if (!ret)
+		_pam_log(LOG_ERR, "%s", strerror(errno));
+	else {
+		int i = 0;
+		
+		for (msg = ldap_first_entry(ld, res); msg;
+		     msg = ldap_next_entry(ld, msg)) {
+			char *s = get_ldap_attr(ld, msg, attr);
+			if (s)
+				ret[i++] = s;
+		}
+
+		if (i != rc) {
+			argcv_free(i, ret);
+			ret = NULL;
+		}
+		ret[i] = NULL;
+
+		qsort(ret, i, sizeof(ret[0]), keycmp);
 	}
-	if (rc > 1)
-		_pam_log(LOG_NOTICE, "LDAP: too many entries for filter %s",
-			 filter);
-      
-	msg = ldap_first_entry(ld, res);
-	ret = get_ldap_attr(ld, msg, attr);
+	
 	ldap_msgfree(res);
   
 	return ret;
@@ -968,7 +1007,7 @@ recursive_copy(pam_handle_t *pamh, DIR *dir,
 	if (chown(dstbuf->name, pw->pw_uid, pw->pw_gid) ||
 	    (st && chmod(dstbuf->name, st->st_mode & 07777))) {
 		_pam_log(LOG_ERR,
-			 "cannot set privileges of %s:"
+			 "cannot set privileges for %s:"
 			 "%s",
 			 dstbuf->name,
 			 strerror(errno));
@@ -1043,15 +1082,14 @@ populate_homedir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 }
 
 static int
-store_pubkey(const char *key, struct passwd *pw)
+store_pubkeys(char **keys, struct passwd *pw)
 {
 	FILE *fp;
-	const char *kp;
 	int c;
-	int found = 0;
 	char *file_name;
 	size_t homelen, pathlen, len;
-	int retval;
+	int retval, i;
+	int update = 0;
 	
 	homelen = strlen(pw->pw_dir);
 	pathlen = strlen(authorized_keys_file);
@@ -1064,9 +1102,11 @@ store_pubkey(const char *key, struct passwd *pw)
 		file_name[homelen++] = '/';
 	strcpy(file_name + homelen, authorized_keys_file);
 	
-	fp = fopen(file_name, "a+");
-	if (!fp && create_interdir(file_name, pw) == 0)
-		fp = fopen(file_name, "a+");
+	fp = fopen(file_name, "r+");
+	if (!fp && create_interdir(file_name, pw) == 0) {
+		fp = fopen(file_name, "w");
+		update = 1; 
+	}
 	if (!fp) {
 		_pam_log(LOG_EMERG, "cannot open file %s: %s",
 			 file_name, strerror(errno));
@@ -1075,33 +1115,36 @@ store_pubkey(const char *key, struct passwd *pw)
 	}
 	free(file_name);
 	fchown(fileno(fp), pw->pw_uid, pw->pw_gid);
-	
-	kp = key;
-	while (!feof(fp)) {
-		while (*kp && (c = getc(fp)) != EOF && c == *kp)
-			kp++;
-		if (*kp == 0) {
-			DEBUG(2, ("key found"));
-			found = 1;
-			break;
-		}
-		kp = key;
-		if (c != '\n') {
-			if (c != EOF) {
-				while ((c = getc(fp)) != EOF && c != '\n')
-					;
-			}
-			if (c == EOF) {
-				if (ftell(fp))
-					fputc('\n', fp);
+
+	if (!update) {
+		i = 0;
+		do {
+			const char *kp = keys[i++];
+			if (!kp) {
+				DEBUG(2, ("some keys deleted"));
+				update = 1;
 				break;
 			}
+			while (*kp && (c = getc(fp)) != EOF && c == *kp)
+				kp++;
+			if (*kp) {
+				DEBUG(2, ("key %d mismatch", i));
+				update = 1;
+				break;
+			}
+		} while (c == '\n');
+
+		if (update) {
+			rewind(fp);
+			ftruncate(fileno(fp), 0);
 		}
 	}
-
-	if (!found) {
-		fwrite(key, strlen(key), 1, fp);
-		fputc('\n', fp);
+	
+	if (update) {
+		for (i = 0; keys[i]; i++) {
+			fwrite(keys[i], strlen(keys[i]), 1, fp);
+			fputc('\n', fp);
+		}
 		retval = PAM_TRY_AGAIN;
 	} else
 		retval = PAM_SUCCESS;
@@ -1135,17 +1178,17 @@ import_public_key(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 	else {
 		char *filter;
 		gray_slist_t slist;
-		char *pubkey;
+		char **keys;
 			
 		slist = gray_slist_create();
 		gray_expand_string(pamh, filter_pat, slist);
 		gray_slist_append_char(slist, 0);
 		filter = gray_slist_finish(slist);
 
-		pubkey = ldap_search(ld, base, filter, attr);
+		keys = get_pubkeys(ld, base, filter, attr);
 		gray_slist_free(&slist);
-		retval = store_pubkey(pubkey, pw);
-		free(pubkey);
+		retval = store_pubkeys(keys, pw);
+		argcvz_free(keys);
 	}
 	ldap_unbind(ld);
 	return retval;
