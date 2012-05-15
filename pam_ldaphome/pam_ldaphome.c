@@ -72,8 +72,8 @@ argcv_free(int wc, char **wv)
 
 	for (i = 0; i < wc; i++) {
 		free(wv[i]);
-		free(wv);
 	}
+	free(wv);
 }
 
 static int
@@ -131,14 +131,13 @@ argcv_concat(int wc, char **wv)
 	
 	for (i = 0; i < wc; i++)
 		size += strlen(wv[i]) + 1;
-	size++;
 	res = malloc(size);
 	if (!res)
 		return 0;
-	for (p = res, i = 0; ; i++) {
+	for (p = res, i = 0;;) {
 		strcpy(p, wv[i]);
 		p += strlen(wv[i]);
-		if (i < wc)
+		if (++i < wc)
 			*p++ = ' ';
 		else
 			break;
@@ -266,7 +265,7 @@ parse_ldap_uri(const char *uri)
 		return NULL;
 	} else if (!urls)
 		return NULL;
-	ldapuri = argcv_concat(wc, wv);
+	ldapuri = argcv_concat(nurls, urls);
 	if (!ldapuri)
 		_pam_log(LOG_ERR, "%s", strerror(errno));
 	ber_memvfree ((void **)urls);
@@ -882,7 +881,6 @@ dir_copy_loop(pam_handle_t *pamh, DIR *dir,
 	      char *buffer, size_t bufsize, struct passwd *pw)
 {
 	struct dirent *ent;
-	struct stat dir_st;
 
 	while ((ent = readdir(dir))) {
 		char const *ename = ent->d_name;
@@ -1044,7 +1042,7 @@ populate_homedir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 	return rc;
 }
 
-static void
+static int
 store_pubkey(const char *key, struct passwd *pw)
 {
 	FILE *fp;
@@ -1053,6 +1051,7 @@ store_pubkey(const char *key, struct passwd *pw)
 	int found = 0;
 	char *file_name;
 	size_t homelen, pathlen, len;
+	int retval;
 	
 	homelen = strlen(pw->pw_dir);
 	pathlen = strlen(authorized_keys_file);
@@ -1072,7 +1071,7 @@ store_pubkey(const char *key, struct passwd *pw)
 		_pam_log(LOG_EMERG, "cannot open file %s: %s",
 			 file_name, strerror(errno));
 		free(file_name);
-		return;
+		return PAM_SERVICE_ERR;
 	}
 	free(file_name);
 	fchown(fileno(fp), pw->pw_uid, pw->pw_gid);
@@ -1103,8 +1102,11 @@ store_pubkey(const char *key, struct passwd *pw)
 	if (!found) {
 		fwrite(key, strlen(key), 1, fp);
 		fputc('\n', fp);
-	}
+		retval = PAM_TRY_AGAIN;
+	} else
+		retval = PAM_SUCCESS;
 	fclose(fp);
+	return retval;
 }
 
 static int
@@ -1142,9 +1144,8 @@ import_public_key(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 
 		pubkey = ldap_search(ld, base, filter, attr);
 		gray_slist_free(&slist);
-		store_pubkey(pubkey, pw);
+		retval = store_pubkey(pubkey, pw);
 		free(pubkey);
-		retval = PAM_SUCCESS;
 	}
 	ldap_unbind(ld);
 	return retval;
@@ -1159,24 +1160,23 @@ create_home_dir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 		if (errno != ENOENT) {
 			_pam_log(LOG_ERR, "cannot stat home directory %s: %s",
 				 pw->pw_dir, strerror(errno));
-			return 1;
+			return PAM_SERVICE_ERR;
 		}
 		/* FIXME: mode must be configurable */
 		if (mkdir(pw->pw_dir, 0775)) {
 			_pam_log(LOG_ERR, "cannot create %s: %s",
 				 pw->pw_dir, strerror(errno));
-			return 1;
+			return PAM_SERVICE_ERR;
 		}
 		populate_homedir(pamh, pw, env);
 		chown(pw->pw_dir, pw->pw_uid, pw->pw_gid);
 	} else if (!S_ISDIR(st.st_mode)) {
 		_pam_log(LOG_ERR, "%s exists, but is not a directory",
 			 pw->pw_dir);
-		return 1;
+		return PAM_SERVICE_ERR;
 	}
-
 		
-	return 0;
+	return PAM_SUCCESS;
 }
 
 PAM_EXTERN int
@@ -1196,9 +1196,9 @@ pam_sm_authenticate(pam_handle_t *pamh,
 		struct passwd *pw;
 
 		if (check_user_groups(pamh, env, &pw, &retval) == 0) {
-			if (create_home_dir(pamh, pw, env) == 0 && 
-			    import_public_key(pamh, pw, env) == 0)
-				retval = PAM_TRY_AGAIN;
+			retval = create_home_dir(pamh, pw, env);
+			if (retval == PAM_SUCCESS)
+				retval = import_public_key(pamh, pw, env);
 		}
 		gray_env_free(env);
 	}

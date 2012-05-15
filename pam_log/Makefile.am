@@ -14,9 +14,7 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 pamdir=@PAMDIR@
-PAM_LOG = pam_log.la
-pam_LTLIBRARIES = @BUILD_PAM_LOG@
-EXTRA_LTLIBRARIES = pam_log.la
+pam_LTLIBRARIES = pam_log.la
 pam_log_la_SOURCES = pam_log.c
 AM_CPPFLAGS=-DMODULE_NAME=\"pam_log\" -DSYSCONFDIR=\"${sysconfdir}\"
 
