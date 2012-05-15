@@ -23,6 +23,10 @@
 #include <security/pam_modules.h>
 
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ldap.h>
@@ -587,18 +591,148 @@ check_user_groups(pam_handle_t *pamh, struct gray_env *env,
 	}
 	return 0;
 }
-
+
 static int
-populate_homedir(struct passwd *pw, const char *skel)
+copy(int src_fd, int dst_fd, char *buffer, size_t bufsize)
 {
-	// FIXME!!!
-	_pam_log(LOG_ERR, "populate_homedir is not yet implemented!");
-	return 1;
+	ssize_t n;
+	
+	while ((n = read(src_fd, buffer, bufsize)) > 0) {
+		n = write(dst_fd, buffer, n);
+		if (n < 0)
+			break;
+	}
+	return n;
 }
 
+static int
+copy_file(pam_handle_t *pamh, const char *src, const char *dst,
+	  char *buffer, size_t bufsize, struct stat *st)
+{
+	int sfd, dfd, rc;
+
+	sfd = open(src, O_RDONLY);
+	if (sfd == -1) {
+		_pam_log(LOG_ERR, "cannot open %s: %s",
+			 src, strerror(errno));
+		return 1;
+	}
+
+	dfd = open(dst, O_CREAT|O_TRUNC|O_RDWR, 0600);
+	if (dfd == -1) {
+		close(sfd);
+		_pam_log(LOG_ERR, "cannot create %s: %s",
+			 dst, strerror(errno));
+		return 1;
+	}
+	if (fchown(dfd, st->st_uid, st->st_gid) ||
+	    fchmod(dfd, st->st_mode & 07777)) {
+		_pam_log(LOG_ERR, "cannot set privileges of %s: %s",
+			 dst, strerror(errno));
+		/* try to continue anyway */
+	}
+	
+	rc = copy(sfd, dfd, buffer, bufsize);
+	if (rc)
+		_pam_log(LOG_ERR, "I/O error copying %s to %s: %s",
+			 src, dst, strerror(errno));
+	
+	close(sfd);
+	close(dfd);
+
+	return rc;
+}
+
+#define INITIAL_READLINK_SIZE 128
+
+int
+read_link_name(const char *name, char **pbuf, size_t *psize, size_t *plen)
+{
+	int rc = 0;
+	char *buf = *pbuf;
+	size_t size = *psize;
+	ssize_t linklen;
+
+	while (1) {
+		if (!buf) {
+			size = INITIAL_READLINK_SIZE;
+			buf = malloc(size);
+		} else {
+			char *p;
+			size_t newsize = size << 1;
+			if (newsize < size) {
+				rc = ENAMETOOLONG;
+				break;
+			}
+			size = newsize;
+			p = realloc(buf, size);
+			if (!p)
+				free(buf);
+			buf = p;
+		}
+		if (!buf) {
+			rc = 1;
+			break;
+		}
+
+		linklen = readlink(name, buf, size);
+		if (linklen < 0 && errno != ERANGE) {
+			rc = 1;
+			break;
+		}
+
+		if ((size_t) linklen < size) {
+			buf[linklen++] = '\0';
+			rc = 0;
+			break;
+		}
+	}
+
+	if (rc) {
+		if (buf) {
+			free (buf);
+			buf = NULL;
+		}
+		size = 0;
+	}
+	*pbuf = buf;
+	*psize = size;
+	if (plen)
+		*plen = linklen;
+	return rc;
+}
+
+
+static int
+copy_link(pam_handle_t *pamh, const char *src, const char *dst,
+	  char *buffer, size_t bufsize, struct stat *st)
+{
+	char *lnkname = NULL;
+	size_t lnklen = 0;
+	int rc;
+	
+	if (read_link_name(src, &lnkname, &lnklen, NULL)) {
+		_pam_log(LOG_ERR, "error reading link %s: %s",
+			 src, strerror(errno));
+		return 1;
+	}
+	rc = symlink(lnkname, dst);
+	if (rc)
+		_pam_log(LOG_ERR, "can't link %s to %s: %s",
+			 src, dst, strerror(errno));
+	else if (lchown(dst, st->st_uid, st->st_gid)) {
+		_pam_log(LOG_ERR, "cannot set privileges of %s: %s",
+			 dst, strerror(errno));
+		/* try to continue anyway */
+	}
+
+	free(lnkname);
+	return rc;
+}
+
 /* Create the directory DIR, eventually creating all intermediate directories
    starting from DIR + BASELEN. */
-int
+static int
 create_hierarchy(char *dir, size_t baselen)
 {
 	int rc;
@@ -641,7 +775,7 @@ create_hierarchy(char *dir, size_t baselen)
 	return rc;
 }
 
-int
+static int
 create_interdir(const char *path, struct passwd *pw)
 {
 	char *dir, *p;
@@ -661,7 +795,255 @@ create_interdir(const char *path, struct passwd *pw)
 	free(dir);
 	return rc;
 }
+
+struct namebuf {
+	char *name;
+	size_t size;
+	size_t prefix_len;
+};
 
+static void
+namebuf_trimslash(struct namebuf *buf)
+{
+	size_t len = strlen(buf->name);
+	while (len > 0 && buf->name[len-1] == '/')
+		--len;
+	buf->name[len] = 0;
+}
+
+static int
+namebuf_init(struct namebuf *buf, const char *name)
+{
+	buf->name = strdup(name);
+	if (!buf->name)
+		return 1;
+	buf->prefix_len = strlen(name);
+	buf->size = buf->prefix_len + 1;
+	namebuf_trimslash(buf);
+	return 0;
+}
+
+static int
+namebuf_set(struct namebuf *buf, const char *name)
+{
+	size_t len;
+
+	if (!buf->name)
+		return namebuf_init(buf, name);
+	len = strlen(name);
+	if (buf->prefix_len + len + 1 > buf->size) {
+		size_t ns;
+		char *np;
+
+		for (ns = buf->size; buf->prefix_len + len + 1 > ns;
+		     ns += ns)
+			;
+
+		np = realloc(buf->name, ns);
+		if (!np)
+			return 1;
+		buf->size = ns;
+		buf->name = np;
+	}
+
+	strcpy(buf->name + buf->prefix_len, name);
+	//namebuf_trimslash(buf);
+
+	return 0;
+}
+
+static size_t
+namebuf_set_prefix(struct namebuf *buf)
+{
+	size_t ret;
+	ret = buf->prefix_len;
+	buf->prefix_len = strlen(buf->name);
+	if (namebuf_set(buf, "/"))
+		return 1;
+	++buf->prefix_len;
+	return ret;
+}
+
+static void
+namebuf_set_prefix_len(struct namebuf *buf, size_t len)
+{
+	buf->prefix_len = len;
+	buf->name[len] = 0;
+}
+
+static int recursive_copy(pam_handle_t *pamh, DIR *dir,
+			  struct namebuf *srcbuf, struct namebuf *dstbuf,
+			  char *buffer, size_t bufsize, struct passwd *pw,
+			  struct stat *st);
+
+static int
+dir_copy_loop(pam_handle_t *pamh, DIR *dir,
+	      struct namebuf *srcbuf, struct namebuf *dstbuf,
+	      char *buffer, size_t bufsize, struct passwd *pw)
+{
+	struct dirent *ent;
+	struct stat dir_st;
+
+	while ((ent = readdir(dir))) {
+		char const *ename = ent->d_name;
+		struct stat st;
+		int rc;
+		
+		if (ename[ename[0] != '.' ? 0 : ename[1] != '.' ? 1 : 2] == 0)
+			continue;
+		if (namebuf_set(srcbuf, ename)) {
+			_pam_log(LOG_ERR, "copy error: %s", strerror(errno));
+			return 1;
+		}
+		if (namebuf_set(dstbuf, ename)) {
+			_pam_log(LOG_ERR, "copy error: %s", strerror(errno));
+			return 1;
+		}
+		if (lstat(srcbuf->name, &st)) {
+			_pam_log(LOG_ERR, "cannot stat %s: %s",
+				 srcbuf->name, strerror(errno));
+			return 1;
+		}
+		st.st_uid = pw->pw_uid;
+		st.st_gid = pw->pw_gid;
+		if (S_ISREG(st.st_mode))
+			rc = copy_file(pamh, srcbuf->name, dstbuf->name,
+				       buffer, bufsize, &st);
+		else if (S_ISDIR(st.st_mode)) {
+			DIR *nd = opendir(srcbuf->name);
+			if (!nd) {
+				_pam_log(LOG_ERR,
+					 "cannot open directory %s: %s",
+					 srcbuf->name, strerror(errno));
+				rc = 1;
+			} else {
+				size_t srclen = namebuf_set_prefix(srcbuf);
+				size_t dstlen = namebuf_set_prefix(dstbuf);
+				rc = recursive_copy(pamh, nd, srcbuf, dstbuf,
+						    buffer, bufsize, pw,
+						    &st);
+				closedir(nd);
+				namebuf_set_prefix_len(dstbuf, dstlen);
+				namebuf_set_prefix_len(srcbuf, srclen);
+			}
+		} else if (S_ISLNK(st.st_mode))
+			rc = copy_link(pamh, srcbuf->name, dstbuf->name,
+				       buffer, bufsize, &st);
+		else {
+			_pam_log(LOG_NOTICE,
+				 "ignoring file %s: unsupported file type",
+				 srcbuf->name);
+			rc = 0;
+		}
+
+		if (rc)
+			return 1;
+	}
+	return 0;
+}
+
+static int
+recursive_copy(pam_handle_t *pamh, DIR *dir,
+	       struct namebuf *srcbuf, struct namebuf *dstbuf,
+	       char *buffer, size_t bufsize, struct passwd *pw,
+	       struct stat *st)
+{
+	int rc;
+	struct stat dst_st;
+		
+	if (stat(dstbuf->name, &dst_st)) {
+		if (errno == ENOENT) {
+			if (mkdir(dstbuf->name, 0700)) {
+				_pam_log(LOG_ERR, "cannot create %s: %s",
+					 dstbuf->name, strerror(errno));
+				return 1;
+			}
+		} else {
+			_pam_log(LOG_ERR, "cannot stat %s: %s",
+				 dstbuf->name, strerror(errno));
+			return 1;
+		}
+	}
+
+	rc = dir_copy_loop(pamh, dir, srcbuf, dstbuf, buffer, bufsize, pw);
+	dstbuf->name[dstbuf->prefix_len-1] = 0;
+	if (chown(dstbuf->name, pw->pw_uid, pw->pw_gid) ||
+	    (st && chmod(dstbuf->name, st->st_mode & 07777))) {
+		_pam_log(LOG_ERR,
+			 "cannot set privileges of %s:"
+			 "%s",
+			 dstbuf->name,
+			 strerror(errno));
+	}
+	
+	return rc;
+}
+
+#define MIN_BUF_SIZE 2
+#define MAX_BUF_SIZE 16384
+
+static int
+populate_homedir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
+{
+	const char *skel;
+	char *buffer;
+	size_t bufsize;
+	struct stat st;
+	unsigned long n;
+	DIR *dir;
+	int rc;
+	
+	skel = gray_env_get(env, "skel");
+	if (!skel)
+		return 0;
+	
+	if (stat(skel, &st)) {
+		_pam_log(LOG_ERR, "cannot stat skeleton directory %s: %s",
+			 pw->pw_dir, strerror(errno));
+		return 1;
+	} else if (!S_ISDIR(st.st_mode)) {
+		_pam_log(LOG_ERR, "%s exists, but is not a directory",
+			 pw->pw_dir);
+		return 1;
+	}
+
+	if (get_intval(env, "copy-buf-size", &n) == 0)
+		bufsize = n;
+	else
+		bufsize = MAX_BUF_SIZE;
+	
+	for (; (buffer = malloc(bufsize)) == NULL; bufsize >>= 1)
+		if (bufsize < MIN_BUF_SIZE)
+			return ENOMEM;
+
+	dir = opendir(skel);
+	if (!dir) {
+		_pam_log(LOG_ERR, "cannot open skeleton directory %s: %s",
+			 skel, strerror(errno));
+		rc = 1;
+	} else {
+		struct namebuf srcbuf, dstbuf;
+
+		if (namebuf_init(&srcbuf, skel) == 0) {
+			namebuf_set_prefix(&srcbuf);
+			if (namebuf_init(&dstbuf, pw->pw_dir) == 0) {
+				namebuf_set_prefix(&dstbuf);
+				rc = recursive_copy(pamh, dir,
+						    &srcbuf, &dstbuf,
+						    buffer, bufsize, pw,
+						    NULL);
+				free(dstbuf.name);
+			} else
+				rc = 1;
+			free(srcbuf.name);
+		} else
+			rc = 1;
+		closedir(dir);
+	}
+	free(buffer);
+	return rc;
+}
+
 static void
 store_pubkey(const char *key, struct passwd *pw)
 {
@@ -772,7 +1154,6 @@ static int
 create_home_dir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 {
 	struct stat st;
-	char *s;
 	
 	if (stat(pw->pw_dir, &st)) {
 		if (errno != ENOENT) {
@@ -786,6 +1167,7 @@ create_home_dir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 				 pw->pw_dir, strerror(errno));
 			return 1;
 		}
+		populate_homedir(pamh, pw, env);
 		chown(pw->pw_dir, pw->pw_uid, pw->pw_gid);
 	} else if (!S_ISDIR(st.st_mode)) {
 		_pam_log(LOG_ERR, "%s exists, but is not a directory",
@@ -793,19 +1175,6 @@ create_home_dir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 		return 1;
 	}
 
-	s = gray_env_get(env, "skel");
-	if (s) {
-		if (stat(s, &st)) {
-			_pam_log(LOG_ERR, "cannot stat skeleton directory %s: %s",
-				 pw->pw_dir, strerror(errno));
-			return 1;
-		} else if (!S_ISDIR(st.st_mode)) {
-			_pam_log(LOG_ERR, "%s exists, but is not a directory",
-				 pw->pw_dir);
-			return 1;
-		}
-		populate_homedir(pw, s);
-	}
 		
 	return 0;
 }
