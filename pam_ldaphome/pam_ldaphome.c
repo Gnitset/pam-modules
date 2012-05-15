@@ -486,6 +486,7 @@ get_ldap_attrs(LDAP *ld, LDAPMessage *msg, const char *attr)
 			p[values[i]->bv_len] = 0;
 			trimnl(p);
 			ret[i] = p;
+			DEBUG(10,("pubkey: %s", p));
 		}
 
 		if (i < count) {
@@ -1244,8 +1245,12 @@ pam_sm_authenticate(pam_handle_t *pamh,
 	DEBUG(90,("enter pam_sm_authenticate"));
 	gray_pam_init(PAM_AUTHINFO_UNAVAIL);
 	if (gray_env_read(config_file_name, &env) == 0) {
+		char *val;
 		struct passwd *pw;
 
+		if (val = gray_env_get(env, "authorized_keys"))
+			authorized_keys_file = val;
+		
 		if (check_user_groups(pamh, env, &pw, &retval) == 0) {
 			retval = create_home_dir(pamh, pw, env);
 			if (retval == PAM_SUCCESS)
