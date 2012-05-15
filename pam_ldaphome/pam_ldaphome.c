@@ -440,14 +440,20 @@ trimnl(char *s)
 	s[len] = 0;
 }
 
-static char *
-get_ldap_attr(LDAP *ld, LDAPMessage *msg, const char *attr)
+static int
+keycmp(const void *a, const void *b)
 {
-	int rc;
+	return strcmp(*(char**)a, *(char**)b);
+}
+
+static char **
+get_ldap_attrs(LDAP *ld, LDAPMessage *msg, const char *attr)
+{
+	int rc, i, count;
 	BerElement *ber = NULL;
 	struct berval bv;
 	char *ufn = NULL;
-	char *val;
+	char **ret;
 	struct berval **values;
 	
 	rc = ldap_get_dn_ber(ld, msg, &ber, &bv);
@@ -456,27 +462,43 @@ get_ldap_attr(LDAP *ld, LDAPMessage *msg, const char *attr)
 	ldap_memfree(ufn);
 
 	values = ldap_get_values_len(ld, msg, attr);
-	if (!values || !values[0]) {
+	if (!values) {
 		_pam_log(LOG_ERR,
 			 "LDAP attribute `%s' has NULL value",
 			 attr);
 		return NULL;
 	}
-	val = strdup(values[0]->bv_val);
-	if (!val)
+
+	for (count = 0; values[count]; count++)
+		;
+
+	ret = calloc(count + 1, sizeof(ret[0]));
+	if (!ret)
 		_pam_log(LOG_ERR, "%s", strerror(errno));
 	else {
-		trimnl(val);
-		DEBUG(1, ("pubkey: %s", val));
-	}
-	ldap_value_free_len(values);
-	return val;
-}
+		for (i = 0; values[i]; i++) {
+			char *p = malloc(values[i]->bv_len + 1);
+			if (!p) {
+				_pam_log(LOG_ERR, "%s", strerror(errno));
+				break;
+			}
+			memcpy(p, values[i]->bv_val, values[i]->bv_len);
+			p[values[i]->bv_len] = 0;
+			trimnl(p);
+			ret[i] = p;
+		}
 
-static int
-keycmp(const void *a, const void *b)
-{
-	return strcmp(a, b);
+		if (i < count) {
+			argcv_free(i, ret);
+			ret = NULL;
+		} else {
+			ret[i] = NULL;
+			qsort(ret, i, sizeof(ret[0]), keycmp);
+		}
+	}
+	
+	ldap_value_free_len(values);
+	return ret;
 }
 
 static char **
@@ -505,29 +527,13 @@ get_pubkeys(LDAP *ld, const char *base, const char *filter, const char *attr)
 		return NULL;
 	}
 
-	rc = ldap_count_entries(ld, res);
-
-	ret = calloc(rc + 1, sizeof(ret[0]));
-	if (!ret)
-		_pam_log(LOG_ERR, "%s", strerror(errno));
-	else {
-		int i = 0;
-		
-		for (msg = ldap_first_entry(ld, res); msg;
-		     msg = ldap_next_entry(ld, msg)) {
-			char *s = get_ldap_attr(ld, msg, attr);
-			if (s)
-				ret[i++] = s;
-		}
-
-		if (i != rc) {
-			argcv_free(i, ret);
-			ret = NULL;
-		}
-		ret[i] = NULL;
-
-		qsort(ret, i, sizeof(ret[0]), keycmp);
+	msg = ldap_first_entry(ld, res);
+	if (!msg) {
+		ldap_msgfree(res);
+		return NULL;
 	}
+
+	ret = get_ldap_attrs(ld, msg, attr);
 	
 	ldap_msgfree(res);
   
@@ -1121,8 +1127,10 @@ store_pubkeys(char **keys, struct passwd *pw)
 		do {
 			const char *kp = keys[i++];
 			if (!kp) {
-				DEBUG(2, ("some keys deleted"));
-				update = 1;
+				if (getc(fp) != EOF) {
+					DEBUG(2, ("some keys deleted"));
+					update = 1;
+				}
 				break;
 			}
 			while (*kp && (c = getc(fp)) != EOF && c == *kp)
@@ -1132,7 +1140,7 @@ store_pubkeys(char **keys, struct passwd *pw)
 				update = 1;
 				break;
 			}
-		} while (c == '\n');
+		} while (c != EOF && (c = getc(fp)) == '\n');
 
 		if (update) {
 			rewind(fp);
