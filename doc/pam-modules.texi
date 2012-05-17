@@ -840,72 +840,6 @@ not the first in the stack of authentication modules.
 * sql summary:: Summary of configuration statements.
 @end menu
 
-@node ldaphome
-@chapter pam_ldaphome
-@c Maintain home directories and SSH keys of LDAP users.
-@set MODULE pam_ldaphome
-@UNREVISED
-
-@table @option
-@opindex config, @command{pam_ldaphome} option
-@item config=@var{file}
-     Read configuration from @var{file}.  Default is
-@file{pam_ldaphome.conf} in @var{sysconfdir}.
-@end table
-
-@deffn {pam_ldaphome config} skel dir
-@FIXME{}
-@end deffn
-
-@deffn {pam_ldaphome config} uri arg
-@FIXME{}
-@example
-uri ldap://127.0.0.1/
-@end example
-@end deffn
-
-@deffn {pam_ldaphome config} base dn
-@FIXME{}
-@example
-base dc=gnu,dc=org,dc=ua
-@end example
-@end deffn
-
-@deffn {pam_ldaphome config} binddn dn
-@FIXME{}
-@example
-binddn cn=Manager,dc=gnu,dc=org,dc=ua
-@end example
-@end deffn
-
-@deffn {pam_ldaphome config} bindpw secret
-@FIXME{}
-@end deffn
-
-@deffn {pam_ldaphome config} tls bool
-@FIXME{}
-@end deffn
-
-@deffn {pam_ldaphome config} min-uid n
-@FIXME{}
-@end deffn
-
-@deffn {pam_ldaphome config} min-gid n
-@FIXME{}
-@end deffn
-
-@deffn {pam_ldaphome config} allow-groups group [group...]
-@FIXME{}
-@end deffn
-
-@deffn {pam_ldaphome config} filter text
-@FIXME{}
-@end deffn
-
-@deffn {pam_ldaphome config} pubkey-attr text
-@FIXME{}
-@end deffn
-
 @node config
 @section Configuration File.
 @cindex configuration file, @command{pam_pgsql}
@@ -1212,6 +1146,188 @@ The @var{query} is subject to item expansion (@pxref{item expansion}).
 
 @xref{sql setenv}, for a detailed description.
 @end table
+
+@node ldaphome
+@chapter pam_ldaphome
+@c Maintain home directories and SSH keys of LDAP users.
+@set MODULE pam_ldaphome
+The @command{pam_ldaphome} facilitates maintenance of a centralized
+LDAP user database.  It should be installed as a part of
+authentication stack.  When invoked, it creates the user home
+directory, if it does not already exist, and updates his
+@file{.ssh/authorized_keys} file with the keys from the database.
+
+Apart from common options, this module understands only one
+implementation-specific option:
+
+@table @option
+@opindex config, @command{pam_ldaphome} option
+@item config=@var{file}
+Read configuration from @var{file}.  Default is
+@file{pam_ldaphome.conf} in @var{sysconfdir}.
+@end table
+
+Actual module configuration is read from the configuration file, which
+has the same syntax as described in @ref{config, SQL configuration
+file}.  The following keywords are defined:
+
+@deffn {pam_ldaphome config} skel dir
+Supplies the name of a @dfn{skeleton directory}.  The contents of this
+directory is copied to the newly created user home directory.  The
+file modes and permissions are retained.
+@end deffn
+
+@deffn {pam_ldaphome config} uri arg
+Sets the URI of the LDAP server to consult for the user profile.
+Example:
+
+@example
+uri ldap://127.0.0.1/
+@end example
+@end deffn
+
+@deffn {pam_ldaphome config} base searchbase
+Use @var{searchbase} as the starting point for the search instead of
+the default, e.g.:
+
+@example
+base dc=gnu,dc=org,dc=ua
+@end example
+@end deffn
+
+@deffn {pam_ldaphome config} binddn dn
+Use the Distinguished Name @var{dn} to bind to the LDAP directory.
+Example:
+
+@example
+binddn cn=Manager,dc=gnu,dc=org,dc=ua
+@end example
+@end deffn
+
+@deffn {pam_ldaphome config} bindpw password
+If @code{binddn} statement is used, this statement supplies the
+password for simple authentication.
+@end deffn
+
+@deffn {pam_ldaphome config} tls bool
+If @var{bool} is @samp{yes}, enables TLS.
+@end deffn
+
+@deffn {pam_ldaphome config} min-uid n
+Sets the minimal UID.  For users with UIDs less than @var{n},
+@command{pam_ldaphome} returns PAM_SUCCESS immediately.  This allows
+you to have a set of basic users whose credentials are kept in the
+system database and who will not be disturbed by
+@command{pam_ldaphome}.  See also @samp{min-gid} and
+@samp{allow-groups}.
+@end deffn
+
+@deffn {pam_ldaphome config} min-gid n
+Sets the minimal GID.  For users with GIDs less than @var{n},
+@command{pam_ldaphome} returns PAM_SUCCESS immediately.
+@end deffn
+
+@deffn {pam_ldaphome config} allow-groups group [group...]
+Only handle members of the listed groups.
+@end deffn
+
+@deffn {pam_ldaphome config} filter expr
+Sets the LDAP filter expression to return a user profile.  The
+@var{expr} should conform to the string representation for search
+filters as defined in RFC 4515.
+@end deffn
+
+@deffn {pam_ldaphome config} pubkey-attr text
+Defines the name of the attribute keeping user public key.
+@end deffn
+
+@menu
+* ldaphome example::
+@end menu
+
+@node ldaphome example
+@section Example of pam_ldaphome configuration
+This example assumes you are using GNU/Linux.  The aim of this
+configuration is to allow remote access via sshd to users present only
+in the LDAP database, using ssh shared-key authentication.  The user
+public keys are kept in @samp{grayPublicKey} attribute of his LDAP
+entry.  When a user logs in for the first time, his home directory
+does not exist yet and consequently ssh is not able to verify his
+key.  Therefore it falls back to the interactive authentication (it is
+supposed, of course, that @samp{UsePAM} is set to @samp{yes} in the
+sshd configuration file).  The authentication stage is supposed to
+create user home directory, populate his @file{.ssh/authorized_keys}
+with his public keys and present user with a descriptive text
+prompting him to cancel his current authentication attempt and retry
+it again.  The corresponding @file{pam.conf} section looks as follows:
+
+@subheading pam.conf
+@example
+sshd auth [success=ok try_again=1 default=die] pam_ldaphome.so 
+sshd auth [success=done ignore=ignore default=die] pam_unix.so
+sshd auth [default=die]  pam_echo.so file=/etc/ldaphome.txt
+@end example
+
+The first line does most of the job.  If @command{pam_ldaphome.so}
+succeeds in creating the user directory it will return
+@samp{try_again}.  This will cause skipping the next stack entry, so
+control will go to @command{pam_echo.so}, which will print a
+descriptive text from @file{/etc/ldaphome.txt} and exit indicating
+authentication failure.
+
+The @command{pam_ldaphome.so} module returns @samp{success} if the
+user who is trying to log in should not be handled by it (e.g. because
+his UID is less than the @samp{min-uid} setting, etc.).  In this case,
+authentication will be handled by @command{pam_unix.so}.  This allows
+normal system accounts to function as usual.  This is very important,
+because it will allow to access the machine even when the LDAP
+database is not available for some reason.
+
+@subheading pam_ldaphome.conf
+The @command{pam_ldaphome.so} configuration handles users with uids
+and gids greater than or equal to 1000 and pertaining to the group
+@samp{remote}.  User home dirs are populated from the @file{/etc/skel}
+directory. 
+
+@example
+min-uid 1000
+min-gid 1000
+allow-groups remote 
+skel /etc/skel
+base dc=gnu,dc=org,dc=ua
+filter (&(objectClass=posixAccount)(uid=$user))
+pubkey-attr grayPublicKey
+@end example
+
+@subsection Schema
+The LDAP schema should include an attribute to keep the user public
+keys.  The author uses the following schema:
+
+@example
+# depends upon:
+#    nis.schema
+
+# Attribute Definitions
+attributetype ( 1.3.6.1.4.1.9163.2.1.0 NAME 'grayPublicKey'
+	DESC 'SSH public key'
+	EQUALITY caseExactIA5Match
+	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+# Object Class Definitions
+objectclass ( 1.3.6.1.4.1.9163.2.2.0 NAME 'grayAccount'
+	DESC 'Abstraction of an employee account'
+	SUP posixAccount AUXILIARY
+	MUST ( cn $ uid $ uidNumber $ gidNumber $ homeDirectory )
+	MAY ( userPassword $ loginShell $ gecos $ grayPublicKey ) )
+@end example
+
+@subheading /etc/nsswitch.conf
+The @samp{passwd} and @samp{group} entries in
+@file{/etc/nsswitch.conf} file should be as follows:
+
+@example
+passwd:         files ldap
+group:          files ldap
+@end example
 
 @node Reporting Bugs
 @chapter How to Report a Bug
