@@ -1255,6 +1255,14 @@ directory to the newly created home.  The default size is 16384 bytes.
 Sets the mode (octal) for the created user directories.
 @end deffn
 
+@deffn {pam_ldaphome config} authorized_keys name
+Sets the pathname (relative to the home directory) for the authorized
+keys file.  The default is @samp{.ssh/authorized_keys}.  For normal
+operation, this value must be the same as the value of
+@samp{AuthorizedKeysFile} variable in @file{sshd_config}.  Unless you
+change the latter, there's no need to edit it.
+@end deffn
+
 @menu
 * ldaphome example::
 @end menu
@@ -1323,15 +1331,15 @@ keys.  The author uses the following schema:
 
 # Attribute Definitions
 attributetype ( 1.3.6.1.4.1.9163.2.1.0 NAME 'grayPublicKey'
-	DESC 'SSH public key'
-	EQUALITY caseExactIA5Match
-	SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+        DESC 'SSH public key'
+        EQUALITY caseExactIA5Match
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
 # Object Class Definitions
 objectclass ( 1.3.6.1.4.1.9163.2.2.0 NAME 'grayAccount'
-	DESC 'Abstraction of an employee account'
-	SUP posixAccount AUXILIARY
-	MUST ( cn $ uid $ uidNumber $ gidNumber $ homeDirectory )
-	MAY ( userPassword $ loginShell $ gecos $ grayPublicKey ) )
+        DESC 'Abstraction of an employee account'
+        SUP posixAccount AUXILIARY
+        MUST ( cn $ uid $ uidNumber $ gidNumber $ homeDirectory )
+        MAY ( userPassword $ loginShell $ gecos $ grayPublicKey ) )
 @end example
 
 @subheading /etc/nsswitch.conf

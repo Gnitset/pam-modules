@@ -41,7 +41,7 @@ check-log-options:
 
 
 check-all-options:
-	@for mod in fshadow regex sql; \
+	@for mod in fshadow regex sql ldaphome; \
 	do \
 	  $(CHECK_DOCS) "pam_$$mod options" \
 	   '/struct pam_opt .*\[\] = /,/^}/s/[ \t]*{ *PAM_OPTSTR(\([^,)]*\)).*/\1/;t lab;b;: lab {/audit/d;/debug/d;/waitdebug/d;p}' \
@@ -59,7 +59,19 @@ check-sql-config:
 	   $(MAKEINFO) $(AM_MAKEINFOFLAGS) $(MAKEINFOFLAGS) -I $(srcdir) -E - \
 		$(info_TEXINFOS) 
 
-check-options: check-all-options check-log-options
+check-ldaphome-config:
+	@$(CHECK_DOCS) 'pam_ldaphome configuration keywords' \
+	   's/.*gray_env_get(.[^,]*, *"\(.[^"]*\)".*/\1/p;s/.*get_intval(.[^,]*, *"\(.[^"]*\)".*/\1/p' \
+	   's/@deffn  *{pam_ldaphome config}  *\([a-zA-Z_][a-zA-Z0-9_-]*\) .*/\1/p' \
+	   $(top_srcdir)/pam_ldaphome/pam_ldaphome.c -- \
+	   $(MAKEINFO) $(AM_MAKEINFOFLAGS) $(MAKEINFOFLAGS) -I $(srcdir) -E - \
+		$(info_TEXINFOS) 
+
+
+check-options: \
+ check-all-options\
+ check-log-options\
+ check-ldaphome-config
 
 all-check-docs: imprimatur-basic-checks check-options check-sql-config
 
