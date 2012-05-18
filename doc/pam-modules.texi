@@ -1214,8 +1214,13 @@ If @code{binddn} statement is used, this statement supplies the
 password for simple authentication.
 @end deffn
 
-@deffn {pam_ldaphome config} tls bool
-If @var{bool} is @samp{yes}, enables TLS.
+@deffn {pam_ldaphome config} tls val
+Controls whether TLS is desired or required.  If @var{val} is
+@samp{no} (the default), TLS will not be used.  If it is @samp{yes},
+the module will issue the @samp{StartTLS} command, but will continue
+anyway if it fails.  Finally, if @var{val} is @samp{only}, TLS is
+mandatory, and the module will not establish LDAP connection unless
+@samp{StartTLS} succeeds.
 @end deffn
 
 @deffn {pam_ldaphome config} min-uid n

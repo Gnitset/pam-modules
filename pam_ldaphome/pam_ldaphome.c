@@ -298,6 +298,8 @@ parse_ldap_uri(const char *uri)
 	return ldapuri;
 }
 
+static void ldap_unbind(LDAP *ld);
+
 static LDAP *
 ldap_connect(struct gray_env *env)
 {
@@ -346,17 +348,45 @@ ldap_connect(struct gray_env *env)
 
 	val = gray_env_get(env, "tls");
 		
-	if (val && gray_boolean_true_p(val)) {
-		rc = ldap_start_tls_s(ld, NULL, NULL);
-		if (rc != LDAP_SUCCESS) {
+	if (val) {
+		enum { tls_no, tls_yes,	tls_only } tls;
+		
+		if (strcmp(val, "yes") == 0)
+			tls = tls_yes;
+		else if (strcmp(val, "no") == 0)
+			tls = tls_no;
+		else if (strcmp(val, "only") == 0)
+			tls = tls_only;
+		else {
 			_pam_log(LOG_ERR,
-				 "ldap_start_tls failed: %s",
-				 ldap_err2string(rc));
-			/* try to continue anyway, to avoid memory
-			   leek (ld not being freed) */
+				 "wrong value for tls statement, "
+				 "assuming \"no\"");
+			tls = tls_no;
+		}
+
+		if (tls != tls_no) {
+			rc = ldap_start_tls_s(ld, NULL, NULL);
+			if (rc != LDAP_SUCCESS) {
+				char *msg = NULL;
+				ldap_get_option(ld,
+						LDAP_OPT_DIAGNOSTIC_MESSAGE,
+						(void*)&msg);
+				_pam_log(LOG_ERR,
+					 "ldap_start_tls failed: %s",
+					 ldap_err2string(rc));
+				_pam_log(LOG_ERR,
+					 "TLS diagnostics: %s", msg);
+				ldap_memfree(msg);
+
+				if (tls == tls_only) {
+					ldap_unbind(ld);
+					return NULL;
+				}
+				/* try to continue anyway */
+			}
 		}
 	}
-
+	
 	if (get_intval(env, "ldap-version", 10, &lval) == 0) {
 		switch (lval) {
 		case 2:
