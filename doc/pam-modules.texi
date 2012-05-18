@@ -1186,6 +1186,11 @@ uri ldap://127.0.0.1/
 @end example
 @end deffn
 
+@deffn {pam_ldaphome config} ldap-version v
+Sets the LDAP version to use.  Valid values for @var{v} are @samp{2}
+and @samp{3} (the default).
+@end deffn
+
 @deffn {pam_ldaphome config} base searchbase
 Use @var{searchbase} as the starting point for the search instead of
 the default, e.g.:
@@ -1239,6 +1244,15 @@ filters as defined in RFC 4515.
 
 @deffn {pam_ldaphome config} pubkey-attr text
 Defines the name of the attribute keeping user public key.
+@end deffn
+
+@deffn {pam_ldaphome config} copy-buf-size n
+Sets the size of the buffer used to copy files from the skeleton
+directory to the newly created home.  The default size is 16384 bytes.
+@end deffn
+
+@deffn {pam_ldaphome config} home-dir-mode mode
+Sets the mode (octal) for the created user directories.
 @end deffn
 
 @menu

@@ -155,6 +155,23 @@ argcv_concat(int wc, char **wv)
 	return res;
 }
 
+static int
+get_intval(struct gray_env *env, const char *name, int base, unsigned long *pv)
+{
+	char *p;
+	char *v = gray_env_get(env, name);
+	
+	if (!v)
+		return 1;
+	*pv = strtoul(v, &p, base);
+	if (*p) {
+		_pam_log(LOG_ERR, "configuration variable %s is not integer",
+			 name);
+		return -1;
+	}
+	return 0;
+}
+
 char *
 parse_ldap_uri(const char *uri)
 {
@@ -287,8 +304,9 @@ ldap_connect(struct gray_env *env)
 	int rc;
 	char *ldapuri = NULL;
 	LDAP *ld = NULL;
-	int protocol = LDAP_VERSION3; /* FIXME: must be configurable */
+	int protocol = LDAP_VERSION3;
 	char *val;
+	unsigned long lval;
 	
 	if (ldap_debug_level) {
 		if (ber_set_option (NULL, LBER_OPT_DEBUG_LEVEL,
@@ -339,6 +357,22 @@ ldap_connect(struct gray_env *env)
 		}
 	}
 
+	if (get_intval(env, "ldap-version", 10, &lval) == 0) {
+		switch (lval) {
+		case 2:
+			protocol = LDAP_VERSION2;
+			break;
+		case 3:
+			protocol = LDAP_VERSION3;
+			break;
+		default:
+			_pam_log(LOG_ERR,
+				 "%s: invalid variable value, "
+				 "defaulting to 3",
+				 "ldap-version");
+		}
+	}
+		
 	ldap_set_option(ld, LDAP_OPT_PROTOCOL_VERSION, &protocol);
 
 	/* FIXME: Timeouts, SASL, etc. */
@@ -542,23 +576,6 @@ get_pubkeys(LDAP *ld, const char *base, const char *filter, const char *attr)
 }
 
 static int
-get_intval(struct gray_env *env, const char *name, unsigned long *pv)
-{
-	char *p;
-	char *v = gray_env_get(env, name);
-	
-	if (!v)
-		return 1;
-	*pv = strtoul(v, &p, 10);
-	if (*p) {
-		_pam_log(LOG_ERR, "configuration variable %s is not integer",
-			 name);
-		return 1;
-	}
-	return 0;
-}	
-
-static int
 check_groups(int gc, char **gv, const char *username)
 {
 	int i;
@@ -597,7 +614,7 @@ check_user_groups(pam_handle_t *pamh, struct gray_env *env,
 		return 1;
 	}
 	*ppw = pw;
-	if (get_intval(env, "min-uid", &ival) == 0) {
+	if (get_intval(env, "min-uid", 10, &ival) == 0) {
 		if (pw->pw_uid < ival) {
 			DEBUG(10, ("ignoring user %s: has UID < %lu",
 				   username, ival));
@@ -605,7 +622,7 @@ check_user_groups(pam_handle_t *pamh, struct gray_env *env,
 			return 1;
 		}
 	}
-	if (get_intval(env, "min-gid", &ival) == 0) {
+	if (get_intval(env, "min-gid", 10, &ival) == 0) {
 		if (pw->pw_gid < ival) {
 			DEBUG(10, ("ignoring user %s: has GID < %lu",
 				   username, ival));
@@ -1051,7 +1068,7 @@ populate_homedir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 		return 1;
 	}
 
-	if (get_intval(env, "copy-buf-size", &n) == 0)
+	if (get_intval(env, "copy-buf-size", 10, &n) == 0)
 		bufsize = n;
 	else
 		bufsize = MAX_BUF_SIZE;
@@ -1209,19 +1226,29 @@ create_home_dir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 	struct stat st;
 	
 	if (stat(pw->pw_dir, &st)) {
+		unsigned long mode = 0755;
+		
 		if (errno != ENOENT) {
 			_pam_log(LOG_ERR, "cannot stat home directory %s: %s",
 				 pw->pw_dir, strerror(errno));
 			return PAM_SERVICE_ERR;
 		}
-		/* FIXME: mode must be configurable */
-		if (mkdir(pw->pw_dir, 0775)) {
+		if (get_intval(env, "home-dir-mode", 8, &mode) == -1)
+			return PAM_SERVICE_ERR;
+		mode &= 07777;
+		if (mkdir(pw->pw_dir, 0700)) {
 			_pam_log(LOG_ERR, "cannot create %s: %s",
 				 pw->pw_dir, strerror(errno));
 			return PAM_SERVICE_ERR;
 		}
 		populate_homedir(pamh, pw, env);
-		chown(pw->pw_dir, pw->pw_uid, pw->pw_gid);
+		if (chown(pw->pw_dir, pw->pw_uid, pw->pw_gid) ||
+		    chmod(pw->pw_dir, mode)) {
+			_pam_log(LOG_ERR,
+				 "cannot change mode or ownership of %s: %s",
+				 pw->pw_dir, strerror(errno));
+			return PAM_SERVICE_ERR;
+		}
 	} else if (!S_ISDIR(st.st_mode)) {
 		_pam_log(LOG_ERR, "%s exists, but is not a directory",
 			 pw->pw_dir);
