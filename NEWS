@@ -5,6 +5,8 @@ See the end of file for copying conditions.
 Please send radius bug reports to <bug-pam-modules@gnu.org.ua>
 
 
+Version 1.7.90, Git
+
 Version 1.7, 2011-04-08
 
 * Allow for use of `CALL proc' in MySQL queries.

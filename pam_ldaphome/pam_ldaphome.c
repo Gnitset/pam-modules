@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <ldap.h>
 #include <pwd.h>
 #include <grp.h>
@@ -346,6 +347,24 @@ ldap_connect(struct gray_env *env)
 	}
 	free(ldapuri);
 
+	if (get_intval(env, "ldap-version", 10, &lval) == 0) {
+		switch (lval) {
+		case 2:
+			protocol = LDAP_VERSION2;
+			break;
+		case 3:
+			protocol = LDAP_VERSION3;
+			break;
+		default:
+			_pam_log(LOG_ERR,
+				 "%s: invalid variable value, "
+				 "defaulting to 3",
+				 "ldap-version");
+		}
+	}
+		
+	ldap_set_option(ld, LDAP_OPT_PROTOCOL_VERSION, &protocol);
+
 	val = gray_env_get(env, "tls");
 		
 	if (val) {
@@ -387,24 +406,6 @@ ldap_connect(struct gray_env *env)
 		}
 	}
 	
-	if (get_intval(env, "ldap-version", 10, &lval) == 0) {
-		switch (lval) {
-		case 2:
-			protocol = LDAP_VERSION2;
-			break;
-		case 3:
-			protocol = LDAP_VERSION3;
-			break;
-		default:
-			_pam_log(LOG_ERR,
-				 "%s: invalid variable value, "
-				 "defaulting to 3",
-				 "ldap-version");
-		}
-	}
-		
-	ldap_set_option(ld, LDAP_OPT_PROTOCOL_VERSION, &protocol);
-
 	/* FIXME: Timeouts, SASL, etc. */
 	return ld;
 }

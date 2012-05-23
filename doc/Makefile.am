@@ -18,9 +18,7 @@ info_TEXINFOS=pam-modules.texi
 pam_modules_TEXINFOS=fdl.texi macros.texi
 
 EXTRA_DIST = \
- gendocs_template\
- mastermenu.el\
- untabify.el
+ gendocs_template
 
 clean-local:
 	rm -rf manual
