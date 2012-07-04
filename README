@@ -1,5 +1,5 @@
 PAM-modules README
-Copyright (C) 2001, 2004-2005, 2007, 2009-2011 Sergey Poznyakoff
+Copyright (C) 2001, 2004-2005, 2007, 2009-2012 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 * Introduction
@@ -92,7 +92,7 @@ Send bug reports to <bug-pam-modules@gnu.org.ua>. Read the chapter
 
 * Copyright information:
 
-Copyright (C) 2001, 2004, 2005, 2007, 2009 Sergey Poznyakoff
+Copyright (C) 2001, 2004-2005, 2007, 2009-2012 Sergey Poznyakoff
 
    Permission is granted to anyone to make or distribute verbatim copies
    of this document as received, in any medium, provided that the

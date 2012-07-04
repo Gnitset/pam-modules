@@ -1,4 +1,5 @@
-# Copyright (C) 2005-2006, 2008-2011 Sergey Poznyakoff
+# This file is part of pam-modules.
+# Copyright (C) 2005-2006, 2008-2012 Sergey Poznyakoff
 #
 # This file is free software; as a special exception the author gives
 # unlimited permission to copy and/or distribute it, with or without
