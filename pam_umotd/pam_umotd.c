@@ -48,7 +48,9 @@ static int cntl_flags;
 static char *motd_file_name;
 static int optindex = -1;
 static long timeout_option = 10;
-const char *logfile_name;
+static const char *logfile_name;
+static long max_output_size = 2000;
+
 
 struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(debug),   pam_opt_long, &debug_level },
@@ -60,30 +62,46 @@ struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(log),     pam_opt_string, &logfile_name },
 	{ PAM_OPTSTR(exec),    pam_opt_rest, &optindex },
 	{ PAM_OPTSTR(timeout), pam_opt_long, &timeout_option },
+	{ PAM_OPTSTR(max-size),pam_opt_long, &max_output_size },
 	{ NULL }
 };
-
-#define MAX_OUTPUT 8096
 
 static int
 read_fd(pam_handle_t *pamh, const char *file, int fd)
 {
-	char buf[1024];
-	ssize_t rd = 0;
-	size_t size = 0;
+	char buf[1024], *p;
+	ssize_t rd;
+	size_t total = 0;
+	size_t level = 0;
 	
-	while ((rd = read(fd, buf, sizeof(buf) - 1)) > 0) {
-		buf[rd] = 0;
+	while (total < max_output_size) {
+		size_t rdsize = sizeof(buf) - level - 1;
+
+		if (total + rdsize >= max_output_size &&
+		    (rdsize = max_output_size - total) == 0)
+			break;
+		rd = read(fd, buf + level, rdsize);
+		if (rd <= 0)
+			break;
+		total += rd;
+		level += rd;
+		buf[level] = 0;
+		p = strrchr(buf, '\n');
+		if (p)
+			*p++ = 0;
 		pam_info(pamh, "%s", buf);
-		size += rd;
-		if (size >= MAX_OUTPUT) {
-			_pam_log(LOG_NOTICE, "file %s too big, truncated",
-				 file);
-			return PAM_SYSTEM_ERR;
-		}
+		if (p && *p) {
+			level = strlen(p);
+			memmove(buf, p, level);
+		} else
+			level = 0;
+	}
+	if (level) {
+		buf[level] = 0;
+		pam_info(pamh, "%s", buf);
 	}
 	if (rd < 0) {
-		_pam_log(LOG_ERR, "cannot open file %s: %s",
+		_pam_log(LOG_ERR, "error reading file %s: %s",
 			 file, strerror(errno));
 		return PAM_SYSTEM_ERR;
 	}
@@ -118,6 +136,7 @@ exec_file(pam_handle_t *pamh, const char **argv, const char *logfile)
 	int i, status, intr;
 	fd_set rd;
 	struct timeval tv;
+	size_t total = 0;
 	
 	if (pipe(p)) {
 		_pam_log(LOG_ERR, "pipe: %s", strerror(errno));
@@ -164,7 +183,7 @@ exec_file(pam_handle_t *pamh, const char **argv, const char *logfile)
 	intr = 0;
 	rc = 0;
 	status = 0;
-	for (i = 0;;) {
+	for (i = 0; total < max_output_size;) {
 		FD_ZERO(&rd);
 		FD_SET(p[0], &rd);
 
@@ -175,18 +194,13 @@ exec_file(pam_handle_t *pamh, const char **argv, const char *logfile)
 			if (rc == (pid_t)-1) {
 				_pam_log(LOG_ERR, "waitpid: %s",
 					 strerror(errno));
-				_pam_log(LOG_NOTICE, "killing %s (pid %lu)",
-					 argv[0], (unsigned long) pid);
-				kill(pid, SIGKILL);
 				break;
 			}
 			intr = 0;
 		}
 		ttl = timeout_option - (time(NULL) - start);
 		if (ttl <= 0) {
-			_pam_log(LOG_NOTICE, "killing %s (pid %lu)",
-				 argv[0], (unsigned long) pid);
-			kill(pid, SIGKILL);
+			_pam_log(LOG_ERR, "timed out reading from %s", argv[0]);
 			break;
 		}
 		tv.tv_sec = ttl;
@@ -206,7 +220,7 @@ exec_file(pam_handle_t *pamh, const char **argv, const char *logfile)
 			if (p)
 				*p++ = 0;
 			pam_info(pamh, "%s", buf);
-			if (*p) {
+			if (p && *p) {
 				i = strlen(p);
 				memmove(buf, p, i);
 			}
@@ -215,9 +229,11 @@ exec_file(pam_handle_t *pamh, const char **argv, const char *logfile)
 			char c;
 			
 			rc = read(p[0], &c, 1);
-			if (rc == 1)
+			if (rc == 1) {
 				buf[i++] = c;
-			else if (errno == EINTR || errno == EAGAIN) {
+				total++;
+			} else if (rc == 0
+				   || errno == EINTR || errno == EAGAIN) {
 				intr = 1;
 				continue;
 			} else {
@@ -233,15 +249,17 @@ exec_file(pam_handle_t *pamh, const char **argv, const char *logfile)
 	close(p[0]);
 
 	if (rc != pid) {
+		_pam_log(LOG_NOTICE, "killing %s (pid %lu)",
+			 argv[0], (unsigned long) pid);
+		kill(pid, SIGKILL);
+		
 		while ((rc = waitpid(pid, &status, 0)) == -1 &&
 		       errno == EINTR);
 		if (rc == (pid_t)-1) {
 			_pam_log(LOG_ERR, "waitpid: %s", strerror(errno));
 			return PAM_SYSTEM_ERR;
 		}
-	}
-	
-	if (WIFEXITED(status)) {
+	} else if (WIFEXITED(status)) {
 		status = WEXITSTATUS(status);
 		if (status) {
 			_pam_log(LOG_ERR, "%s exited with status %d",
