@@ -33,9 +33,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <ldap.h>
-#include <pwd.h>
-#include <grp.h>
 #include <signal.h>
 #include <time.h>
 
@@ -126,7 +123,7 @@ read_file(pam_handle_t *pamh, const char *file)
 }
 	
 static int
-exec_file(pam_handle_t *pamh, const char **argv, const char *logfile)
+exec_file(pam_handle_t *pamh, char **argv, const char *logfile)
 {
 	pid_t pid, rc;
 	int p[2];
@@ -172,7 +169,7 @@ exec_file(pam_handle_t *pamh, const char **argv, const char *logfile)
 		} else
 			dup2(1, 2);
 		
-		execv(argv[0], (char**)argv);
+		execv(argv[0], argv);
 		_exit(127);
 	}
 
@@ -300,6 +297,7 @@ pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, const char **argv)
 		gray_slist_free(&slist);
 	} else if (optindex >= 0) {
 		int i;
+		char **xargv;
 		
 		argc -= optindex;
 		argv += optindex;
@@ -307,13 +305,16 @@ pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, const char **argv)
 			_pam_log(LOG_INFO, "empty command line");
 			return retval;
 		}
+		xargv = gray_malloc((argc + 1) * sizeof (xargv[0]));
 		slist = gray_slist_create();
 		for (i = 0; i < argc; i++) {
 			gray_expand_string(pamh, argv[i], slist);
 			gray_slist_append_char(slist, 0);
-			argv[i] = gray_slist_finish(slist);
+			xargv[i] = gray_slist_finish(slist);
 		}
-		retval = exec_file(pamh, argv, logfile_name);
+		xargv[i] = NULL;
+		retval = exec_file(pamh, xargv, logfile_name);
+		free(xargv);
 		gray_slist_free(&slist);
 	} else
 		_pam_log(LOG_ERR,

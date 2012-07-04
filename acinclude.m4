@@ -16,9 +16,7 @@
 AC_DEFUN([PM_ENABLE],[
   AC_ARG_ENABLE($1,
                 AC_HELP_STRING([--disable-$1], [Disable pam_$1]),
-                [if test $build_$1 = probe; then
-		   build_$1=$enableval
-	         fi],
+                [build_$1=$enableval],
 		[build_$1=probe])
   m4_pushdef([upmodname],translit($1, [a-z.-], [A-Z__]))
   if test $build_$1 != no; then
