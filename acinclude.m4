@@ -17,13 +17,12 @@ AC_DEFUN([PM_ENABLE],[
   AC_ARG_ENABLE($1,
                 AC_HELP_STRING([--disable-$1], [Disable pam_$1]),
                 [build_$1=$enableval],
-		[build_$1=probe])
+		[build_$1=m4_if([$2],[],yes,probe)])
   m4_pushdef([upmodname],translit($1, [a-z.-], [A-Z__]))
-  if test $build_$1 != no; then
-    build_$1=yes
-    AC_SUBST([BUILD_PAM_]upmodname, ['$(]upmodname[)'])
+  m4_if([$2],[],,[if test $build_$1 != no; then
     $2
-  fi
+    test $build_$1 = probe && build_$1=no
+  fi])
   AM_CONDITIONAL([PAM_COND_]upmodname, [test "$[]build_$1" = "yes"])
   m4_popdef([upmodname])
 ])

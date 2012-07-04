@@ -23,14 +23,11 @@
 #include <security/pam_modules.h>
 #include <security/pam_ext.h>
 
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/wait.h>
-#include <dirent.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>

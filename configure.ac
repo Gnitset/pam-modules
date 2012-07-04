@@ -81,11 +81,17 @@ AC_CHECK_MEMBERS([struct spwd.sp_expire], , ,
 dnl Checks for library functions.
 AC_CHECK_FUNCS(strerror tcgetattr)
 
-AC_CHECK_FUNC(fgetpwent,
-              [],
-              [build_fshadow=no])
 
-PM_ENABLE(fshadow)
+PM_ENABLE(fshadow,[
+ AC_CHECK_FUNC(fgetpwent,
+               [build_fshadow=yes],
+               [if $build_fshadow = yes; then
+	          AC_MSG_ERROR([cannot build requested pam_fgetpwent, because the fgetpwent function is not available])
+		else
+	          build_fshadow=no
+		fi])
+])	       
+
 PM_ENABLE(log)
 PM_ENABLE(regex)
 
@@ -110,38 +116,40 @@ AC_ARG_WITH(sql,
 	   build_pgsql=$withval])	
 	   
 if test "$build_mysql" != no; then
-  PM_CHECK_LIB(mysqlclient, mysql_real_connect, "-lm",
-              [ AC_DEFINE(USE_SQL_MYSQL,1,
-                          [Define this if you are going to use MySQL])
-                AC_DEFINE(HAVE_LIBMYSQL,1,
-                          [Define this if you have mysqlclient library])
-                MYSQLLIBS="$pm_cv_lib_mysqlclient"
-		SQL_MODULES="$SQL_MODULES pam_mysql.la"
-		build_mysql=yes ],
-              [ test "$build_mysql" = yes && AC_MSG_ERROR([MySQL libraries required, but not present])
-	        build_mysql=no ],
-              [/usr/lib/mysql /usr/local/lib/mysql])
+  PM_ENABLE(mysql, [
+    PM_CHECK_LIB(mysqlclient, mysql_real_connect, "-lm",
+                 [ AC_DEFINE(USE_SQL_MYSQL,1,
+                             [Define this if you are going to use MySQL])
+                   AC_DEFINE(HAVE_LIBMYSQL,1,
+                             [Define this if you have mysqlclient library])
+                   MYSQLLIBS="$pm_cv_lib_mysqlclient"
+		   SQL_MODULES="$SQL_MODULES pam_mysql.la"
+		   build_mysql=yes ],
+                 [ test "$build_mysql" = yes && AC_MSG_ERROR([cannot build the requested module pam_mysql, because MySQL libraries are not present])
+	           build_mysql=no ],
+                 [/usr/lib/mysql /usr/local/lib/mysql])])
 fi
 
 if test "$build_pgsql" != no; then
-  PM_CHECK_LIB(pq, PQconnectStart, [],
-  	      [ save_CPPFLAGS=$CPPFLAGS
-	        for dir in /usr/local/pgsql/include /usr/pgsql/include
-		do
+  PM_ENABLE(pgsql, [
+    PM_CHECK_LIB(pq, PQconnectStart, [],
+    	         [ save_CPPFLAGS=$CPPFLAGS
+	           for dir in /usr/local/pgsql/include /usr/pgsql/include
+		   do
 			CPPFLAGS="$save_CPPFLAGS -I$dir"
 			AC_CHECK_HEADER([libpq-fe.h], [break])
 			CPPFLAGS="$save_CPPFLAGS"
-		done
-	        AC_DEFINE(USE_SQL_PGSQL,1,
-                          [Define this if you are going to use PostgreSQL])
-                AC_DEFINE(HAVE_LIBPQ,1,
-                          [Define this if you have libpq]) 
-                PGSQLLIBS="$pm_cv_lib_pq"
-		SQL_MODULES="$SQL_MODULES pam_pgsql.la"
-		build_pgsql=yes ],
-              [ test "$build_pgsql" = yes && AC_MSG_ERROR([PostgreSQL libraries required, but not present])
-	        build_pgsql=no ],
-              [/usr/pgsql/lib /usr/local/pgsql/lib])
+		   done
+	           AC_DEFINE(USE_SQL_PGSQL,1,
+                             [Define this if you are going to use PostgreSQL])
+                   AC_DEFINE(HAVE_LIBPQ,1,
+                             [Define this if you have libpq]) 
+                   PGSQLLIBS="$pm_cv_lib_pq"
+		   SQL_MODULES="$SQL_MODULES pam_pgsql.la"
+		   build_pgsql=yes ],
+                 [ test "$build_pgsql" = yes && AC_MSG_ERROR([cannot build the requested module pma_pgsql, because PostgreSQL libraries are not present])
+	           build_pgsql=no ],
+                 [/usr/pgsql/lib /usr/local/pgsql/lib])])
 fi
 
 AC_SUBST(MYSQLLIBS)	
@@ -149,15 +157,18 @@ AC_SUBST(PGSQLLIBS)
 AC_SUBST(SQL_MODULES)
 
 # LDAP support
-PM_ENABLE(ldaphome)
-if test $build_ldaphome = probe; then
+PM_ENABLE(ldaphome,[
   AC_CHECK_LIB(ldap, ldap_bind,
-               [build_ldaphome=yes]
-               [build_ldaphome=no])
-fi
+               [build_ldaphome=yes],
+               [if test $build_ldaphome = yes; then
+	          AC_MSG_ERROR([cannot build pam_ldaphome, because the required library libldap is not found])
+	        else
+	          build_ldaphome=no
+		fi])
+])
 
 #
-PM_ENABLE(umotd)
+PM_ENABLE(umotd,[
 case $build_umotd in
 probe)
   build_umotd=$ac_cv_header_security_pam_ext_h
@@ -166,6 +177,7 @@ yes)
   test $ac_cv_header_security_pam_ext_h = no && AC_MSG_ERROR([Cannot build pam_umotd, because the required header security/pam_ext.h is not present])
   ;;
 esac
+])
 
 ## *****************
 ## debugging support
