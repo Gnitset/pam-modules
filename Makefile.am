@@ -28,6 +28,9 @@ endif
 if PAM_COND_LDAPHOME
   LDAPHOME_DIR=pam_ldaphome
 endif
+if PAM_COND_UMOTD
+  UMOTD_DIR=pam_umotd
+endif
 SUBDIRS = \
  imprimatur\
  doc\
@@ -37,6 +40,7 @@ SUBDIRS = \
  $(LOG_DIR)\
  pam_sql\
  $(LDAPHOME_DIR)\
+ $(UMOTD_DIR)\
  pamck
 
 EXTRA_DIST=ChangeLog.svn

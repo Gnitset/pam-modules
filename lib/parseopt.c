@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2008, 2010-2011 Sergey Poznyakoff
+   Copyright (C) 2008, 2010-2012 Sergey Poznyakoff
  
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -79,9 +79,10 @@ gray_parseopt(struct pam_opt *opt, int argc, const char **argv)
 {
 	long n;
 	char *s;
+	int i;
 	int rc = 0;
 	
-	for (; argc-- > 0; ++argv) {
+	for (i = 0; i < argc; ++i, ++argv) {
 		const char *value;
 		struct pam_opt *p = find_opt(opt, *argv, &value);
 
@@ -91,7 +92,7 @@ gray_parseopt(struct pam_opt *opt, int argc, const char **argv)
 			rc = 1;
 			continue;
 		}
-				
+			
 		switch (p->type) {
 		case pam_opt_long:
 			n = strtol(value, &s, 0);
@@ -143,6 +144,10 @@ gray_parseopt(struct pam_opt *opt, int argc, const char **argv)
 			*(int*)p->data = n;
 			break;
 
+		case pam_opt_rest:
+			*(int*)p->data = i + 1;
+			return 0;
+			
 		case pam_opt_null:
 			break;
 		}

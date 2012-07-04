@@ -1,5 +1,5 @@
 # This file is part of pam-modules.       -*- autoconf -*-
-# Copyright (C) 2005-2011 Sergey Poznyakoff
+# Copyright (C) 2005-2012 Sergey Poznyakoff
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -56,14 +56,14 @@ AH_TEMPLATE([HAVE_PAM_MISC_SETENV],[Define if pam_misc_setenv is available.])
 AC_CHECK_LIB(pam_misc, pam_misc_setenv,
              [PAM_MISC=-lpam_misc
 	      AC_DEFINE([HAVE_PAM_MISC_SETENV],1)],:,[-lpam])
-			    
+
 dnl Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS(security/pam_appl.h security/pam_modules.h,
                  :,
 		 AC_MSG_ERROR([Required PAM header files not found]))
 AC_CHECK_HEADERS(fcntl.h syslog.h unistd.h crypt.h security/_pam_aconf.h \
-                 security/pam_misc.h termios.h)
+                 security/pam_misc.h security/pam_ext.h termios.h)
 AC_CHECK_HEADER(shadow.h,
                 [],
                 [build_fshadow=no])
@@ -156,6 +156,17 @@ if test $build_ldaphome = probe; then
                [build_ldaphome=no])
 fi
 
+#
+PM_ENABLE(umotd)
+case $build_umotd in
+probe)
+  build_umotd=$ac_cv_header_security_pam_ext_h
+  ;;
+yes)
+  test $ac_cv_header_security_pam_ext_h = no && AC_MSG_ERROR([Cannot build pam_umotd, because the required header security/pam_ext.h is not present])
+  ;;
+esac
+
 ## *****************
 ## debugging support
 ## *****************
@@ -204,7 +215,7 @@ delim="-------------------------------------------------------------------"
 echo $delim | tr '-' '*'
 echo "Modules to build:"
 res=
-for module in fshadow regex log pgsql mysql ldaphome
+for module in fshadow regex log pgsql mysql ldaphome umotd
 do
 	modname=pam_$module
 	eval enable=\${build_$module}
@@ -225,7 +236,8 @@ build_regex=$build_regex
 build_log=$build_log
 build_pgsql=$build_pgsql
 build_mysql=$build_mysql
-build_ldaphome=$build_ldaphome])
+build_ldaphome=$build_ldaphome
+build_umotd=$build_umotd])
 		
 AC_OUTPUT(Makefile
           doc/Makefile
@@ -235,4 +247,5 @@ AC_OUTPUT(Makefile
 	  pam_log/Makefile
 	  pam_sql/Makefile
 	  pam_ldaphome/Makefile
+	  pam_umotd/Makefile
 	  pamck/Makefile)

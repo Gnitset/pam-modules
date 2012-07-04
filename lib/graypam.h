@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2008, 2010-2011 Sergey Poznyakoff
+   Copyright (C) 2008, 2010-2012 Sergey Poznyakoff
  
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
@@ -153,7 +153,8 @@ enum pam_opt_type {
 	pam_opt_long,
 	pam_opt_string,
 	pam_opt_enum,
-	pam_opt_const
+	pam_opt_const,
+	pam_opt_rest,
 };
 
 struct pam_opt {
