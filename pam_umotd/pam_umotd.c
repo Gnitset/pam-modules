@@ -44,7 +44,7 @@ static int optindex = -1;
 static long timeout_option = 10;
 static const char *logfile_name;
 static long max_output_size = 2000;
-
+static char *la_str;
 
 struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(debug),   pam_opt_long, &debug_level },
@@ -57,9 +57,50 @@ struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(exec),    pam_opt_rest, &optindex },
 	{ PAM_OPTSTR(timeout), pam_opt_long, &timeout_option },
 	{ PAM_OPTSTR(max-size),pam_opt_long, &max_output_size },
+	{ PAM_OPTSTR(max-la),  pam_opt_string, &la_str },
 	{ NULL }
 };
+
+static int
+fpread(const char *str, double *ret)
+{
+	char *p;
+	*ret = strtod(str, &p);
+	if (*p) {
+		_pam_log(LOG_ERR,
+			 "not a valid floating point number: %s",
+			 str);
+		return 1;
+	}
+	return 0;
+}
 
+/* FIXME: Linux-specific */
+static int
+get_la(double *ret)
+{
+	char buf[80];
+	int rc = -1;
+	FILE *fp = fopen("/proc/loadavg", "r");
+	if (!fp)
+		return -1;
+	if (!fgets(buf, sizeof(buf), fp))
+		_pam_log(LOG_ERR, "cannot read /proc/loadavg: %s",
+			 strerror(errno));
+	else {
+		char *p = strchr(buf, ' ');
+		if (*p) {
+			*p = 0;
+			rc = fpread(buf, ret);
+		} else
+			rc = -1;
+	}
+	fclose(fp);
+	return rc;
+}
+		
+	
+
 static int
 read_fd(pam_handle_t *pamh, const char *file, int fd)
 {
@@ -194,7 +235,8 @@ exec_file(pam_handle_t *pamh, char **argv, const char *logfile)
 		}
 		ttl = timeout_option - (time(NULL) - start);
 		if (ttl <= 0) {
-			_pam_log(LOG_ERR, "timed out reading from %s", argv[0]);
+			_pam_log(LOG_ERR, "timed out reading from %s",
+				 argv[0]);
 			break;
 		}
 		tv.tv_sec = ttl;
@@ -282,6 +324,17 @@ pam_sm_open_session(pam_handle_t *pamh, int flags, int argc, const char **argv)
 	debug_level = 0;
 	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
 	gray_parseopt(pam_opt, argc, argv);
+	if (la_str) {
+		double max_la, la;
+		if (fpread(la_str, &max_la))
+			return PAM_SERVICE_ERR;
+		if (get_la(&la) == 0 && la >= max_la) {
+			_pam_log(LOG_ERR,
+				 "load average too high: %.2g >= %.2g",
+				 la, max_la);
+			return PAM_IGNORE;
+		}
+	}
 
 	if (motd_file_name) {
 		char *file;
