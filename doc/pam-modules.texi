@@ -33,6 +33,7 @@
                                        messages to syslog.
 * pam_ldaphome (pam-modules)ldaphome   Maintain home directories and
                                        SSH keys od LDAP users.
+* pam_umotd    (pam-modules)umotd      Display a user-specific MOTD.
 * pamck:       (pam-modules)pamck.     Verify PAM Access.                                       
 @end direntry
 @end ifinfo
@@ -93,6 +94,7 @@ Individual modules
 * log::                 Log arbitrary messages to syslog.
 * sql::                 Modules for SQL authentication and session management.
 * ldaphome::            Maintain home directories and SSH keys of LDAP users.
+* umotd::               Display a user-specific MOTD.
 
 * Reporting Bugs::      How to Report a Bug.
 
@@ -229,9 +231,6 @@ username: }.
 @item password
 @code{PAM_AUTHTOK}.  The authentication token (often a password).
 @end table
-
-   Item expansion is used by @command{pam_log}, @command{pam_mysql}
-and @command{pam_pgsql}. 
 
 @node pamck
 @chapter Verify PAM Access
@@ -1355,6 +1354,99 @@ The @samp{passwd} and @samp{group} entries in
 passwd:         files ldap
 group:          files ldap
 @end example
+
+@node umotd
+@chapter pam_umotd
+@set MODULE pam_umotd
+@cindex motd
+@cindex message of the day
+The @command{pam_umotd} module displays a user-specific @dfn{message
+of the day} (@sc{motd}).  The text can be taken either from a disk
+file, or read from the standard output of a program launched for
+that purpose.
+
+This module is Linux-specific.
+
+The module is normally started as a part of the @dfn{session} stack,
+e.g.:
+
+@example
+session optional pam_umotd.so file=/etc/motd
+@end example
+
+The @option{file} option specifies the file to read the @sc{motd}
+from.  By default the output size is limited to 2000 bytes (a usual
+80x25 screen-worth of characters).  If the input file is bigger than
+that, it will be truncated.  The size limit can be controlled using
+the @option{max-size} parameter:
+
+@example
+session optional pam_umotd.so max-size=1024 file=/etc/motd
+@end example
+
+Another safety-related parameter is @option{max-la}, which controls
+the maximum 5-minute load average, under which the message will be
+displayed.  If the current LA is greater than this value, the module
+will return immediately without displaying anything@footnote{As of
+version @value{VERSION} this functionality relies on the file
+@file{/proc/loadavg}.}.
+
+The @sc{motd} can be generated on the fly, by launching an external
+program and displaying its output.  This allows you to create dynamic,
+user-specific @sc{motd}s.  To select this mode, use the @option{exec}
+parameter.  The rest of arguments after this parameter are taken to be
+the name of the program to be run and its command line arguments.
+Before starting the program, the arguments undergo item expansion (@pxref{item
+expansion}).  For example: 
+
+@example
+@group
+session optional pam_umotd.so max-size=1024 max-la=5.0 timeout=5 \
+           exec /usr/bin/genmotd $@{user@} $@{tty@}
+@end group                    
+@end example
+
+This example runs the program @file{/usr/bin/genmotd} passing it the
+user login name and the tty name as its argument.  Notice the
+@option{timeout} parameter, which controls the maximum time (in
+seconds) the program will be allowed to run.  If it runs longer than that,
+it will be killed.  The default timeout is 10 seconds.
+
+@menu
+* summary of pam_umotd options::
+@end menu
+
+@node summary of pam_umotd options
+@section Summary of @command{pam_umotd} options
+
+This section summarizes the options understood by @command{pam_umotd}.
+
+@table @option
+@opsummary{file}
+@item file=@var{filename}
+Read and display text from file @var{filename}.
+
+@opsummary{exec}
+@item exec
+Execute a program and display its output.  The rest of arguments after
+this parameter are taken to be the program name and its command line
+arguments.  The arguments are subject to item expansion (@pxref{item
+expansion}).  The program inherits the current environment.
+
+@opsummary{timeout}
+@item timeout=@var{n}
+Limit the execution time of the program started via the @option{exec}
+option to @var{n} seconds.  The default value is 10.  
+
+@opsummary{max-size}
+@item max-size=@var{n}
+Limit the output size to @var{n} bytes.  Default is 2000.
+
+@opsummary{max-la}
+@item max-la=@var{d}
+Exit immediately if the 5-minute load average is greater than or equal
+to @var{d} (a floating-point number).
+@end table
 
 @node Reporting Bugs
 @chapter How to Report a Bug
