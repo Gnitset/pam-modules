@@ -1,11 +1,11 @@
-pam-modules -- history of user-visible changes. 2012-07-04
+pam-modules -- history of user-visible changes. 2012-07-05
 Copyright (C) 2001, 2004-2005, 2007-2012 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 Please send radius bug reports to <bug-pam-modules@gnu.org.ua>
 
 
-Version 1.7.90, Git
+Version 1.7.91, Git
 
 * pam_ldaphome
 * pam_umotd
