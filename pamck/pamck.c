@@ -162,7 +162,7 @@ main (int argc, char **argv)
 				exit(0);
 			} 
 			group = find_group(optarg);
-			if (!service) 
+			if (!group) 
 				error(1,
 				      "no such management group, try `%s -g help' for the list",
 				      program_name);

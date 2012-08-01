@@ -202,7 +202,7 @@ parse_ldap_uri(const char *uri)
 			char *domain = NULL, *hostlist = NULL;
 			size_t i;
 	      
-			if (ldap_dn2domain (lud->lud_dn, &domain) ||
+			if (ldap_dn2domain(lud->lud_dn, &domain) ||
 			    !domain) {
 				_pam_log(LOG_ERR,
 					 "DNS SRV: cannot convert "
@@ -288,14 +288,14 @@ parse_ldap_uri(const char *uri)
 	}
 
 	if (ludlist) {
-		ldap_free_urldesc (ludlist);
+		ldap_free_urldesc(ludlist);
 		return NULL;
 	} else if (!urls)
 		return NULL;
 	ldapuri = argcv_concat(nurls, urls);
 	if (!ldapuri)
 		_pam_log(LOG_ERR, "%s", strerror(errno));
-	ber_memvfree ((void **)urls);
+	ber_memvfree((void **)urls);
 	return ldapuri;
 }
 
@@ -312,14 +312,14 @@ ldap_connect(struct gray_env *env)
 	unsigned long lval;
 	
 	if (ldap_debug_level) {
-		if (ber_set_option (NULL, LBER_OPT_DEBUG_LEVEL,
+		if (ber_set_option(NULL, LBER_OPT_DEBUG_LEVEL,
 				    &ldap_debug_level)
 		    != LBER_OPT_SUCCESS )
 			_pam_log(LOG_ERR,
 				 "cannot set LBER_OPT_DEBUG_LEVEL %d",
 				 ldap_debug_level);
 
-		if (ldap_set_option (NULL, LDAP_OPT_DEBUG_LEVEL,
+		if (ldap_set_option(NULL, LDAP_OPT_DEBUG_LEVEL,
 				     &ldap_debug_level)
 		    != LDAP_OPT_SUCCESS )
 			_pam_log(LOG_ERR,
@@ -411,7 +411,77 @@ ldap_connect(struct gray_env *env)
 }
 
 static int
-ldap_bind (LDAP *ld, struct gray_env *env)
+full_read(int fd, char *file, char *buf, size_t size)
+{
+	while (size) {
+		ssize_t n;
+			
+		n = read(fd, buf, size);
+		if (n == -1) {
+			if (errno == EAGAIN || errno == EINTR)
+				continue;
+			_pam_log(LOG_ERR, "error reading from %s: %s",
+				 file, strerror(errno));
+			return -1;
+		} else if (n == 0) {
+			_pam_log(LOG_ERR, "short read from %s", file);
+			return -1;
+		}
+
+		buf += n;
+		size -= n;
+	}
+	return 0;
+}
+
+static int
+get_passwd(struct gray_env *env, struct berval *pwd, char **palloc)
+{
+	char *file;
+
+	file = gray_env_get(env, "bindpwfile");
+	if (file) {
+		struct stat st;
+		int fd, rc;
+		char *mem, *p;
+		
+		fd = open(file, O_RDONLY);
+		if (fd == -1) {
+			_pam_log(LOG_ERR, "can't open password file %s: %s",
+				 file, strerror(errno));
+			return -1;
+		}
+		if (fstat(fd, &st)) {
+			_pam_log(LOG_ERR, "can't stat password file %s: %s",
+				 file, strerror(errno));
+			close(fd);
+			return -1;
+		}
+		mem = malloc(st.st_size + 1);
+		if (!mem) {
+			_pam_log(LOG_ERR, "can't allocate memory (%lu bytes)",
+				 (unsigned long) st.st_size+1);
+			close(fd);
+			return -1;
+		}
+		rc = full_read(fd, file, mem, st.st_size);
+		close(fd);
+		if (rc)
+			return rc;
+		mem[st.st_size] = 0;
+		p = strchr(mem, '\n');
+		if (p)
+			*p = 0;
+		*palloc = mem;
+		pwd->bv_val = mem;
+	} else
+		pwd->bv_val = gray_env_get(env, "bindpw");
+	pwd->bv_len = pwd->bv_val ? strlen(pwd->bv_val) : 0;
+	return 0;
+}
+
+static int
+ldap_bind(LDAP *ld, struct gray_env *env)
 {
 	int msgid, err, rc;
 	LDAPMessage *result;
@@ -420,12 +490,14 @@ ldap_bind (LDAP *ld, struct gray_env *env)
 	char *matched = NULL;
 	char *info = NULL;
 	char **refs = NULL;
-	static struct berval passwd;
+	struct berval passwd;
 	char *binddn;
+	char *alloc_ptr = NULL;
 	
 	binddn = gray_env_get(env, "binddn");
-	passwd.bv_val = gray_env_get(env, "bindpw");
-	passwd.bv_len = passwd.bv_val ? strlen(passwd.bv_val) : 0;
+
+	if (get_passwd(env, &passwd, &alloc_ptr))
+		return 1;
 
 	msgbuf[0] = 0;
 
@@ -435,11 +507,13 @@ ldap_bind (LDAP *ld, struct gray_env *env)
 		_pam_log(LOG_ERR,
 			 "ldap_sasl_bind(SIMPLE) failed: %s",
 			 ldap_err2string(rc));
+		free(alloc_ptr);
 		return 1;
 	}
 
 	if (ldap_result(ld, msgid, LDAP_MSG_ALL, NULL, &result ) == -1) {
 		_pam_log(LOG_ERR, "ldap_result failed");
+		free(alloc_ptr);
 		return 1;
 	}
 
@@ -447,7 +521,8 @@ ldap_bind (LDAP *ld, struct gray_env *env)
 			       &ctrls, 1);
 	if (rc != LDAP_SUCCESS) {
 		_pam_log(LOG_ERR, "ldap_parse_result failed: %s",
-			 ldap_err2string (rc));
+			 ldap_err2string(rc));
+		free(alloc_ptr);
 		return 1;
 	}
 
@@ -483,6 +558,8 @@ ldap_bind (LDAP *ld, struct gray_env *env)
 		ber_memfree(info);
 	if (refs)
 		ber_memvfree((void **)refs);
+
+	free(alloc_ptr);
 
 	return !(err == LDAP_SUCCESS);
 }
@@ -783,7 +860,7 @@ read_link_name(const char *name, char **pbuf, size_t *psize, size_t *plen)
 
 	if (rc) {
 		if (buf) {
-			free (buf);
+			free(buf);
 			buf = NULL;
 		}
 		size = 0;
@@ -1137,7 +1214,7 @@ populate_homedir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 }
 
 static int
-store_pubkeys(char **keys, struct passwd *pw)
+store_pubkeys(char **keys, struct passwd *pw, struct gray_env *env)
 {
 	FILE *fp;
 	int c;
@@ -1145,6 +1222,8 @@ store_pubkeys(char **keys, struct passwd *pw)
 	size_t homelen, pathlen, len;
 	int retval, i;
 	int update = 0;
+	int oldmask;
+	unsigned long mode;
 	
 	homelen = strlen(pw->pw_dir);
 	pathlen = strlen(authorized_keys_file);
@@ -1156,12 +1235,26 @@ store_pubkeys(char **keys, struct passwd *pw)
 	if (pw->pw_dir[homelen - 1] != '/')
 		file_name[homelen++] = '/';
 	strcpy(file_name + homelen, authorized_keys_file);
+
+	switch (get_intval(env, "keyfile-mode", 8, &mode)) {
+	case -1:
+		return PAM_SERVICE_ERR;
+	case 1:
+		oldmask = -1;
+		break;
+	case 0:
+		oldmask = umask(0666 ^ (mode & 0777));
+	}
 	
 	fp = fopen(file_name, "r+");
 	if (!fp && create_interdir(file_name, pw) == 0) {
 		fp = fopen(file_name, "w");
 		update = 1; 
 	}
+
+	if (oldmask != -1)
+		umask(oldmask);
+	
 	if (!fp) {
 		_pam_log(LOG_EMERG, "cannot open file %s: %s",
 			 file_name, strerror(errno));
@@ -1244,7 +1337,7 @@ import_public_key(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 
 		keys = get_pubkeys(ld, base, filter, attr);
 		gray_slist_free(&slist);
-		retval = store_pubkeys(keys, pw);
+		retval = store_pubkeys(keys, pw, env);
 		argcvz_free(keys);
 	}
 	ldap_unbind(ld);
@@ -1290,10 +1383,7 @@ create_home_dir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 }
 
 PAM_EXTERN int
-pam_sm_authenticate(pam_handle_t *pamh,
-		    int flags,
-		    int argc,
-		    const char **argv)
+pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
 	int retval = PAM_AUTH_ERR;
 	struct gray_env *env;

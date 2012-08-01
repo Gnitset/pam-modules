@@ -1213,6 +1213,10 @@ If @code{binddn} statement is used, this statement supplies the
 password for simple authentication.
 @end deffn
 
+@deffn {pam_ldaphome config} bindpwfile file
+Read password for simple authentication from @var{file}.
+@end deffn
+
 @deffn {pam_ldaphome config} tls val
 Controls whether TLS is desired or required.  If @var{val} is
 @samp{no} (the default), TLS will not be used.  If it is @samp{yes},
@@ -1257,6 +1261,10 @@ directory to the newly created home.  The default size is 16384 bytes.
 
 @deffn {pam_ldaphome config} home-dir-mode mode
 Sets the mode (octal) for the created user directories.
+@end deffn
+
+@deffn {pam_ldaphome config} keyfile-mode mode
+Sets the mode (octal) for the created authorized keys file.
 @end deffn
 
 @deffn {pam_ldaphome config} authorized_keys name
