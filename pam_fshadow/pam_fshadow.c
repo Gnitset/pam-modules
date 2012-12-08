@@ -83,6 +83,12 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 {
 	int retval = PAM_SUCCESS;
 	
+	memset(&rexp, 0, sizeof(rexp));
+	regex_str = NULL;
+	regex_flags = REG_EXTENDED;
+	username_index = 1;
+	domain_index = 2;
+
 	gray_log_init(0, MODULE_NAME, LOG_AUTHPRIV);
 	if (gray_parseopt(pam_opt, argc, argv))
 		return PAM_AUTHINFO_UNAVAIL;
@@ -119,18 +125,8 @@ _pam_parse(pam_handle_t *pamh, int argc, const char **argv)
 				 regex_str);
 			regfree(&rexp);
 			retval = PAM_AUTHINFO_UNAVAIL;
-		} else {
+		} else
 			cntl_flags |= CNTL_REGEX;
-			rc = pam_set_data(pamh, "REGEX", &rexp,
-					  gray_cleanup_regex);
-			
-			if (rc != PAM_SUCCESS) {
-				_pam_log(LOG_NOTICE, 
-					 "can't keep data [%s]: %s",
-					 "REGEX",
-					 pam_strerror(pamh, rc));
-			}
-		}
 	}
        
 	return retval;
@@ -398,6 +394,8 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 	retval = pam_get_user(pamh, &username, NULL);
 	if (retval != PAM_SUCCESS || !username) {
 		DEBUG(1,("can not get the username"));
+		if (cntl_flags & CNTL_REGEX)
+			regfree(&rexp);
 		return PAM_SERVICE_ERR;
 	}
 
@@ -423,8 +421,8 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags,
 				 username,
 				 regex_str));
 		}
+		regfree(&rexp);
 	}
-		
 	
 	/* Get the password */
 	if (_pam_get_password(pamh, &password, "Password:"))
