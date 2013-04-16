@@ -1337,8 +1337,11 @@ import_public_key(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 
 		keys = get_pubkeys(ld, base, filter, attr);
 		gray_slist_free(&slist);
-		retval = store_pubkeys(keys, pw, env);
-		argcvz_free(keys);
+		if (keys) {
+			retval = store_pubkeys(keys, pw, env);
+			argcvz_free(keys);
+		} else
+			retval = PAM_SUCCESS;
 	}
 	ldap_unbind(ld);
 	return retval;

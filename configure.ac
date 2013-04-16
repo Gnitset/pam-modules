@@ -100,23 +100,23 @@ PM_ENABLE(regex)
 AC_ARG_WITH(mysql,
             AC_HELP_STRING([--without-mysql],
 	                   [Configure to work without MySQL]),
-	    [build_mysql=$withval])	
+	    [want_mysql=$withval])	
 AC_ARG_WITH(pgsql,
             AC_HELP_STRING([--without-pgsql],
 	                   [Configure to work without Postgres]),
-	    [build_pgsql=$withval])
+	    [want_pgsql=$withval])
 AC_ARG_WITH(postgres,
             AC_HELP_STRING([--without-postgres],
 	                   [Same as --without-pgsql]),
- 	    [build_pgsql=$withval])
+ 	    [want_pgsql=$withval])
 AC_ARG_WITH(sql,
-	    AC_HELP_STRING([--without-sql],
+ AC_HELP_STRING([--without-sql],
 	                   [Do not build SQL dependent modules]),
-	  [build_mysql=$withval	
-	   build_pgsql=$withval])	
+	  [want_mysql=$withval	
+	   want_pgsql=$withval])	
 	   
-if test "$build_mysql" != no; then
-  PM_ENABLE(mysql, [
+PM_ENABLE(mysql, [
+  if test "$want_mysql" != no; then
     PM_CHECK_LIB(mysqlclient, mysql_real_connect, "-lm",
                  [ AC_DEFINE(USE_SQL_MYSQL,1,
                              [Define this if you are going to use MySQL])
@@ -127,11 +127,12 @@ if test "$build_mysql" != no; then
 		   build_mysql=yes ],
                  [ test "$build_mysql" = yes && AC_MSG_ERROR([cannot build the requested module pam_mysql, because MySQL libraries are not present])
 	           build_mysql=no ],
-                 [/usr/lib/mysql /usr/local/lib/mysql])])
-fi
+                 [/usr/lib/mysql /usr/local/lib/mysql])
+  fi
+])
 
-if test "$build_pgsql" != no; then
-  PM_ENABLE(pgsql, [
+PM_ENABLE(pgsql, [
+  if test "$want_pgsql" != no; then
     PM_CHECK_LIB(pq, PQconnectStart, [],
     	         [ save_CPPFLAGS=$CPPFLAGS
 	           for dir in /usr/local/pgsql/include /usr/pgsql/include
@@ -149,8 +150,9 @@ if test "$build_pgsql" != no; then
 		   build_pgsql=yes ],
                  [ test "$build_pgsql" = yes && AC_MSG_ERROR([cannot build the requested module pma_pgsql, because PostgreSQL libraries are not present])
 	           build_pgsql=no ],
-                 [/usr/pgsql/lib /usr/local/pgsql/lib])])
-fi
+                 [/usr/pgsql/lib /usr/local/pgsql/lib])
+  fi
+])
 
 AC_SUBST(MYSQLLIBS)	
 AC_SUBST(PGSQLLIBS)
