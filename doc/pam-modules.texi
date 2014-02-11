@@ -1170,6 +1170,13 @@ Actual module configuration is read from the configuration file, which
 has the same syntax as described in @ref{config, SQL configuration
 file}.  The following keywords are defined:
 
+@deffn {pam_ldaphome config} allow-home-dir path
+If present, this option controls where @command{pam_ldaphome} should
+try to create home directories.  Its value is a list of directories
+separated by colons.  The user's home directory will be created only
+if the directory part of its name is listed in @var{path}.
+@end deffn
+
 @deffn {pam_ldaphome config} skel dir
 Supplies the name of a @dfn{skeleton directory}.  The contents of this
 directory is copied to the newly created user home directory.  The

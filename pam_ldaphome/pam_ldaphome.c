@@ -961,7 +961,7 @@ create_interdir(const char *path, struct passwd *pw)
 	dir[len] = 0;
 	rc = create_hierarchy(dir, strlen(pw->pw_dir));
 	if (rc == 0)
-		chown(dir, pw->pw_uid, pw->pw_gid);
+		rc = chown(dir, pw->pw_uid, pw->pw_gid);
 	free(dir);
 	return rc;
 }
@@ -1261,8 +1261,9 @@ store_pubkeys(char **keys, struct passwd *pw, struct gray_env *env)
 		free(file_name);
 		return PAM_SERVICE_ERR;
 	}
-	free(file_name);
-	fchown(fileno(fp), pw->pw_uid, pw->pw_gid);
+	if (fchown(fileno(fp), pw->pw_uid, pw->pw_gid))
+		_pam_log(LOG_ERR, "chown %s: %s",
+			 file_name, strerror(errno));
 
 	if (!update) {
 		i = 0;
@@ -1286,8 +1287,14 @@ store_pubkeys(char **keys, struct passwd *pw, struct gray_env *env)
 
 		if (update) {
 			rewind(fp);
-			ftruncate(fileno(fp), 0);
+			if (ftruncate(fileno(fp), 0)) {
+				_pam_log(LOG_ERR, "truncate %s: %s",
+					 file_name, strerror(errno));
+				free(file_name);
+				return PAM_SERVICE_ERR;
+			}
 		}
+		free(file_name);
 	}
 	
 	if (update) {
@@ -1348,25 +1355,62 @@ import_public_key(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 }
 
 static int
+dir_in_path(const char *dir, const char *path)
+{
+	char *p;
+	size_t dirlen;
+
+	p = strrchr(dir, '/');
+	if (p)
+		dirlen = p - dir;
+	else
+		return 0;
+	
+	while (*path) {
+		size_t len = strcspn(path, ":");
+		while (len > 0 && path[len-1] == '/')
+			--len;
+		if (len == dirlen && memcmp(path, dir, len) == 0)
+			return 1;
+		path += len;
+		if (*path == ':')
+			++path;
+	}
+	return 0;
+}
+
+enum create_status {
+	create_ok,
+	create_failure,
+	create_skip
+};
+
+static enum create_status
 create_home_dir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 {
 	struct stat st;
 	
 	if (stat(pw->pw_dir, &st)) {
 		unsigned long mode = 0755;
+		char *val;
 		
 		if (errno != ENOENT) {
 			_pam_log(LOG_ERR, "cannot stat home directory %s: %s",
 				 pw->pw_dir, strerror(errno));
-			return PAM_SERVICE_ERR;
+			return create_failure;
 		}
+		
+		val = gray_env_get(env, "allow-home-dir");
+		if (val && !dir_in_path(pw->pw_dir, val))
+			return create_skip;
+
 		if (get_intval(env, "home-dir-mode", 8, &mode) == -1)
-			return PAM_SERVICE_ERR;
+			return create_failure;
 		mode &= 07777;
 		if (mkdir(pw->pw_dir, 0700)) {
 			_pam_log(LOG_ERR, "cannot create %s: %s",
 				 pw->pw_dir, strerror(errno));
-			return PAM_SERVICE_ERR;
+			return create_failure;
 		}
 		populate_homedir(pamh, pw, env);
 		if (chown(pw->pw_dir, pw->pw_uid, pw->pw_gid) ||
@@ -1374,15 +1418,15 @@ create_home_dir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 			_pam_log(LOG_ERR,
 				 "cannot change mode or ownership of %s: %s",
 				 pw->pw_dir, strerror(errno));
-			return PAM_SERVICE_ERR;
+			return create_failure;
 		}
 	} else if (!S_ISDIR(st.st_mode)) {
 		_pam_log(LOG_ERR, "%s exists, but is not a directory",
 			 pw->pw_dir);
-		return PAM_SERVICE_ERR;
+		return create_failure;
 	}
 		
-	return PAM_SUCCESS;
+	return create_ok;
 }
 
 PAM_EXTERN int
@@ -1403,9 +1447,16 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 			authorized_keys_file = val;
 		
 		if (check_user_groups(pamh, env, &pw, &retval) == 0) {
-			retval = create_home_dir(pamh, pw, env);
-			if (retval == PAM_SUCCESS)
+			switch (create_home_dir(pamh, pw, env)) {
+			case create_ok:
 				retval = import_public_key(pamh, pw, env);
+				break;
+			case create_failure:
+				retval = PAM_SERVICE_ERR;
+				break;
+			case create_skip:
+				retval = PAM_SUCCESS;
+			}
 		}
 		gray_env_free(env);
 	}
