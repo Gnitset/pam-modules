@@ -1,5 +1,5 @@
 /* This file is part of pam-modules.
-   Copyright (C) 2009-2012 Sergey Poznyakoff
+   Copyright (C) 2009-2012, 2014 Sergey Poznyakoff
  
    This program is free software; you can redistribute it and/or modify it
    under the terms of the GNU General Public License as published by the
