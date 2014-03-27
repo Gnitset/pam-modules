@@ -383,7 +383,7 @@ gray_free_transform_expr ()
 {
   while (transform_head)
     {
-      struct transform *next = transform_head;
+      struct transform *next = transform_head->next;
       free_transform (transform_head);
       transform_head = next;
     }
