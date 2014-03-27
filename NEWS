@@ -1,14 +1,32 @@
-pam-modules -- history of user-visible changes. 2014-02-11
+pam-modules -- history of user-visible changes. 2014-03-28
 Copyright (C) 2001, 2004-2005, 2007-2012, 2014 Sergey Poznyakoff
 See the end of file for copying conditions.
 
-Please send radius bug reports to <bug-pam-modules@gnu.org.ua>
+Please send pam-modules bug reports to <bug-pam-modules@gnu.org.ua>
 
 
-Version 1.7.92, Git
+Version 1.8.92, (Git)
+
+Bugfixes
+
+
+Version 1.8, 2013-07-29
 
 * pam_ldaphome
+
+This module creates the user home directory, if it does not
+already exist, and updates his `.ssh/authorized_keys' file with the
+keys from the LDAP database.
+
 * pam_umotd
+
+Pam_umotd displays a user-specific message of the day.  The text can
+be taken either from a disk file, or read from the standard output of
+a program launched for that purpose.  This module is Linux-specific.
+
+* Bugfixes
+** pam_fshadow made reentrant
+
 
 
 Version 1.7, 2011-04-08

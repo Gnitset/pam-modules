@@ -16,7 +16,7 @@
 
 AC_PREREQ(2.63)
 
-AC_INIT(pam-modules, 1.7.92, bug-pam-modules@gnu.org.ua)
+AC_INIT(pam-modules, 1.8.92, bug-pam-modules@gnu.org.ua)
 AC_CONFIG_SRCDIR(pam_fshadow/pam_fshadow.c)
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])

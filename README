@@ -52,29 +52,10 @@ The applications-specific options are:
         e.g.:
 
 	   ./configure --without-crypt-lib LDFLAGS=...
-	   
- --disable-fshadow
-        Disable pam_fshadow module.
-	
- --disable-log
-        Disable pam_log module.
-	
- --disable-regex
-        Disable pam_regex module.  
-	
- --without-mysql
-        Do not build pam_mysql
 
- --without-pgsql
- --without-postgres
-        Do not build pam_pgsql
-
- --without-sql
-        Do not build SQL-dependent modules (i.e. pam_mysql and
-        pam_pgsql)
-
- --with-pamdir=DIR
-	Install PAM modiles in DIR (default is PREFIX/lib/security)
+Building of each particular MODULE can be disabled using the
+--disable-MODULE command line option.  See the documentation for
+the list of available modules.
 	
 ** Run make
 
@@ -92,7 +73,7 @@ Send bug reports to <bug-pam-modules@gnu.org.ua>. Read the chapter
 
 * Copyright information:
 
-Copyright (C) 2001, 2004-2005, 2007, 2009-2012 Sergey Poznyakoff
+Copyright (C) 2001, 2004-2005, 2007, 2009-2014 Sergey Poznyakoff
 
    Permission is granted to anyone to make or distribute verbatim copies
    of this document as received, in any medium, provided that the
