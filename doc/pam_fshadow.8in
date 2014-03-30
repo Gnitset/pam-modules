@@ -1,0 +1,223 @@
+.\" This file is part of PAM-Modules -*- nroff -*-
+.\" Copyright (C) 2001-2014 Sergey Poznyakoff
+.\"
+.\" PAM-Modules is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 3, or (at your option)
+.\" any later version.
+.\"
+.\" PAM-Modules is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
+.so config.so
+.TH PAM_FSHADOW 8 "March 30, 2014" "PAM-MODULES" "Pam-Modules User Reference"
+.SH NAME
+pam_fshadow \- use alternative passwd and/or shadow files
+.SH SYNOPSIS
+.nh
+.na
+\fBpam_fshadow\fR\
+ [\fBbasic\fR|\fBextended\fR]\
+ [\fBignore\-case\fR|\fBicase\fR|\fBcase\fR]\
+ [\fBnopasswd\fR]\
+ [\fBnoshadow\fR]\
+ [\fBregex=\fIEXPR\fR]\
+ [\fBrevert\-index\fR]\
+ [\fBsysconfdir=\fIDIR\fR]\
+ [\fBuse_authtok\fR]\
+ [\fBdebug\fR[\fB=\fINUMBER\fR]]\
+ [\fBwaitdebug\fR]\
+ [\fBaudit\fR]
+.ad
+.hy
+.SH DESCRIPTION
+Authenticates the user against alternative \fBpasswd\fR and
+\fBshadow\fR files.  There are two operation modes:
+\fBplain\fR mode, in which the module uses only
+one \fBpasswd\fR,\fBshadow\fR pair, and \fBvirtual domain\fR mode,
+which selects the pair to use based depending on the authentication
+token (the user name).
+.PP
+In plain mode, \fBpam_fshadow\fR checks the supplied user name and
+authentication token against the \fBpasswd\fR and \fBshadow\fR files
+located in the system configuration directory.  The latter is set when
+configuring the package and defaults to \fB\*(ET\fR.  Its
+location can be changed using the \fBsysconfdir\fR command line
+parameter.
+.PP
+The command line options \fBnopasswd\fR and \fBnoshadow\fR are
+provided to disable reading of either file.  E.g. if \fBnoshadow\fR is
+given, the module will expect all authentication information to be
+stored in the \fBpasswd\fR file.
+.PP
+The \fBvirtual domain\fR mode select the \fBpasswd\fR,\fBshadow\fR
+pair to use depending on the user name.  To that effect, the user name
+is first split into the \fBlocal\fR and \fBauthentication domain\fR
+parts using a regular expression supplied with the \fBregex\fR option.
+The configuration directory name is then constructed by concatenating the
+system configuration directory, a directory separator character (\fB/\fR),
+and the name of the authentication domain.   The authentication then
+proceeds as described above for the plain mode.  If the supplied user name
+does not match the regular expression, \fBpam_fshadow\fR falls back to
+the plain mode.
+.SH OPTIONS
+.TP
+\fBbasic\fR
+The argument to the \fBregex\fR option is a basic regular expression. 
+.TP
+\fBextended\fR
+The argument to the \fBregex\fR option is a POSIX extended regular
+expression.  This is the default.
+.TP
+\fBignore\-case\fR, \fBicase\fR
+Use case-insensitive regex matching.
+.TP
+Use case-sensitive regex matching (default).
+.TP
+\fBnopasswd\fR
+Use only \fBshadow\fR file for authentication.
+.TP
+\fBnoshadow\fR
+Use only \fBpasswd\fR file for authentication.
+.TP
+\fBregex=\fIEXPR\fR
+Defines a regular expression for splitting user name into the proper
+name and authentication domain.  The expression must contain two
+parentesized groups.  If it matches, the group 1 will be used to
+extract local user name and the group 2 will select the authentication
+domain.  The \fBrevert\-index\fR option changes this behavior, causing
+group 1 to be used for authentication domain and group 2 for user
+name.  For example:
+.RS
+.EX
+regex=(.*)@(.*)
+.EE
+.RE
+
+This regular expression will match user names like \fBsmith@domain\fR.
+.TP
+\fBrevert\-index\fR
+Use group #2 from the regular expression as the user name and group #1
+as the authentication domain. 
+.TP
+\fBsysconfdir=\fIDIR\fR
+Use \fIDIR\fR as the system configuration directory, instead of the
+default \fB\*(ET\fR.
+.TP
+\fBuse_authtok\fR
+Do not prompt the user for password, take it from the saved
+authentication tokens.
+.TP
+\fBdebug\fR\fB=\fINUMBER\fR]
+Set debugging level (0 <= \fINUMBER\fR <= 100).
+.TP
+\fBwaitdebug\fR
+Wait for \fIN\fR seconds before starting up.  This option is intended
+to facilitate attaching to the module with
+.BR gdb (1).
+It is available only if the package was configured with
+the \fB\-\-enable\-debug\fR option.
+.TP
+\fBaudit\fR
+Log auditing information.
+.SH MODULE TYPES PROVIDED
+.BR auth ,
+.BR session ,
+.BR account .
+.SH RETURN VALUES
+.TP
+.B PAM_SUCCESS
+Successful return.
+.TP
+.B PAM_AUTH_ERR
+Authentication failed.
+.TP
+.B PAM_AUTHINFO_UNAVAIL
+The input information is not sufficient.
+.TP
+.B PAM_AUTHTOK_RECOVER_ERR
+Failed to obtain stored authentication token.  This code can be
+returned if \fBuse_authtok\fR was used.
+.TP
+.B PAM_SERVICE_ERR
+Can't open \fBpasswd\fR or \fBshadow\fR file, or get username or
+password.
+.TP
+.B PAM_USER_UNKNOWN
+Supplied username not found.
+.TP
+.B PAM_SYSTEM_ERR
+Out of memory.
+.SH EXAMPLES
+.nr step 1 1
+.IP \n[step].
+Plain mode.  Use the file \fB/etc/ftpauth/shadow\fR for authentication.
+.PP
+.EX
+auth required pam_fshadow.so sysconfdir=/etc/ftpauth nopasswd
+.EE
+.IP \n+[step].
+Authenticate against files located in \fB/etc/authdomain\fR.  E.g. if the
+supplied user name were \fBsmith@ftp\fR, it would use the files
+.B /etc/authdomain/ftp/passwd
+and
+.BR /etc/authdomain/ftp/shadow :
+.PP
+auth required pam_fshadow.so sysconfdir=/etc/authdomain regex=(.*)@(.*) 
+.PP
+.EX
+.EE
+.SH NOTE
+This manpage is a short description of \fBpam_fshadow\fR.  For a detailed
+discussion, including examples and usage recommendations, refer to the
+\fBPAM-modules Manual\fR available in texinfo format.  If the \fBinfo\fR
+reader and the tar documentation are properly installed on your
+system, the command
+.PP
+.RS +4
+.B info pam-modules
+.RE
+.PP
+should give you access to the complete manual.
+.PP
+You can also view the manual using the info mode in
+.BR emacs (1),
+or find it in various formats online at
+.PP
+.RS +4
+.B http://www.gnu.org.ua/software/pam-modules/manual
+.RE
+.PP
+If any discrepancies occur between this manpage and the
+\fBPAM-modules Manual\fR, the later shall be considered the authoritative
+source.
+.SH "SEE ALSO"
+.BR pam.conf (5),
+.BR pam.d (5),
+.BR pam (8),
+.BR regex (7).
+.SH AUTHORS
+Sergey Poznyakoff <gray@gnu.org>
+.SH "BUG REPORTS"
+Report bugs to <bug\-pam\-modules@gnu.org.ua>.
+.SH COPYRIGHT
+Copyright \(co 2001-2014 Sergey Poznyakoff
+.br
+.na
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+.br
+.ad
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.\" Local variables:
+.\" eval: (add-hook 'write-file-hooks 'time-stamp)
+.\" time-stamp-start: ".TH [A-Z_][A-Z0-9_.\\-]* [0-9] \""
+.\" time-stamp-format: "%:B %:d, %:y"
+.\" time-stamp-end: "\""
+.\" time-stamp-line-limit: 20
+.\" end:
+

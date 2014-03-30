@@ -1,0 +1,137 @@
+.\" This file is part of PAM-Modules -*- nroff -*-
+.\" Copyright (C) 2001-2014 Sergey Poznyakoff
+.\"
+.\" PAM-Modules is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 3, or (at your option)
+.\" any later version.
+.\"
+.\" PAM-Modules is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
+.TH PAMCK 1 "March 31, 2014" "PAM-MODULES" "Pam-Modules User Reference"
+.SH NAME
+pamck \- test PAM stack
+.SH SYNOPSIS
+.nh
+.na
+\fBpamck\fR [\fB\-hv\fR] [\fB\-s\fR \fISERVICE\fR]\
+ [\fB\-g\fR \fIGROUP\fR] \fIUSER\fR [\fIPASSWORD\fR]
+.ad
+.hy
+.SH DESCRIPTION
+Tests the functionality of \fBPAM\fR stack.
+.SH OPTIONS
+.TP
+.B \-h
+Print short help summary and exit.
+.TP
+.B \-v
+Print program version and copyright information and exit.
+.TP
+\fB\-s\fR \fISERVICE\fR
+Select service name to use.  Default group is \fBcheck\fR.
+.TP
+\fB\-g\fR \fIGROUP\fR
+Select \fBPAM\fR management group to check.  Allowed arguments are:
+.RS
+.TP
+.B auth
+Authentication group.  Call \fBpam_authenticate\fR.
+.TP
+.B acct
+Account management.  Call \fBpam_acct_mgmt\fR.
+.TP
+.B open
+Session management.  Call \fBpam_open_session\fR.
+.TP
+.B close
+Session management.  Call \fBpam_close_session\fR.
+.TP
+.B pass
+Password management.  Call \fBpam_chauthtok\fR.
+.RE
+.SH EXIT CODES
+.TP
+.B 0
+Successful termination.
+.TP
+.B 1
+Invalid command line usage.
+.TP
+.B 2
+\fBPAM\fR stack returned error.
+.SH EXAMPLES
+.nr step 1 1
+.IP \n[step].
+Test if the user \fBsmith\fR can be authenticated using the
+\fBcheck\fR service.  The program will ask for password interactively:
+.PP
+.EX
+pamck smith
+.EE
+.IP \n+[step].
+Same as above, but supply password on the command line:
+.PP
+.EX
+pamck smith guessme
+.EE
+.IP \n+[step].
+Check if the user \fBsmith\fR authenticates using the \fBftp\fR service.
+.PP
+.EX
+pamck -s ftp smith
+.EE
+.SH NOTE
+This manpage is a short description of \fBpamck\fR.  For a detailed
+discussion, including examples and usage recommendations, refer to the
+\fBPAM-modules Manual\fR available in texinfo format.  If the \fBinfo\fR
+reader and the tar documentation are properly installed on your
+system, the command
+.PP
+.RS +4
+.B info pam-modules
+.RE
+.PP
+should give you access to the complete manual.
+.PP
+You can also view the manual using the info mode in
+.BR emacs (1),
+or find it in various formats online at
+.PP
+.RS +4
+.B http://www.gnu.org.ua/software/pam-modules/manual
+.RE
+.PP
+If any discrepancies occur between this manpage and the
+\fBPAM-modules Manual\fR, the later shall be considered the authoritative
+source.
+.SH "SEE ALSO"
+.BR pam.conf (5),
+.BR pam.d (5),
+.BR pam (8).
+.SH AUTHORS
+Sergey Poznyakoff <gray@gnu.org>
+.SH "BUG REPORTS"
+Report bugs to <bug\-pam\-modules@gnu.org.ua>.
+.SH COPYRIGHT
+Copyright \(co 2001-2014 Sergey Poznyakoff
+.br
+.na
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+.br
+.ad
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.\" Local variables:
+.\" eval: (add-hook 'write-file-hooks 'time-stamp)
+.\" time-stamp-start: ".TH [A-Z_][A-Z0-9_.\\-]* [0-9] \""
+.\" time-stamp-format: "%:B %:d, %:y"
+.\" time-stamp-end: "\""
+.\" time-stamp-line-limit: 20
+.\" end:
+

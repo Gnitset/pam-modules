@@ -1,0 +1,180 @@
+.\" This file is part of PAM-Modules -*- nroff -*-
+.\" Copyright (C) 2001-2014 Sergey Poznyakoff
+.\"
+.\" PAM-Modules is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 3, or (at your option)
+.\" any later version.
+.\"
+.\" PAM-Modules is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
+.TH PAM_UMOTD 8 "April 2, 2014" "PAM-MODULES" "Pam-Modules User Reference"
+.SH NAME
+pam_umotd \- display a message of the day
+.SH SYNOPSIS
+.nh
+.na
+\fBpam_umotd\fR [\fBfile=\fIFILENAME\fR]\
+ [\fBtimeout=\fIN\fR]\
+ [\fBmax\-size=\fIN\fR]\
+ [\fBmax\-la=\fIN\fR]\
+ [\fBdebug\fR[\fB=\fINUMBER\fR]]\
+ [\fBwaitdebug\fR]\
+ [\fBaudit\fR]\
+ [\fBexec\fR [\fIARGS\fR]...]
+.ad
+.hy
+.SH DESCRIPTION
+Displays a user-specific message of the day.  The text can be taken
+either from a disk file, or read from the standard output of a program
+launched for that purpose.
+
+This module is Linux-specific.
+
+\fBPam_umotd\fR is normally started as part of the \fBsession\fR stack.
+.SH OPTIONS
+.TP
+\fBfile=\fIFILENAME\fR
+Read and display text from the file \fIFILENAME\fR.
+.TP
+.B exec
+Execute a program and display its output.  The rest of arguments
+after this parameter are taken to be the program name and its
+command line arguments.  The arguments are subject to \fBitem
+expansion\fR, during which any occurrence of \fB$\fINAME\fR is
+replaced by the value of the \fBPAM\fR item \fINAME\fR.  A limited
+support for the shell-style default values is available: namely, the
+notation \fB${\fIITEM\fB:\-\fIVALUE\fB}\fR expands to the value of
+\fIITEM\fR if it is set, and to \fIVALUE\fR otherwise.  Notice, that
+\fIVALUE\fR must be a literal value (string or numeric).  Valid item
+names are:
+.RS
+.TP
+.B service
+.BR PAM_SERVICE .
+The service name (identifies the \fBPAM\fR stack that will be used).
+.TP
+.B user
+.BR PAM_USER .
+The username of the entity under whose identity service will be given.
+.TP
+.B tty
+.BR PAM_TTY .
+The terminal name: prefixed by \fB/dev/\fR if it is a device file; for
+graphical, X-based, applications the value for this item is usually
+the \fB$DISPLAY\fR environment variable. 
+.TP
+.B rhost
+.BR PAM_RHOST .
+The requesting hostname (the hostname of the machine
+from which the \fBPAM_RUSER\fR entity is requesting service).  That is
+\fBPAM_RUSER@PAM_RHOST\fR identifies the requesting user.  In some
+applications, \fBPAM_RHOST\fR may be \fBNULL\fR.
+.TP
+.B ruser
+.BR PAM_RUSER .
+The requesting entity: user's name for a locally requesting user or a
+remote requesting user.  In some cases, \fBPAM_RUSER\fR may be \fBNULL\fR.
+.TP
+.B prompt
+.BR PAM_USER_PROMPT .
+The string used when prompting for a user's name.  The default value
+for this string is \fBPlease enter username: \fR.
+.TP
+.B password
+.BR PAM_AUTHTOK .
+The authentication token (often a password).
+.RE
+.TP
+\fBtimeout=\fIN\fR
+Limit the execution time of the program started via the \fBexec\fR
+option to \fBN\fR seconds.  The default value is 10.
+.TP
+.B
+\fBmax\-size=\fIN\fR
+Limit the output size to \fIN\fR bytes.  Default is 2000.
+.TP
+\fBmax\-la=\fID\fR
+Exit immediately if the 5-minute load average is greater than or
+equal to \fID\fR (a floating-point number).
+.TP
+\fBdebug\fR[\fB=\fINUMBER\fR]
+Set debugging level (0 <= \fINUMBER\fR <= 100).
+.TP
+\fBaudit\fR
+Log auditing information.
+.TP
+\fBwaitdebug=\fIN\fR
+Wait for \fIN\fR seconds before starting up.  This option is intended
+to facilitate attaching to the module with
+.BR gdb (1).
+It is available only if the package was configured with
+the \fB\-\-enable\-debug\fR option.
+.SH MODULE TYPES PROVIDED
+.B session
+.SH RETURN VALUES
+.TP
+.B PAM_IGNORE
+Ignore this module
+.TP
+.B PAM_SERVICE_ERR
+Unable to read the file (if the \fBfile=\fR option is given) or
+execute the program (if \fBexec\fR is given).
+.SH EXAMPLES
+.EX
+session optional pam_umotd.so file=/etc/motd
+.EE
+.SH NOTE
+This manpage is a short description of \fBpam_umotd\fR.  For a detailed
+discussion, including examples and usage recommendations, refer to the
+\fBPAM-modules Manual\fR available in texinfo format.  If the \fBinfo\fR
+reader and the tar documentation are properly installed on your
+system, the command
+.PP
+.RS +4
+.B info pam-modules
+.RE
+.PP
+should give you access to the complete manual.
+.PP
+You can also view the manual using the info mode in
+.BR emacs (1),
+or find it in various formats online at
+.PP
+.RS +4
+.B http://www.gnu.org.ua/software/pam-modules/manual
+.RE
+.PP
+If any discrepancies occur between this manpage and the
+\fBPAM-modules Manual\fR, the later shall be considered the authoritative
+source.
+.SH "SEE ALSO"
+.BR pam.conf (5),
+.BR pam.d (5),
+.BR pam (8).
+.SH AUTHORS
+Sergey Poznyakoff <gray@gnu.org>
+.SH "BUG REPORTS"
+Report bugs to <bug\-pam\-modules@gnu.org.ua>.
+.SH COPYRIGHT
+Copyright \(co 2001-2014 Sergey Poznyakoff
+.br
+.na
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+.br
+.ad
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.\" Local variables:
+.\" eval: (add-hook 'write-file-hooks 'time-stamp)
+.\" time-stamp-start: ".TH [A-Z_][A-Z0-9_.\\-]* [0-9] \""
+.\" time-stamp-format: "%:B %:d, %:y"
+.\" time-stamp-end: "\""
+.\" time-stamp-line-limit: 20
+.\" end:
+

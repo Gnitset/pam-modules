@@ -16,9 +16,51 @@
 
 info_TEXINFOS=pam-modules.texi
 pam_modules_TEXINFOS=fdl.texi macros.texi
+dist_man_MANS = pamck.1
+
+if PAM_COND_FSHADOW
+  dist_man_MANS += pam_fshadow.8
+endif
+if PAM_COND_REGEX
+  dist_man_MANS += pam_regex.8
+endif
+if PAM_COND_LOG
+  dist_man_MANS += pam_log.8
+endif
+#if PAM_COND_LDAPHOME
+#  dist_man_MANS += pam_ldaphome.8
+#endif
+if PAM_COND_UMOTD
+  dist_man_MANS += pam_umotd.8
+endif
+if PAM_COND_MYSQL
+  dist_man_MANS += pam_mysql.8
+endif
+if PAM_COND_PGSQL
+  dist_man_MANS += pam_pgsql.8
+endif
+
+config.so: $(top_srcdir)/configure.ac $(top_srcdir)/doc/Makefile.am
+	$(AM_V_GEN){\
+                echo ".ds ET $(sysconfdir)"; \
+        } > config.so
+
+BUILD_MANS=pam_fshadow.8 pam_mysql.8 pam_pgsql.8
+CLEANFILES=$(BUILD_MANS) config.so
+
+pam_fshadow.8 pam_mysql.8 pam_pgsql.8: config.so
+
+.8in.8:
+	$(AM_V_GEN){\
+                echo '.\" -*- buffer-read-only: t -*- vi: set ro:';\
+                echo '.\" THIS FILE IS GENERATED AUTOMATICALLY; DO NOT EDIT!';\
+                soelim -I$(top_builddir)/doc $<;\
+        } > $@
 
 EXTRA_DIST = \
- gendocs_template
+ gendocs_template\
+ pam_fshadow.8in\
+ pam_mysql.8in
 
 clean-local:
 	rm -rf manual

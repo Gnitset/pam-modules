@@ -1,5 +1,9 @@
 Makefile
 Makefile.in
+config.so
+pam_fshadow.8
+pam_mysql.8
+pam_pgsql.8
 pam-modules.info*
 stamp-vti
 version.texi

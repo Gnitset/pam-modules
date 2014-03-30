@@ -1,0 +1,130 @@
+.\" This file is part of PAM-Modules -*- nroff -*-
+.\" Copyright (C) 2001-2014 Sergey Poznyakoff
+.\"
+.\" PAM-Modules is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 3, or (at your option)
+.\" any later version.
+.\"
+.\" PAM-Modules is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
+.TH PAM_LOG 8 "March 28, 2014" "PAM-MODULES" "Pam-Modules User Reference"
+.SH NAME
+pam_log \- log messages to syslog
+.SH SYNOPSIS
+.nh
+.na
+\fBpam_log\fR [\fB\-audit\fR]\
+ [\fB\-debug\fR[\fB=\fILEVEL\fR]]\
+ [\fB\-noopen\fR]\
+ [\fB\-waitdebug\fR[\fB=\fISECONDS\fR]]\
+ [\fB\-pri=\fIFACILITY\fB.\fIPRIORITY\fR]\
+ [\fB\-tag=\fILABEL\fR] \fITEXT\fR...
+.ad
+.hy
+.SH DESCRIPTION
+Sends diagnostic text to syslog.
+.SH OPTIONS
+.TP
+\fB\-pri=\fIFACILITY\fB.\fIPRIORITY\fR
+Send text to the given syslog facility and priority.  Valid values for
+\fIFACILITY\fR are:
+.BR user ,
+.BR daemon ,
+.BR auth ,
+.BR authpriv ", and "
+.BR local0 " through " local7 .
+Valid values for \fIPRIORITY\fR are:
+.BR emerg ,
+.BR alert ,
+.BR crit ,
+.BR err ,
+.BR warning ,
+.BR notice ,
+.BR info ", and "
+.BR debug .
+
+Either part can be omitted, in which case the following defaults are
+used: \fIFACILITY=\fBauthpriv\fR, \fIPRIORITY=\fBinfo\fR.
+.TP
+\fB\-tag=\fILABEL\fR
+Use \fILABEL\fR as the syslog tag, instead of the module name.
+.TP
+\fB\-debug\fR[\fB=\fINUMBER\fR]
+Set debugging level (0 <= \fINUMBER\fR <= 100).
+.TP
+\fB\-audit\fR
+Log auditing information.
+.TP
+\fB\-waitdebug=\fIN\fR
+Wait for \fIN\fR seconds before starting up.  This option is intended
+to facilitate attaching to the module with
+.BR gdb (1).
+It is available only if the package was configured with
+the \fB\-\-enable\-debug\fR option.
+.SH MODULE TYPES PROVIDED
+All module types (\fBaccount\fR, \fBauth\fR, \fBpassword\fR and
+\fBsession\fR) are provided.
+.SH RETURN VALUES
+.TP
+.B PAM_IGNORE
+Ignore this module.
+.SH EXAMPLES
+.EX
+account requisite pam_log.so -tag FTP \\
+      -pri=daemon.info User ${user:-unknown} is granted FTP access
+.EE      
+.SH NOTE
+This manpage is a short description of \fBpam_log\fR.  For a detailed
+discussion, including examples and usage recommendations, refer to the
+\fBPAM-modules Manual\fR available in texinfo format.  If the \fBinfo\fR
+reader and the tar documentation are properly installed on your
+system, the command
+.PP
+.RS +4
+.B info pam-modules
+.RE
+.PP
+should give you access to the complete manual.
+.PP
+You can also view the manual using the info mode in
+.BR emacs (1),
+or find it in various formats online at
+.PP
+.RS +4
+.B http://www.gnu.org.ua/software/pam-modules/manual
+.RE
+.PP
+If any discrepancies occur between this manpage and the
+\fBPAM-modules Manual\fR, the later shall be considered the authoritative
+source.
+.SH "SEE ALSO"
+.BR pam.conf (5),
+.BR pam.d (5),
+.BR pam (8).
+.SH AUTHORS
+Sergey Poznyakoff <gray@gnu.org>
+.SH "BUG REPORTS"
+Report bugs to <bug\-pam\-modules@gnu.org.ua>.
+.SH COPYRIGHT
+Copyright \(co 2001-2014 Sergey Poznyakoff
+.br
+.na
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+.br
+.ad
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.\" Local variables:
+.\" eval: (add-hook 'write-file-hooks 'time-stamp)
+.\" time-stamp-start: ".TH [A-Z_][A-Z0-9_.\\-]* [0-9] \""
+.\" time-stamp-format: "%:B %:d, %:y"
+.\" time-stamp-end: "\""
+.\" time-stamp-line-limit: 20
+.\" end:
+

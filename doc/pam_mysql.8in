@@ -1,0 +1,374 @@
+.\" This file is part of PAM-Modules -*- nroff -*-
+.\" Copyright (C) 2001-2014 Sergey Poznyakoff
+.\"
+.\" PAM-Modules is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 3, or (at your option)
+.\" any later version.
+.\"
+.\" PAM-Modules is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with PAM-Modules.  If not, see
+.\" <http://www.gnu.org/licenses/>.
+.so config.so
+.TH PAM_MYSQL 8 "April 2, 2014" "PAM-MODULES" "Pam-Modules User Reference"
+.SH NAME
+pam_mysql \- authenticate using a MySQL database
+.SH SYNOPSIS
+.nh
+.na
+\fBpam_mysql\fR [\fBconfig=\fIFILE\fR]\
+ [\fBuse_authtok\fR]\
+ [\fBdebug\fR[\fB=\fINUMBER\fR]]\
+ [\fBwaitdebug\fR]\
+ [\fBaudit\fR]
+.ad
+.hy
+.SH DESCRIPTION
+Provides authentication and account management services via a MySQL
+database.
+.PP
+When used in the \fBauth\fR stack, the module first connects to the
+database using credentials supplied in the configuration file (see
+below).  Then, it retrieves the value of the \fBpasswd\-query\fR
+configuration parameter and performs \fBPAM\fR item expansion over
+it.  The resulting query is sent to the \fBSQL\fR server.  If this
+query produces a non-empty result, the first column from the first
+tuple is used as encrypted user password and is compared with the
+supplied authentication token.  If it matches, the user is
+authenticated successfully.  The comparison includes the following
+checks, performed in that order until one of them returns match or the
+list is exhausted: 
+.nr step 1 1
+.IP \n[step].
+Compare the retrieved password with the result of the system
+.BR crypt (3)
+function called with the authentication token and retrieved password
+as its arguments
+.IP \n+[step].
+Encrypt the authentication token using the
+.B MySQL
+password encoding algorithm and compare the result with the retrieved
+password.
+.IP \n+[step].
+Compare password with the MD5 sum of the authentication token.
+.IP \n+[step].
+Assume the password is encrypted using the
+.BR LDAP -style
+encoding and compare it accordingly.
+.IP \n+[step].
+Compare both strings literally.  This check is performed only if
+the
+.B allow\-plaintext\-pass
+configuration parameter is set.
+.PP
+Any of these checks can be disabled using the corresponding
+configuration setting.
+.SH CONFIGURATION
+The configuration information is supplied in a file
+.BR \*(ET/pam_sql.conf .
+An alternative location can be given via the \fBconfig\fR command line
+option.  The file is a usual UNIX-style configuration file with
+comments introduced by the \fB#\fR character.  Long statements can be
+split across several physical lines of text by ending each line but
+the last with a backslash character. 
+.PP
+The following statements are defined.
+.SS Database connection configuration
+.TP
+.BI host " NAME"
+Sets hostname or IP address of the MySQL server.
+
+If the database is listening on the local socket, the \fINAME\fR
+is the pathname of the local socket.
+.TP
+.BI port " NUMBER"
+Sets the MySQL port number.  The default value is 3306.
+.TP
+.BI db " NAME"
+Sets the database name.
+.TP
+.BI login " NAME"
+Sets the database user name.  The user must have \fBSELECT\fR
+privileges on tables in the authentication database.
+.TP
+.BI pass " TEXT"
+Sets password for database access.
+.SS Queries
+These statements define \fBSQL\fR queries used by the module.  The
+argument of each statement is subject to
+.BR "PAM item expansion" ,
+which is described in detail in the following section.
+.TP
+.BI passwd\-query " QUERY"
+Defines \fBSQL\fR query to be used to obtain the user's password from the
+database.
+.TP
+.BI session\-start\-query " QUERY"
+Defines \fBSQL\fR query to be executed on session start.
+.TP
+.BI session\-stop\-query " QUERY"
+Defines \fBSQL\fR query to be executed on session termination.
+.TP
+.BI setenv\-query " QUERY"
+This query is available when the package is compiled with
+.B Linux PAM
+implementation.  The data it selects from the database are then
+stored in the \fBPAM\fR environment.  Only the first tuple returned
+is used; the column names are treated as environment variable names,
+and column values as their values. 
+.SS Password encryption
+The variables in this subsections control how the module treats
+passwords returned by the 
+.BR passwd\-query .
+Their argument is a boolean value: \fByes\fR, \fBtrue\fR or \fBt\fR,
+for true value and \fBno\fR, \fBfalse\fR or \fBf\fR, for false value.
+.TP
+.BI allow\-plaintext\-pass " BOOL"
+Controls whether the
+.B passwd\-query
+may return a plaintext password.
+.TP
+.BI allow\-ldap\-pass " BOOL"
+The returned password may be a
+.BR LDAP -style
+password hash, i.e. the hash value encoded as base-64 and prefixed
+with a hashing algorithm name in curly braces.  This variable is
+\fBtrue\fR by default. 
+.TP
+.BI allow\-md5-pass " BOOL"
+The returned password may be encrypted using \fBMySQL md5\fR
+function.
+.TP
+.BI allow\-mysql\-pass " BOOL"
+The returned password may be encrypted using \fBMySQL password\fR
+function.
+.SH PAM ITEM EXPANSION
+The query strings described in the previous section are subject to
+item expansion prior to being sent to the \fBMySQL\fR server.  This
+feature is similar to the shell variable expansion.  During item
+expansion, any occurrence of \fB$\fINAME\fR is replaced with the
+actual value of the \fBPAM\fR item \fINAME\fR.  If the item in
+question is not defined, an empty string is substituted instead.  A
+limited support for the shell-style default values is available:
+namely, the notation \fB${\fIITEM\fB:-\fIVALUE\fB}\fR expands to the
+value of \fBITEM\fR if it is set, and to \fIVALUE\fR otherwise.
+Notice, that \fIVALUE\fR must be a literal value (string or numeric).
+.PP
+The following table lists valid \fBPAM\fR item names:
+.TP
+.B service
+.BR PAM_SERVICE .
+The service name (identifies the \fBPAM\fR stack that will be used).
+.TP
+.B user
+.BR PAM_USER .
+The username of the entity under whose identity service will be given.
+.TP
+.B tty
+.BR PAM_TTY .
+The terminal name: prefixed by \fB/dev/\fR if it is a device file; for
+graphical, X-based, applications the value for this item is usually
+the \fB$DISPLAY\fR environment variable. 
+.TP
+.B rhost
+.BR PAM_RHOST .
+The requesting hostname (the hostname of the machine
+from which the \fBPAM_RUSER\fR entity is requesting service).  That is
+\fBPAM_RUSER@PAM_RHOST\fR identifies the requesting user.  In some
+applications, \fBPAM_RHOST\fR may be \fBNULL\fR.
+.TP
+.B ruser
+.BR PAM_RUSER .
+The requesting entity: user's name for a locally requesting user or a
+remote requesting user.  In some cases, \fBPAM_RUSER\fR may be \fBNULL\fR.
+.TP
+.B prompt
+.BR PAM_USER_PROMPT .
+The string used when prompting for a user's name.  The default value
+for this string is:
+.sp
+.nh
+.na
+.B Please enter username: 
+.ad
+.hy
+.TP
+.B password
+.BR PAM_AUTHTOK .
+The authentication token (often a password).
+.SH OPTIONS
+.TP
+.BI config= FILE
+Read configuration from \fIFILE\fR instead of
+.BR \*(ET/pam_sql.conf .
+.TP
+\fBuse_authtok\fR
+Do not prompt the user for password, take it from the saved
+authentication tokens.
+.TP
+\fBdebug\fR\fB=\fINUMBER\fR]
+Set debugging level (0 <= \fINUMBER\fR <= 100).
+.TP
+\fBwaitdebug\fR
+Wait for \fIN\fR seconds before starting up.  This option is intended
+to facilitate attaching to the module with
+.BR gdb (1).
+It is available only if the package was configured with
+the \fB\-\-enable\-debug\fR option.
+.TP
+\fBaudit\fR
+Log auditing information.
+.SH MODULE TYPES PROVIDED
+.BR auth ,
+.BR session .
+.SH RETURN VALUES
+.TP
+.B PAM_SUCCESS
+Successful termination
+.TP
+.B PAM_AUTH_ERR
+Authentication failed.
+.TP
+.B PAM_USER_UNKNOWN
+Supplied username not found.
+.TP
+.B PAM_AUTHTOK_RECOVER_ERR
+Failed to obtain stored authentication token.  This code can be
+returned if \fBuse_authtok\fR was used.
+.TP
+.B PAM_SERVICE_ERR
+Some configuration or internal module error: required configuration
+parameter is missing, etc.
+.SH EXAMPLES
+.SS Simple authentication
+This example assumes the authentication table of the following
+structure:
+.PP
+.EX
+CREATE TABLE auth (
+   user char(32),
+   passwd char(128),
+   PRIMARY KEY (user_name)
+);
+.PP
+The configuration file will look like:
+.PP
+.EX
+# Authentication data
+host localhost
+db userdb
+login test
+pass guessme
+# Retrieve password from the database.
+passwd-query SELECT passwd\\
+             FROM auth\
+             WHERE user='${user}'
+.EE
+.SS Accounting
+This example assumes the accounting table of the following structure:
+.PP
+.EX
+CREATE TABLE acct (
+  type int,        -- 0 for active session, 1 for a terminated one
+  user char(32),   -- user name
+  host char(256),  -- remote host name
+  tty char(16),    -- tty name
+  service char(32),-- PAM service name
+  ts  datetime,    -- timestamp
+  duration int,    -- duration of the session if type==1
+  primary key (user,host,service,tty)
+);  
+.EE
+.PP
+The correspondig configuration statements (without the database
+credentials part) are:
+.EX
+session-start-query INSERT INTO acct\\
+                    (type, user, service, tty, host, ts)\\
+                    VALUES(0, $user, $service, $tty, $rhost, now())
+session-stop-query  UPDATE acct\\
+                    SET type=1, duration=now()-ts\\
+                    WHERE user='$user'\\
+                      AND host='$host'\\
+                      AND service='$service'\\
+                      AND tty='$tty'
+.EE
+.SS Setting the Environment
+This example assumes the following table structure:
+.PP
+.EX
+CREATE TABLE userprop (
+  user varchar(32),
+  dir varchar(128),
+  uid int,
+  gid int
+);
+.EE
+.PP
+The following 
+.B setenv\-query
+statement will set the \fBPAM\fR environment variables
+.BR home ,
+.BR uid ", and"
+.BR gid :
+.PP
+.EX
+setenv-query SELECT dir as home, uid, gid\\
+             FROM userprop\\
+             WHERE username='$user'
+.EE
+.SH NOTE
+This manpage is a short description of \fBpam_mysql\fR.  For a detailed
+discussion, including examples and usage recommendations, refer to the
+\fBPAM-modules Manual\fR available in texinfo format.  If the \fBinfo\fR
+reader and the tar documentation are properly installed on your
+system, the command
+.PP
+.RS +4
+.B info pam-modules
+.RE
+.PP
+should give you access to the complete manual.
+.PP
+You can also view the manual using the info mode in
+.BR emacs (1),
+or find it in various formats online at
+.PP
+.RS +4
+.B http://www.gnu.org.ua/software/pam-modules/manual
+.RE
+.PP
+If any discrepancies occur between this manpage and the
+\fBPAM-modules Manual\fR, the later shall be considered the authoritative
+source.
+.SH "SEE ALSO"
+.BR pam_pgsql (8),
+.BR pam.conf (5),
+.BR pam.d (5),
+.BR pam (8).
+.SH AUTHORS
+Sergey Poznyakoff <gray@gnu.org>
+.SH "BUG REPORTS"
+Report bugs to <bug\-pam\-modules@gnu.org.ua>.
+.SH COPYRIGHT
+Copyright \(co 2001-2014 Sergey Poznyakoff
+.br
+.na
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+.br
+.ad
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.\" Local variables:
+.\" eval: (add-hook 'write-file-hooks 'time-stamp)
+.\" time-stamp-start: ".TH [A-Z_][A-Z0-9_.\\-]* [0-9] \""
+.\" time-stamp-format: "%:B %:d, %:y"
+.\" time-stamp-end: "\""
+.\" time-stamp-line-limit: 20
+.\" end:
+
