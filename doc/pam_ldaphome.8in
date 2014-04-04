@@ -1,0 +1,269 @@
+.\" This file is part of PAM-Modules -*- nroff -*-
+.\" Copyright (C) 2001-2014 Sergey Poznyakoff
+.\"
+.\" PAM-Modules is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 3, or (at your option)
+.\" any later version.
+.\"
+.\" PAM-Modules is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
+.so config.so
+.TH PAM_LDAPHOME 8 "April 4, 2014" "PAM-MODULES" "Pam-Modules User Reference"
+.SH NAME
+pam_ldaphome \- create and populate user home directories
+.SH SYNOPSIS
+.nh
+.na
+\fBpam_ldaphome\fR\
+ [\fBconfig=\fIFILE\fR]\
+ [\fBdebug\fR[\fB=\fINUMBER\fR]]\
+ [\fBwaitdebug\fR]\
+ [\fBaudit\fR]
+.ad
+.hy
+.SH DESCRIPTION
+For each login attempt, checks if the home directory for that user
+exists, and if not, creates it.  The created directory is populated
+with files taken from a specified \fIskeleton directory\fR.  The
+file \fB.ssh/authorized_keys\fR is created and populated with
+\fBSSH\fR public keys for that user, obtained from an LDAP database.
+.PP
+If home directory already exists, \fBpam_ldaphome\fR checks if 
+contents of the \fB.ssh/authorized_keys\fR have diverged from the
+LDAP database and synchronizes it if so.
+.SH CONFIGURATION
+The configuration is kept in the file
+.BR \*(ET/pam_ldaphome.conf .
+The file is a usual UNIX-style configuration file with
+comments introduced by the \fB#\fR character.  Long statements can be
+split across several physical lines of text by ending each line but
+the last with a backslash character. 
+.PP
+Available configuration directives are:
+.TP
+.BI allow-home-dir " PATH"
+Lists directories in which it is allowed to create home directories.
+\fIPATH\fR is a list of directories separated by colons.  The user's
+home directory will be created only if the directory part of its name
+is listed in \fIPATH\fR.
+.TP
+.BI skel " DIR"
+Supplies the name of a \fIskeleton directory\fR.  The contents of this
+directory is copied to each newly created user home directory.  The
+file modes and permissions are retained.
+.TP
+.BI uri " ARG"
+Sets the URI of the LDAP server to consult for the user profile.
+.TP
+.BI ldap-version " NUM"
+Sets the LDAP version to use.  Valid arguments are
+.B 2 
+and
+.B 3
+(the default).
+.TP
+.BI base " SEARCHBASE"
+Use \fISEARCHBASE\fR as starting point for searches.
+.TP
+.BI binddn " DN"
+Use the Distinguished Name \fIDB\fR to bind to the LDAP directory.
+.TP
+.BI bindpw " PASSWORD"
+Used together with \fBbinddn\fR, this statement supplies the
+password for simple authentication.
+.TP
+.BI bindpwfile " FILE"
+Read password for simple authentication from \fIFILE\fR.
+.TP
+.BI tls " VAL"
+Controls whether TLS is desired or required.  If \fIVAL\fR is
+\fBno\fR (the default), TLS will not be used.  If it is \fByes\fR,
+the module will issue the \fIStartTLS\fR command, but will continue
+anyway if it fails.  Finally, if \fIVAL\fR is the word \fBonly\fR, the
+use of TLS becomes mandatory, and the module will not establish LDAP
+connection unless \fIStartTLS\fR succeeds.
+.TP
+.BI min\-uid " N"
+Sets the minimal UID.  For users with UIDs less than \fIN\fR,
+\fBpam_ldaphome\fR will return \fBPAM_SUCCESS\fR immediately.  This
+allows you to have a set of basic users whose credentials are kept in
+the system database and who will not be disturbed by
+\fBpam_ldaphome\fR.  See also \fBmin\-gid\fR and \fBallow\-groups\fR.
+.TP
+.BI min\-gid " N"
+Sets the minimal GID.  For users with GIDs less than \fIN\fR,
+the module will return \fBPAM_SUCCESS\fR immediately.
+.TP
+\fBallow\-groups\fR \fIGROUP\fR [\fIGROUP\fR...]
+Only handle members of the listed groups.
+.TP
+.BI filter " EXPR"
+Defines a LDAP filter expression which returns the user profile.  The
+\fIEXPR\fR should conform to the string representation for search
+filters as defined in RFC 4515.
+.TP
+.BI pubkey\-attr " TEXT"
+Defines the name of the attribute that keeps user's public SSH key.
+.TP
+.BI copy\-buf\-size " N"
+Sets the size of the buffer used to copy files from the skeleton
+directory to the newly created home.  The default value is 16384 bytes.
+.TP
+.BI home\-dir\-mode " MODE"
+Defines the file mode (octal) for creation of the user directories.
+.TP
+.BI keyfile\-mode " MODE"
+Defines the file mode (octal) for creation of authorized keys files.
+.TP
+.BI authorized_keys " NAME"
+Sets the pathname (relative to the home directory) for the authorized
+keys file.  The default is \fB.ssh/authorized_keys\fR.  For normal
+operation, this value must be the same as the value of
+\fBAuthorizedKeysFile\fR variable in
+.BR sshd_config (5).
+Unless you change the latter, there's no need to edit it.
+.SH OPTIONS
+.TP
+.BI config= FILE
+Read configuration from \fIFILE\fR instead of
+.nh
+.na
+.BR \*(ET/pam_ldaphome.conf .
+.ad
+.hy
+.TP
+\fBdebug\fR\fB=\fINUMBER\fR]
+Set debugging level (0 <= \fINUMBER\fR <= 100).
+.TP
+\fBwaitdebug\fR
+Wait for \fIN\fR seconds before starting up.  This option is intended
+to facilitate attaching to the module with
+.BR gdb (1).
+It is available only if the package was configured with
+the \fB\-\-enable\-debug\fR option.
+.TP
+\fBaudit\fR
+Log auditing information.
+.SH MODULE TYPES PROVIDED
+.BR auth .
+.SH RETURN VALUES
+.TP
+.B PAM_SUCCESS
+Successful termination.
+.TP
+.B PAM_SERVICE_ERR
+System error or error in configuration of the module.
+.SH EXAMPLE
+The aim of this configuration is to allow remote access via \fBsshd\fR to
+users present only in the LDAP database, using ssh shared-key
+authentication.  The user public keys are kept in the
+.B grayPublicKey
+attribute of his LDAP entry.  When a user logs in for the first time,
+his home directory does not exist yet and consequently \fBsshd\fR is not able
+to verify his key.  Therefore it falls back to the interactive
+authentication (it is supposed, of course, that \fBUsePAM\fR is set to
+\fByes\fR in the \fBsshd\fR configuration file).  The authentication
+stage is supposed to create user home directory, populate the
+\fB.ssh/authorized_keys\fR file with his public keys and present user
+with a descriptive text prompting him to cancel his current
+authentication attempt and retry it again.
+.TP
+.B PAM ssh stack configuration:
+.EX
+auth [success=ok try_again=1 default=die] pam_ldaphome.so 
+auth [success=done ignore=ignore default=die] pam_unix.so
+auth [default=die]  pam_echo.so file=/etc/ldaphome.txt
+.EE
+.TP
+.B The configuration file (\*(ET/pam_ldaphome.conf)
+The configuration handles only users with uids and gids greater than
+or equal to 1000 and pertaining to the group \fBremote\fR.  Home
+directories are populated from the
+.B /etc/skel
+directory:
+
+.EX
+min-uid 1000
+min-gid 1000
+allow-groups remote 
+skel /etc/skel
+base dc=gnu,dc=org,dc=ua
+filter (&(objectClass=posixAccount)(uid=$user))
+pubkey-attr grayPublicKey
+.EE
+.TP
+.B Addition to the LDAP schema:
+The LDAP schema should include an attribute to keep the user public
+keys.  The author uses the following schema:
+
+.EX
+# depends upon:
+#    nis.schema
+
+# Attribute Definitions
+attributetype ( 1.3.6.1.4.1.9163.2.1.0 NAME 'grayPublicKey'
+        DESC 'SSH public key'
+        EQUALITY caseExactIA5Match
+        SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+# Object Class Definitions
+objectclass ( 1.3.6.1.4.1.9163.2.2.0 NAME 'grayAccount'
+        DESC 'Abstraction of an employee account'
+        SUP posixAccount AUXILIARY
+        MUST ( cn $ uid $ uidNumber $ gidNumber $ homeDirectory )
+        MAY ( userPassword $ loginShell $ gecos $ grayPublicKey ) )
+.EE
+.SH NOTE
+This manpage is a short description of \fBpam_ldaphome\fR.  For a detailed
+discussion, including examples and usage recommendations, refer to the
+\fBPAM-modules Manual\fR available in texinfo format.  If the \fBinfo\fR
+reader and the tar documentation are properly installed on your
+system, the command
+.PP
+.RS +4
+.B info pam-modules
+.RE
+.PP
+should give you access to the complete manual.
+.PP
+You can also view the manual using the info mode in
+.BR emacs (1),
+or find it in various formats online at
+.PP
+.RS +4
+.B http://www.gnu.org.ua/software/pam-modules/manual
+.RE
+.PP
+If any discrepancies occur between this manpage and the
+\fBPAM-modules Manual\fR, the later shall be considered the authoritative
+source.
+.SH "SEE ALSO"
+.BR pam.conf (5),
+.BR pam.d (5),
+.BR pam (8).
+.SH AUTHORS
+Sergey Poznyakoff <gray@gnu.org>
+.SH "BUG REPORTS"
+Report bugs to <bug\-pam\-modules@gnu.org.ua>.
+.SH COPYRIGHT
+Copyright \(co 2001-2014 Sergey Poznyakoff
+.br
+.na
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+.br
+.ad
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.\" Local variables:
+.\" eval: (add-hook 'write-file-hooks 'time-stamp)
+.\" time-stamp-start: ".TH [A-Z_][A-Z0-9_.\\-]* [0-9] \""
+.\" time-stamp-format: "%:B %:d, %:y"
+.\" time-stamp-end: "\""
+.\" time-stamp-line-limit: 20
+.\" end:
+

@@ -27,9 +27,9 @@ endif
 if PAM_COND_LOG
   dist_man_MANS += pam_log.8
 endif
-#if PAM_COND_LDAPHOME
-#  dist_man_MANS += pam_ldaphome.8
-#endif
+if PAM_COND_LDAPHOME
+  dist_man_MANS += pam_ldaphome.8
+endif
 if PAM_COND_UMOTD
   dist_man_MANS += pam_umotd.8
 endif
@@ -45,10 +45,10 @@ config.so: $(top_srcdir)/configure.ac $(top_srcdir)/doc/Makefile.am
                 echo ".ds ET $(sysconfdir)"; \
         } > config.so
 
-BUILD_MANS=pam_fshadow.8 pam_mysql.8 pam_pgsql.8
+BUILD_MANS=pam_fshadow.8 pam_mysql.8 pam_pgsql.8 pam_ldaphome.8
 CLEANFILES=$(BUILD_MANS) config.so
 
-pam_fshadow.8 pam_mysql.8 pam_pgsql.8: config.so
+pam_fshadow.8 pam_mysql.8 pam_pgsql.8 pam_ldaphome.8: config.so
 
 .8in.8:
 	$(AM_V_GEN){\
@@ -59,8 +59,7 @@ pam_fshadow.8 pam_mysql.8 pam_pgsql.8: config.so
 
 EXTRA_DIST = \
  gendocs_template\
- pam_fshadow.8in\
- pam_mysql.8in
+ $(BUILD_MANS:.8=.8in)
 
 clean-local:
 	rm -rf manual
