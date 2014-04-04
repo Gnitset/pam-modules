@@ -47,7 +47,7 @@ the last with a backslash character.
 .PP
 Available configuration directives are:
 .TP
-.BI allow-home-dir " PATH"
+.BI allow\-home\-dir " PATH"
 Lists directories in which it is allowed to create home directories.
 \fIPATH\fR is a list of directories separated by colons.  The user's
 home directory will be created only if the directory part of its name
@@ -61,7 +61,7 @@ file modes and permissions are retained.
 .BI uri " ARG"
 Sets the URI of the LDAP server to consult for the user profile.
 .TP
-.BI ldap-version " NUM"
+.BI ldap\-version " NUM"
 Sets the LDAP version to use.  Valid arguments are
 .B 2 
 and
