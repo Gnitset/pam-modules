@@ -1,0 +1,125 @@
+.\" This file is part of PAM-Modules -*- nroff -*-
+.\" Copyright (C) 2001-2014 Sergey Poznyakoff
+.\"
+.\" PAM-Modules is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 3, or (at your option)
+.\" any later version.
+.\"
+.\" PAM-Modules is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
+.TH PAM_GROUPMEMBER 8 "May 6, 2014" "PAM-MODULES" "Pam-Modules User Reference"
+.SH NAME
+pam_groupmember \- test group membership
+.SH SYNOPSIS
+.nh
+.na
+\fBpam_groupmember\fR\
+ \fBgroups=\fIGROUPLIST\fR\
+ [\fBsense=\fISENSE\fR]\
+ [\fBdebug\fR[\fB=\fINUMBER\fR]]\
+ [\fBwaitdebug\fR]\
+ [\fBaudit\fR]
+.ad
+.hy
+.SH DESCRIPTION
+Tests if the user is member of at least one group from
+\fIGROUPLIST\fR.  \fIGROUPLIST\fR is a comma-separated list of
+group names or IDs (numbers prefixed with a plus sign).
+.SH OPTIONS
+.TP
+\fBgroups=\fIGROUPLIST\fR
+Defines a list of groups to check against.  \fIGROUPLIST\fR is a
+comma-separated list of group names.  A group name prefixed with a
+plus sign is treated as GID number.
+.TP
+\fBsense=allow\fR|\fBdeny\fR
+What to do if the user name matches the expression given by the
+\fBregex\fR option.  The value \fBallow\fR (the default) instructs the
+module to return \fBPAM_SUCCESS\fR, the \fBdeny\fR instructs it to
+return \fBPAM_AUTH_ERR\fR.
+.TP
+\fBdebug\fR[\fB=\fINUMBER\fR]
+Set debugging level (0 <= \fINUMBER\fR <= 100).
+.TP
+\fBaudit\fR
+Log auditing information.
+.TP
+\fBwaitdebug=\fIN\fR
+Wait for \fIN\fR seconds before starting up.  This option is intended
+to facilitate attaching to the module with
+.BR gdb (1).
+It is available only if the package was configured with
+the \fB\-\-enable\-debug\fR option.
+.SH MODULE TYPES PROVIDED
+All module types (\fBaccount\fR, \fBauth\fR, \fBpassword\fR and
+\fBsession\fR) are provided.
+.SH RETURN VALUES
+.TP
+.B PAM_SUCCESS
+Successful return.
+.TP
+.B PAM_AUTH_ERR
+Authentication failed.
+.TP
+.B PAM_AUTHINFO_UNAVAIL
+The input information is not sufficient.
+.TP
+.B PAM_USER_UNKNOWN
+Supplied username not found.
+.SH EXAMPLES
+auth required pam_groupmember.so groups=users,+80,ftp
+.SH NOTE
+This manpage is a short description of \fBpam_groupmember\fR.  For a detailed
+discussion, including examples and usage recommendations, refer to the
+\fBPAM-modules Manual\fR available in texinfo format.  If the \fBinfo\fR
+reader and the tar documentation are properly installed on your
+system, the command
+.PP
+.RS +4
+.B info pam-modules
+.RE
+.PP
+should give you access to the complete manual.
+.PP
+You can also view the manual using the info mode in
+.BR emacs (1),
+or find it in various formats online at
+.PP
+.RS +4
+.B http://www.gnu.org.ua/software/pam-modules/manual
+.RE
+.PP
+If any discrepancies occur between this manpage and the
+\fBPAM-modules Manual\fR, the later shall be considered the authoritative
+source.
+.SH "SEE ALSO"
+.BR pam.conf (5),
+.BR pam.d (5),
+.BR pam (8).
+.SH AUTHORS
+Sergey Poznyakoff <gray@gnu.org>
+.SH "BUG REPORTS"
+Report bugs to <bug\-pam\-modules@gnu.org.ua>.
+.SH COPYRIGHT
+Copyright \(co 2001-2014 Sergey Poznyakoff
+.br
+.na
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+.br
+.ad
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.\" Local variables:
+.\" eval: (add-hook 'write-file-hooks 'time-stamp)
+.\" time-stamp-start: ".TH [A-Z_][A-Z0-9_.\\-]* [0-9] \""
+.\" time-stamp-format: "%:B %:d, %:y"
+.\" time-stamp-end: "\""
+.\" time-stamp-line-limit: 20
+.\" end:
+

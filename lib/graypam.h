@@ -92,7 +92,9 @@ void gray_raise(const char *fmt, ...);
 
 void *gray_malloc(size_t size);
 void *gray_zalloc(size_t size);
+void *gray_calloc(size_t count, size_t size);
 void *gray_realloc(void *ptr, size_t size);
+char *gray_strdup(const char *str);
 
 void gray_pam_delete(char *x);
 void gray_cleanup_string(pam_handle_t *pamh, void *x, int error_status);

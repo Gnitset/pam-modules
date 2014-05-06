@@ -94,6 +94,7 @@ PM_ENABLE(fshadow,[
 
 PM_ENABLE(log)
 PM_ENABLE(regex)
+PM_ENABLE(groupmember)
 
 # Check for SQL support	      
 
@@ -229,7 +230,7 @@ delim="-------------------------------------------------------------------"
 echo $delim | tr '-' '*'
 echo "Modules to build:"
 res=
-for module in fshadow regex log pgsql mysql ldaphome umotd
+for module in fshadow regex log pgsql mysql ldaphome umotd groupmember
 do
 	modname=pam_$module
 	eval enable=\${build_$module}
@@ -251,7 +252,8 @@ build_log=$build_log
 build_pgsql=$build_pgsql
 build_mysql=$build_mysql
 build_ldaphome=$build_ldaphome
-build_umotd=$build_umotd])
+build_umotd=$build_umotd
+build_groupmember=$build_groupmember])
 		
 AC_OUTPUT(Makefile
           doc/Makefile
@@ -262,4 +264,5 @@ AC_OUTPUT(Makefile
 	  pam_sql/Makefile
 	  pam_ldaphome/Makefile
 	  pam_umotd/Makefile
+	  pam_groupmember/Makefile
 	  pamck/Makefile)

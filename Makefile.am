@@ -32,6 +32,9 @@ endif
 if PAM_COND_UMOTD
   UMOTD_DIR=pam_umotd
 endif
+if PAM_COND_GROUPMEMBER
+  GROUPMEMBER_DIR=pam_groupmember
+endif
 SUBDIRS = \
  imprimatur\
  doc\
@@ -42,6 +45,7 @@ SUBDIRS = \
  pam_sql\
  $(LDAPHOME_DIR)\
  $(UMOTD_DIR)\
+ $(GROUPMEMBER_DIR)\
  pamck
 
 EXTRA_DIST=ChangeLog.svn

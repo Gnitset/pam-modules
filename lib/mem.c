@@ -48,12 +48,29 @@ gray_zalloc(size_t size)
 }
 
 void *
+gray_calloc(size_t count, size_t size)
+{
+	return gray_zalloc(count * size);
+}
+
+void *
 gray_realloc(void *ptr, size_t size)
 {
 	ptr = realloc(ptr, size);
 	if (!ptr)
 		gray_raise("Not enough memory");
 	return ptr;
+}
+
+char *
+gray_strdup(const char *str)
+{
+	char *p;
+	
+	if (!str)
+		return NULL;
+	p = gray_malloc(strlen(str) + 1);
+	return strcpy(p, str);
 }
 
 

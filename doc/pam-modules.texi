@@ -34,6 +34,7 @@
 * pam_ldaphome (pam-modules)ldaphome   Maintain home directories and
                                        SSH keys od LDAP users.
 * pam_umotd    (pam-modules)umotd      Display a user-specific MOTD.
+* pam_groupmember (pam_modules)groupmember Test group membership.
 * pamck:       (pam-modules)pamck.     Verify PAM Access.                                       
 @end direntry
 @end ifinfo
@@ -85,6 +86,7 @@ Individual modules
 * sql::                 Modules for SQL authentication and session management.
 * ldaphome::            Maintain home directories and SSH keys of LDAP users.
 * umotd::               Display a user-specific MOTD.
+* groupmember::         Test group membership.
 
 * Reporting Bugs::      How to Report a Bug.
 
@@ -1451,6 +1453,50 @@ Limit the output size to @var{n} bytes.  Default is 2000.
 @item max-la=@var{d}
 Exit immediately if the 5-minute load average is greater than or equal
 to @var{d} (a floating-point number).
+@end table
+
+@node groupmember
+@chapter pam_groupmember
+@set MODULE pam_umotd
+@cindex groupmember
+@cindex group membership
+@cindex test group membership
+
+The @command{pam_groupmember} module checks whether the user is member
+of one or more groups.  Both primary and supplementary groups are
+checked.  The list of groups to be checked is given with the
+@option{groups} option.  Its argument is a comma-separated list of
+group names of numeric IDs, prefixed with @samp{+} sign.
+
+The module returns PAM_SUCCESS if the user is member of one of the
+supplied groups and PAM_AUTH_ERR on otherwise.  The return value can
+be inverted using the @option{sense=deny} option.
+
+Additionally, the module can return PAM_USER_UNKNOWN if the user is
+not known and PAM_AUTHINFO_UNAVAIL if unable to retrieve the user
+name.
+
+The @command{pam_groupmember} module can be used in any PAM service stack.
+
+@menu
+* summary of pam_groupmember options::
+@end menu
+
+@node summary of pam_groupmember options
+@section Summary of @command{pam_groupmember} options
+
+@table @option
+@opsummary{groups}
+@item groups=@var{group-list}
+Defines groups to check against.  The argument is a comma-separated
+list of group names or IDs.  Group IDs must be prefixed with a plus
+sign.
+
+@opsummary{sense}
+@item sense=@{allow|deny@}
+   What to do on success.  The value @samp{allow} means to return
+@code{PAM_SUCCESS}, @samp{deny} means to return @code{PAM_AUTH_ERR}.
+Default is @samp{allow}.
 @end table
 
 @node Reporting Bugs

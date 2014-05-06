@@ -39,6 +39,9 @@ endif
 if PAM_COND_PGSQL
   dist_man_MANS += pam_pgsql.8
 endif
+if PAM_COND_GROUPMEMBER
+  dist_man_MANS += pam_groupmember.8
+endif
 
 config.so: $(top_srcdir)/configure.ac $(top_srcdir)/doc/Makefile.am
 	$(AM_V_GEN){\
