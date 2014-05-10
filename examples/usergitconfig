@@ -1,0 +1,195 @@
+#! /usr/bin/perl
+# This file is part of pam-modules.
+# Copyright (C) 2014 Sergey Poznyakoff
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+use strict;
+use Net::LDAP;
+
+=head1 NAME
+
+usergitconfig - initialize user .gitconfig file
+
+=head1 SYNOPSIS
+
+B<usergitconfig> I<LOGIN>
+
+=head1 DESCRIPTION
+
+This program reads the B<.gitconfig> file from the current working directory
+and expands occurrences of B<${I<ATTRIBUTE>}> with the value of I<ATTRIBUTE>
+from the LDAP B<posixAccount> record for user I<LOGIN>.  If there is no such
+attribute, an empty value is substituted.
+
+The program reads its configuration from one of the following files:
+B</etc/ldap.conf>, B</etc/ldap/ldap.conf> and B</etc/openldap/ldap.conf>.
+These files are tried in this order and the first one of them that exists
+is read.
+
+The following configuration statements are used:
+
+=over 4
+
+=item B<uri> B<ldap[si]://>[I<name>[:I<port>]] ...>
+
+Specifies the URI of the LDAP server (or servers) to connect to.  The default
+is B<ldap://127.0.0.1>.    
+    
+=item B<base> I<DN>
+
+Specifies the default base DN to use when performing ldap operations.
+The base must be specified as a Distinguished Name in LDAP format.
+
+=item B<binddn> I<DN>
+
+Specifies the default bind DN to use.
+
+=item B<binddnpw> I<PASS>
+
+Specifies the password to use with B<binddn>.    
+
+=item B<uid> I<ATTR>
+
+Name of the attribute to use instead of B<uid>.  The LDAP record is searched
+using the filter B<(&(objectClass=posixAccount)(I<ATTR>=I<LOGIN>))>.
+    
+=back    
+
+All keywords are case-insensitive.
+
+By default, the program expands the keywords in the B<.gitconfig> file.  This
+can be changed via the environment variable B<GITCONFIG_TEMPLATE>.  If it is
+set, the program uses its value as the name of the file to use.  This file is
+read line by line, expanding the keywords encountered and the resulting text
+is written to B<.gitconfig>.
+
+The program is intended to be used in B<initrc-command> keyword of the
+B<pam_ldaphome>(8) configuration file.
+
+=head1 SEE ALSO
+
+B<pam_ldaphome>(8), B<ldap.conf>(5).
+
+=head1 AUTHOR
+
+Sergey Poznyakoff <gray@gnu.org>    
+    
+=cut    
+
+# ###################################
+# Configuration file handling
+# ###################################
+
+my %config = ('uri' => 'ldap://127.0.0.1', 'uid' => 'uid');
+
+sub read_config_file($) {
+    my $config_file = shift;
+    my $file;
+    my $line = 0;
+
+    open($file, "<", $config_file) or die("cannot open $config_file: $!");
+    while (<$file>) {
+	++$line;
+	chomp;
+	s/^\s+//;
+	s/\s+$//;
+	        s/#.*//;
+	next if ($_ eq "");
+	my @kwp = split(/\s*\s+\s*/, $_, 2);
+	$config{lc($kwp[0])} = $kwp[1];
+    }
+    close($file);
+}
+
+# ###################################
+# LDAP Functions
+# ###################################
+
+sub assert {
+    my $mesg = shift;
+    my $action = shift;
+    die("An error occurred $action: ".$mesg->error) if ($mesg->code);
+    return $mesg;
+}
+
+sub ldap_connect {
+    my $ldap = Net::LDAP->new($config{'uri'})
+	or die("Unable to connect to LDAP server $config{'uri'}: $!");
+    my @bindargs = ();
+    if (defined($config{'binddn'})) {
+	push(@bindargs, $config{'binddn'});
+	push(@bindargs, password => $config{'bindpass'}) # FIXME
+	    if defined($config{'bindpass'});
+    }
+    assert($ldap->bind(@bindargs), "binding to the server");
+    return $ldap;
+}
+
+# ###################################
+# MAIN
+# ###################################
+
+die "bad number of arguments" unless ($#ARGV == 0);
+
+## Read configuration
+foreach my $file ("/etc/ldap.conf", "/etc/ldap/ldap.conf",
+		  "/etc/openldap/ldap.conf") {
+    if (-e $file) {
+	read_config_file($file);
+	last;
+    }
+}
+
+my $ldap = ldap_connect;
+
+my $filter = "(&(objectClass=posixAccount)($config{'uid'}=$ARGV[0]))";
+
+my $res = assert($ldap->search(base => $config{'base'},
+			       filter => $filter),
+		 "searching for $filter in $config{'base'}");
+my $entry = $res->entry(0);
+
+my $template = defined($ENV{'GITCONFIG_TEMPLATE'})
+                   ? $ENV{'GITCONFIG_TEMPLATE'}
+                   : ".gitconfig";
+open(my $fd, "<", $template) or die "can't open $template: $!";
+
+my $outfile;
+if ($template eq ".gitconfig") {
+    $outfile = ".gitconfig.$$";
+} else {
+    $outfile = ".gitconfig";
+}
+
+open(my $ofd, ">", $outfile) or die "can't open $outfile for output: $!";
+
+while (<$fd>) {
+    s/\$\{(.*?)\}/$entry->get_value($1)/gex;
+    print $ofd $_;
+}
+
+close $fd;
+close $ofd;
+
+if ($outfile ne ".gitconfig") {
+    unlink(".gitconfig")
+	or die "can't unlink .gitconfig: $1";
+    rename($outfile, ".gitconfig")
+	or die "can't rename $outfile to .gitconfig: $1";
+}
+
+$ldap->unbind;
+
+			    

@@ -48,7 +48,10 @@ SUBDIRS = \
  $(GROUPMEMBER_DIR)\
  pamck
 
-EXTRA_DIST=ChangeLog.svn
+EXTRA_DIST=ChangeLog.svn examples
+dist-hook:
+	rm -rf `find $(distdir)/examples -name '*~'`
+
 #  Name of the previous ChangeLog file.
 prev_change_log = ChangeLog.svn
 #  Start Git ChangeLog from this date. 

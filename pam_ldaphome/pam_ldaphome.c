@@ -30,6 +30,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
+#include <sys/time.h>
+#include <sys/wait.h>
 #include <ldap.h>
 #include <pwd.h>
 #include <grp.h>
@@ -1429,6 +1432,160 @@ create_home_dir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 	return create_ok;
 }
 
+static int
+run_prog(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env,
+	 const char *command, const char *logfile)
+{
+	pid_t pid, rc;
+	int p[2];
+	long ttl;
+	time_t start;
+	int i, status;
+	struct timeval tv;
+	unsigned long timeout_option = 10;
+
+	DEBUG(2,("running command %s", command)); 
+	get_intval(env, "exec-timeout", 10, &timeout_option);
+	
+	if (pipe(p)) {
+		_pam_log(LOG_ERR, "pipe: %s", strerror(errno));
+		return PAM_SYSTEM_ERR;
+	}
+		
+	pid = fork();
+	if (pid == -1) {
+		close(p[0]);
+		close(p[1]);
+		_pam_log(LOG_ERR, "fork: %s", strerror(errno));
+		return PAM_SYSTEM_ERR;
+	}
+	
+	if (pid == 0) {		
+		/* child */
+		char *argv[3];
+
+		if (chdir(pw->pw_dir)) {
+			_pam_log(LOG_ERR, "chdir: %s", strerror(errno));
+			_exit(127);
+		}
+		
+		if (dup2(p[1], 1) == -1) {
+			_pam_log(LOG_ERR, "dup2: %s", strerror(errno));
+			_exit(127);
+		}
+		for (i = sysconf(_SC_OPEN_MAX); i >= 0; i--) {
+			if (i != 1)
+				close(i);
+		}
+		open("/dev/null", O_RDONLY);
+		if (logfile) {
+			if (open(logfile, O_CREAT|O_APPEND|O_WRONLY,
+				 0644) == -1) {
+				_pam_log(LOG_ERR, "open(%s): %s",
+					 logfile, strerror(errno));
+				_exit(127);
+			}
+		} else
+			dup2(1, 2);
+		argv[0] = (char*) command;
+		argv[1] = pw->pw_name;
+		argv[2] = NULL;
+		execv(command, argv);
+		_exit(127);
+	}
+
+	/* master */
+	close(p[1]);
+
+	start = time(NULL);
+	while (1) {
+		ttl = timeout_option - (time(NULL) - start);
+		if (ttl <= 0) {
+			_pam_log(LOG_ERR, "timed out waiting for %s", command);
+			break;
+		}
+		tv.tv_sec = ttl;
+		tv.tv_usec = 0;
+		rc = select(0, NULL, NULL, NULL, &tv);
+ 		if (rc == -1 && errno == EINTR) {
+			rc = waitpid(pid, &status, WNOHANG);
+			if (rc == pid)
+				break;
+			if (rc == (pid_t)-1) {
+				_pam_log(LOG_ERR, "waitpid: %s",
+					 strerror(errno));
+				break;
+			}
+		}
+	}
+
+	close(p[0]);
+
+	if (rc != pid) {
+		_pam_log(LOG_NOTICE, "killing %s (pid %lu)",
+			 command, (unsigned long) pid);
+		kill(pid, SIGKILL);
+		
+		while ((rc = waitpid(pid, &status, 0)) == -1 &&
+		       errno == EINTR);
+		if (rc == (pid_t)-1) {
+			_pam_log(LOG_ERR, "waitpid: %s", strerror(errno));
+			return PAM_SYSTEM_ERR;
+		}
+	} else if (WIFEXITED(status)) {
+		status = WEXITSTATUS(status);
+		if (status) {
+			_pam_log(LOG_ERR, "%s exited with status %d",
+				 command, status);
+			return PAM_SYSTEM_ERR;
+		} else
+			DEBUG(2,("%s finished successfully", command));
+	} else if (WIFSIGNALED(status)) {
+		status = WTERMSIG(status);
+		_pam_log(LOG_ERR, "%s got signal %d", command, status);
+		return PAM_SYSTEM_ERR;
+	} else if (status) {
+		_pam_log(LOG_ERR, "%s failed: unknown status 0x%x",
+			 command, status);
+		return PAM_SYSTEM_ERR;
+	}
+	return PAM_SUCCESS;
+}
+
+void
+sigchld(int sig)
+{
+	/* nothing */;
+}
+
+static int
+run_initrc(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
+{
+	int rc;
+        struct sigaction sa, save_sa;
+	const char *command = gray_env_get(env, "initrc-command");
+	const char *logfile = gray_env_get(env, "initrc-log");
+
+	if (!command)
+		return PAM_SUCCESS;
+	
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0;
+	sa.sa_handler = sigchld;
+	if (sigaction(SIGCHLD, &sa, &save_sa)) {
+		_pam_log(LOG_ERR, "sigaction: %m");
+		return PAM_SYSTEM_ERR;
+	}
+	
+	rc = run_prog(pamh, pw, env, command, logfile);
+	
+	if (sigaction(SIGCHLD, &save_sa, NULL)) {
+		_pam_log(LOG_ERR, "sigaction failed to restore SIGCHLD: %m");
+		return PAM_SYSTEM_ERR;
+	}
+	return rc;
+}
+
 PAM_EXTERN int
 pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
@@ -1449,6 +1606,9 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 		if (check_user_groups(pamh, env, &pw, &retval) == 0) {
 			switch (create_home_dir(pamh, pw, env)) {
 			case create_ok:
+				retval = run_initrc(pamh, pw, env);
+				if (retval)
+					break;
 				retval = import_public_key(pamh, pw, env);
 				break;
 			case create_failure:
