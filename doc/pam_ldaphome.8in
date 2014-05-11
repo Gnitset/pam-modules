@@ -128,6 +128,58 @@ operation, this value must be the same as the value of
 \fBAuthorizedKeysFile\fR variable in
 .BR sshd_config (5).
 Unless you change the latter, there's no need to edit it.
+.TP
+.BI initrc\-command " COMMAND"
+Run \fICOMMAND\fR after populating the user home directory with
+files from the skeleton directory.  The user login name is passed to
+\fICOMMAND\fR as its argument.  Before invoking, the current working
+directory is changed to the user home, standard input is closed, and
+standard output is redirected to standard errror.
+
+The command should exit with code 0 on success.  If it exits with a
+non-zero code, PAM_SYSTEM_ERR will be reported.
+.TP
+.BI initrc-log " FILE"
+Redirects standard output and error from the
+\fBinitrc\-command\fR to \fIFILE\fR.
+.TP
+\fBinitrc\-environ\fR \fIENV\fR ...
+Modifies the environment of \fBinitrc\-command\fR.
+
+This statement takes one or more arguments.  Each argument can be one
+of:
+.RS +4
+.TP
+.BR \- " (a dash)"
+Clear the environment.  This is understood only when used as the first
+argument.
+.TP
+\fB\-\fINAME\fR
+Unset the environment variable \fINAME\fR.
+.TP
+\fB\-\fINAME\fB=\fIVALUE\fR
+Unset the environment variable \fINAME\fR only if it has the given \fIVALUE\fR.
+.TP
+.I NAME
+Retain the environment variable \fINAME\fR.
+.TP
+\fINAME\fB=\fIVALUE\fR
+Define environment variable \fINAME\fR to have given \fIVALUE\fR.
+.TP
+\fINAME\fB+=\fIVALUE\fR
+Retain the variable \fINAME\fR and append \fIVALUE\fR to its existing
+value.  If no such variable is present in the environment, it is
+created. If \fIVALUE\fR begins with a punctuation character, this character 
+is removed from it before the assignment.
+.TP
+\fINAME\fB=+\fIVALUE\fR
+Retain variable \fINAME\fR and prepend \fIVALUE\fR to its existing
+value.  If no such variable is present in the environment, it is
+created.  If \fIVALUE\fR ends with a punctuation character, this character 
+is removed from it before assignment.
+.RE
+The \fIVALUE\fR part can be enclosed in single or double quotes, in
+which case the usual shell dequoting rules apply.
 .SH OPTIONS
 .TP
 .BI config= FILE

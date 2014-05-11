@@ -1172,7 +1172,7 @@ if the directory part of its name is listed in @var{path}.
 @deffn {pam_ldaphome config} skel dir
 Supplies the name of a @dfn{skeleton directory}.  The contents of this
 directory is copied to the newly created user home directory.  The
-file modes and permissions are retained.
+file modes and permissions are preserved.
 @end deffn
 
 @deffn {pam_ldaphome config} uri arg
@@ -1250,7 +1250,7 @@ filters as defined in RFC 4515.
 @end deffn
 
 @deffn {pam_ldaphome config} pubkey-attr text
-Defines the name of the attribute keeping user public key.
+Defines the name of the attribute which holds the user public key.
 @end deffn
 
 @deffn {pam_ldaphome config} copy-buf-size n
@@ -1272,6 +1272,81 @@ keys file.  The default is @samp{.ssh/authorized_keys}.  For normal
 operation, this value must be the same as the value of
 @samp{AuthorizedKeysFile} variable in @file{sshd_config}.  Unless you
 change the latter, there's no need to edit it.
+@end deffn
+
+The following statements instruct @command{pam_ldaphome} to invoke an
+external command after initializing the user home directory.  This can
+be used to customize the files copied from the skeleton directory
+according to the user.
+
+@deffn {pam_ldaphome config} initrc-command command
+Run @command{command} after populating the user home directory with
+files from the skeleton directory.
+
+The user login name is passed to the command as its argument.  Before
+invoking, the current working directory is changed to the user home,
+standard input is closed, and standard output is redirected to
+standard errror.
+
+The command should exit with code 0 on success.  If it exits with a
+non-zero code, @command{pam_ldaphome} will report
+@samp{PAM_SYSTEM_ERR}.
+@end deffn
+
+@deffn {pam_ldaphome config} initrc-log file
+This statement redirects the standard output and error from the 
+@command{initrc-command} to @var{file}.
+@end deffn
+
+@deffn {pam_ldaphome config} initrc-environ env ...
+Modifies the environment of @command{initrc-command}.
+
+This statement takes one or more arguments.  Each argument can be one
+of:
+
+@table @asis
+@item - (a dash)
+Clear the environment.  This is understood only when used as the first
+argument.
+
+@item -@var{name}
+Unset the environment variable @var{name}.
+
+@item -@var{name}=@var{val}
+Unset the environment variable @var{name} only if its value is @var{val}.
+
+@item @var{name}
+Retain the environment variable @var{name}.
+
+@item @var{name}=@var{value}
+Define environment variable @var{name} to have given @var{value}.
+
+@item @var{name}+=@var{value}
+Retain variable @var{name} and append @var{value} to its existing
+value.  If no such variable is present in the environment, it is
+created and @var{value} is assigned to it.  However, if @var{value}
+begins with a punctuation character, this character is removed from it
+before the assignment.  This is convenient for using this construct with
+environment variables like @env{PATH}, e.g.:
+
+@smallexample
+PATH+=:/sbin
+@end smallexample
+
+In this example, if @env{PATH} exists, @samp{:/sbin} will be appended
+to it.  Otherwise, it will be created and @samp{/sbin} will be
+assigned to it.
+
+@item @var{name}=+@var{value}
+Retain variable @var{name} and prepend @var{value} to its existing
+value.  If no such variable is present in the environment, it is
+created and @var{value} is assigned to it.  However, if @var{value}
+ends with a punctuation character, this character is removed from it
+before assignment. 
+@end table
+
+The @var{value} part can be enclosed in single or double quotes, in
+which case the usual shell dequoting rules apply.
 @end deffn
 
 @menu

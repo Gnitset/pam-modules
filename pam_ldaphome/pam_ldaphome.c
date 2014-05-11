@@ -1432,6 +1432,274 @@ create_home_dir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 	return create_ok;
 }
 
+extern char **environ;
+
+static char *
+find_env(char *name, int val)
+{
+        int nlen = strcspn(name, "?+=");
+        int i;
+	
+        for (i = 0; environ[i]; i++) {
+                size_t elen = strcspn(environ[i], "=");
+                if (elen == nlen && memcmp(name, environ[i], nlen) == 0)
+                        return val ? environ[i] + elen + 1 : environ[i];
+        }
+        return NULL;
+}
+
+static int
+locate_unset(char **env, const char *name)
+{
+        volatile int i;
+        int nlen = strcspn(name, "=");
+
+        for (i = 0; env[i]; i++) {
+                if (env[i][0] == '-') {
+                        size_t elen = strcspn(env[i] + 1, "=");
+                        if (elen == nlen
+                            && memcmp(name, env[i] + 1, nlen) == 0) {
+                                if (env[i][nlen + 1])
+                                        return strcmp(name + nlen,
+                                                      env[i] + 1 + nlen) == 0;
+                                else
+                                        return 1;
+                        }
+                }
+        }
+        return 0;
+}
+
+static char *
+env_concat(char *name, size_t namelen, char *a, char *b)
+{
+        char *res;
+        size_t len;
+        
+        if (a && b) {
+                res = gray_malloc(namelen + 1 + strlen(a) + strlen(b) + 1);
+                strcpy(res + namelen + 1, a);
+                strcat(res, b);
+        } else if (a) {
+                len = strlen(a);
+                if (ispunct(a[len-1]))
+                        len--;
+                res = gray_malloc(namelen + 1 + len + 1);
+                memcpy(res + namelen + 1, a, len);
+                res[namelen + 1 + len] = 0;
+        } else /* if (a == NULL) */ {
+                if (ispunct(b[0]))
+                        b++;
+		len = strlen(b);
+                res = gray_malloc(namelen + 1 + len + 1);
+                strcpy(res + namelen + 1, b);
+        }
+        memcpy(res, name, namelen);
+        res[namelen] = '=';
+        return res;
+}
+
+static char **
+parsenv(char *str)
+{
+	enum {
+		st_init,
+		st_kwd,
+		st_val,
+		st_eq,
+		st_dquote,
+		st_squote,
+		st_end
+	} state = st_init, prev_state;
+# define setstate(s) do { prev_state = state; state = s; } while (0)
+	char *p, *kw;
+	char **wv = NULL;
+	size_t wi = 0, wc = 0;
+
+	if (!str)
+		return NULL;
+	
+	for (p = str; *p; ++p) {
+		switch (state) {
+		case st_init:
+			if (*p == ' ' || *p == '\t')
+				continue;
+			setstate(st_kwd);
+			kw = p;
+			break;
+		case st_kwd:
+			if (*p == ' ' || *p == '\t') {
+				setstate(st_end);
+			} else if (*p == '=') {
+				setstate(st_eq);
+			}
+			break;
+		case st_eq:
+			if (*p == '"') {
+				setstate(st_dquote);
+			} else if (*p == '\'') {
+				setstate(st_squote);
+			} else {
+				setstate(st_val);
+			}
+			/* fall through */
+		case st_val:
+			if (*p == ' ' || *p == '\t')
+				setstate(st_end);
+			break;
+		case st_dquote:
+			if (*p == '\\')
+				++p;
+			else if (*p == '"')
+				setstate(st_end);
+			break;
+		case st_squote:
+			if (*p == '\'')
+				setstate(st_end);
+			break;
+		case st_end:
+			/* can't happen */
+			break;
+		}
+
+		if (state == st_end) {
+			size_t len = p - kw;
+			char *q;
+
+			if (wi == wc) {
+				if (wc == 0)
+					wc = 4;
+				else
+					wc *= 2;
+				wv = gray_realloc(wv, wc * sizeof(wv[0]));
+			}
+			
+			switch (prev_state) {
+			case st_squote:
+				len -= 2;
+				wv[wi] = gray_malloc(len + 1);
+				for (q = wv[wi]; *kw; ) {
+					if (*kw == '\'')
+						++kw;
+					else
+						*q++ = *kw++;
+				}
+				*q = 0;
+				break;
+			case st_dquote:
+				len -= 2;
+				wv[wi] = gray_malloc(len + 1);
+				q = wv[wi];
+				while ((*q++ = *kw++) != '=')
+					;
+				while (*kw != '"')
+					*q++ = *kw++;
+				++kw;
+				while (*kw != '"') {
+					if (*kw == '\\')
+						++kw;
+					*q++ = *kw++;
+				}
+				*q = 0;
+				break;
+			default:
+				wv[wi] = gray_malloc(len + 1);
+				memcpy(wv[wi], kw, len);
+				wv[wi][len] = 0;
+			}
+			++wi;
+			setstate(st_init);
+		}
+	}
+
+	if (state != st_init) {
+		if (wc == wi) {
+			++wc;
+			wv = gray_realloc(wv, (wc + 1) * sizeof(wv[0]));
+		}
+		wv[wi++] = gray_strdup(kw);
+	}
+	
+	if (wc == wi)
+		wv = gray_realloc(wv, (wc + 1) * sizeof(wv[0]));
+	wv[wi] = NULL;
+	
+	return wv;
+}
+
+static char **
+env_setup(char *envstr)
+{
+	char **env;
+        char **old_env = environ;
+        char **new_env;
+        int count, i, n;
+
+	env = parsenv(envstr);
+	
+        if (!env)
+                return old_env;
+
+        if (strcmp(env[0], "-") == 0) {
+                old_env = NULL;
+                env++;
+        }
+        
+        /* Count new environment size */
+        count = 0;
+        if (old_env)
+                for (i = 0; old_env[i]; i++)
+                        count++;
+    
+        for (i = 0; env[i]; i++)
+                count++;
+
+        /* Allocate the new environment. */
+        new_env = gray_calloc(count + 1, sizeof new_env[0]);
+
+        /* Populate the environment. */
+        n = 0;
+        
+        if (old_env)
+                for (i = 0; old_env[i]; i++) {
+                        if (!locate_unset(env, old_env[i]))
+                                new_env[n++] = old_env[i];
+                }
+
+        for (i = 0; env[i]; i++) {
+                char *p;
+                
+                if (env[i][0] == '-') {
+                        /* Skip unset directives. */
+                        continue;
+                } if ((p = strchr(env[i], '='))) {
+                        if (p == env[i])
+                                continue; /* Ignore erroneous entry */
+                        if (p[-1] == '+') 
+                                new_env[n++] = env_concat(env[i],
+                                                          p - env[i] - 1,
+                                                          find_env(env[i], 1),
+                                                          p + 1);
+                        else if (p[1] == '+')
+                                new_env[n++] = env_concat(env[i],
+                                                          p - env[i],
+                                                          p + 2,
+                                                          find_env(env[i], 1));
+			else if (p[-1] == '?') {
+				if (!find_env(env[i], 0))
+					new_env[n++] = p + 1;
+			} else
+                                new_env[n++] = env[i];
+                } else {
+                        p = find_env(env[i], 0);
+                        if (p)
+                                new_env[n++] = p;
+                }
+        }
+        new_env[n] = NULL;
+        return new_env;
+}
+
 static int
 run_prog(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env,
 	 const char *command, const char *logfile)
@@ -1490,7 +1758,8 @@ run_prog(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env,
 		argv[0] = (char*) command;
 		argv[1] = pw->pw_name;
 		argv[2] = NULL;
-		execv(command, argv);
+		execve(command, argv,
+		       env_setup(gray_env_get(env, "initrc-environ")));
 		_exit(127);
 	}
 
@@ -1552,7 +1821,7 @@ run_prog(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env,
 	return PAM_SUCCESS;
 }
 
-void
+static void
 sigchld(int sig)
 {
 	/* nothing */;
