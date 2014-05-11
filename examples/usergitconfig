@@ -56,7 +56,7 @@ The base must be specified as a Distinguished Name in LDAP format.
 
 Specifies the default bind DN to use.
 
-=item B<binddnpw> I<PASS>
+=item B<bindpw> I<PASS>
 
 Specifies the password to use with B<binddn>.    
 
@@ -130,8 +130,8 @@ sub ldap_connect {
     my @bindargs = ();
     if (defined($config{'binddn'})) {
 	push(@bindargs, $config{'binddn'});
-	push(@bindargs, password => $config{'bindpass'}) # FIXME
-	    if defined($config{'bindpass'});
+	push(@bindargs, password => $config{'bindpw'})
+	    if defined($config{'bindpw'});
     }
     assert($ldap->bind(@bindargs), "binding to the server");
     return $ldap;
