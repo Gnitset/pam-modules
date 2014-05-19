@@ -25,6 +25,15 @@ gray_env_get(struct gray_env *env, const char *name)
 	return NULL;
 }
 
+int
+gray_env_get_bool(struct gray_env *env, const char *name, int dfl)
+{
+	char *p = gray_env_get(env, name);
+	if (!p)
+		return dfl;
+	return gray_boolean_true_p(p);	
+}
+
 void
 gray_env_free(struct gray_env *env)
 {

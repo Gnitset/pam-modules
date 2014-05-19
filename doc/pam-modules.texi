@@ -1249,6 +1249,12 @@ Sets the LDAP filter expression to return a user profile.  The
 filters as defined in RFC 4515.
 @end deffn
 
+@deffn {pam_ldaphome config} import-public-keys bool
+When set to @samp{no}, disables importing public keys from LDAP.  You
+may wish to use this option if you are using @command{openssh} 6.1 or
+later with @command{ldappubkey} as @samp{AuthorizedKeysCommand}.
+@end deffn
+
 @deffn {pam_ldaphome config} pubkey-attr text
 Defines the name of the attribute which holds the user public key.
 @end deffn
@@ -1351,6 +1357,7 @@ which case the usual shell dequoting rules apply.
 
 @menu
 * ldaphome example::
+* usergitconfig::
 @end menu
 
 @node ldaphome example
@@ -1436,6 +1443,43 @@ The @samp{passwd} and @samp{group} entries in
 passwd:         files ldap
 group:          files ldap
 @end example
+
+@node usergitconfig
+@section usergitconfig
+@cindex usergitconfig
+
+The @file{examples} subdirectory of the @command{pam-modules}
+distribution contains a program @command{usergitconfig} which
+is designed to customize user's @file{.gitconfig} file using
+attributes from his LDAP entry.
+
+The command reads the @file{.gitconfig} file and replaces any
+occurrence of @samp{$@{@var{attr}@}} with the value of the LDAP
+attribute @var{attr}.  Not defined attributes are replaced with
+empty strings.
+
+To use this utility with @command{pam_ldaphome}, copy it to
+some location of preference (say, @file{/usr/libexec}), and
+add the following to @command{pam_ldaphome} configuration file:
+
+@example
+skel /etc/skel
+initrc-command /usr/libexec/usergitconfig
+@end example
+
+The @file{/etc/skel} directory should contain the file @file{.gitconfig}.
+Suppose its contents is as follows:
+
+@example
+[user]
+	name = $@{cn@}
+	email = $@{mail@}
+@end example
+
+@noindent
+Then, after successful completion of @command{pam_ldaphome}, the
+user's @file{.gitconfig} file will contain his real name and email
+set properly from the database.
 
 @node umotd
 @chapter pam_umotd

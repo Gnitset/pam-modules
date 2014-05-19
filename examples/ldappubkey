@@ -20,25 +20,23 @@ use Net::LDAP;
 
 =head1 NAME
 
-usergitconfig - initialize user .gitconfig file
+ldappubkey - get user public ssh keys from the LDAP database
 
 =head1 SYNOPSIS
 
-B<usergitconfig> I<LOGIN>
+B<ldappubkey> I<LOGIN>
 
 =head1 DESCRIPTION
 
-This program reads the B<.gitconfig> file from the current working directory
-and expands occurrences of B<${I<ATTRIBUTE>}> with the value of I<ATTRIBUTE>
-from the LDAP B<posixAccount> record for user I<LOGIN>.  If there is no such
-attribute, an empty value is substituted.
+Produces on the standard output public ssh keys for the user I<LOGIN>, each
+on a separate line.  The program is designed for use with B<sshd>(8) version
+6.x or higher.  Public keys are obtained from a LDAP database.  The
+configuration is looked up in the following files: B</etc/ldap.conf>,
+B</etc/ldap/ldap.conf> and B</etc/openldap/ldap.conf>.  These files are
+tried in this order and the first one of them that exists is read.
 
-The program reads its configuration from one of the following files:
-B</etc/ldap.conf>, B</etc/ldap/ldap.conf> and B</etc/openldap/ldap.conf>.
-These files are tried in this order and the first one of them that exists
-is read.
-
-The following configuration statements are used:
+The following configuration statements are used (all keywords are
+case-insensitive):
 
 =over 4
 
@@ -64,42 +62,47 @@ Specifies the password to use with B<binddn>.
 
 Name of the attribute to use instead of B<uid>.  The LDAP record is searched
 using the filter B<(&(objectClass=posixAccount)(I<ATTR>=I<LOGIN>))>.
+
+=item B<publickeyattribute> I<ATTR>
+
+Name of the attribute which holds the public key.  Default is B<grayPublicKey>.
+    
+=back
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-h>
+
+Show program usage.
+
+=item B<--help>
+
+Show detailed help page.    
     
 =back    
-
-All keywords are case-insensitive.
-
-By default, the program expands the keywords in the B<.gitconfig> file.  This
-can be changed via the environment variable B<GITCONFIG_TEMPLATE>.  If it is
-set, the program uses its value as the name of the file to use.  This file is
-read line by line, expanding the keywords encountered and the resulting text
-is written to B<.gitconfig>.
-
-The program is intended to be used in B<initrc-command> keyword of the
-B<pam_ldaphome>(8) configuration file.
-
-Example B<.gitconfig> file:
-
-    [user]
-        name = ${cn}
-        email = ${mail}
-
     
 =head1 SEE ALSO
 
-B<pam_ldaphome>(8), B<ldap.conf>(5).
+B<sshd>(8), B<sshd_config>(5), B<ldap.conf>(5).
 
+=head1 BUGS
+
+LDAP filter string is hardcoded.    
+    
 =head1 AUTHOR
 
 Sergey Poznyakoff <gray@gnu.org>    
     
-=cut    
+=cut
 
 # ###################################
 # Configuration file handling
 # ###################################
 
-my %config = ('uri' => 'ldap://127.0.0.1', 'uid' => 'uid');
+my %config = ('uri' => 'ldap://127.0.0.1', 'uid' => 'uid',
+	      'publickeyattribute' => 'grayPublicKey');
 
 sub read_config_file($) {
     my $config_file = shift;
@@ -120,28 +123,11 @@ sub read_config_file($) {
     close($file);
 }
 
-# ###################################
-# LDAP Functions
-# ###################################
-
 sub assert {
     my $mesg = shift;
     my $action = shift;
     die("An error occurred $action: ".$mesg->error) if ($mesg->code);
     return $mesg;
-}
-
-sub ldap_connect {
-    my $ldap = Net::LDAP->new($config{'uri'})
-	or die("Unable to connect to LDAP server $config{'uri'}: $!");
-    my @bindargs = ();
-    if (defined($config{'binddn'})) {
-	push(@bindargs, $config{'binddn'});
-	push(@bindargs, password => $config{'bindpw'})
-	    if defined($config{'bindpw'});
-    }
-    assert($ldap->bind(@bindargs), "binding to the server");
-    return $ldap;
 }
 
 # ###################################
@@ -160,44 +146,31 @@ foreach my $file ("/etc/ldap.conf", "/etc/ldap/ldap.conf",
     }
 }
 
-my $ldap = ldap_connect;
+my $ldap = Net::LDAP->new($config{'uri'})
+    or die("Unable to connect to LDAP server $config{'uri'}: $!");
+my @bindargs = ();
+if (defined($config{'binddn'})) {
+    push(@bindargs, $config{'binddn'});
+    push(@bindargs, password => $config{'bindpw'})
+	if defined($config{'bindpw'});
+}
+assert($ldap->bind(@bindargs), "binding to the server");
 
+my $attr = $config{'publickeyattribute'};
 my $filter = "(&(objectClass=posixAccount)($config{'uid'}=$ARGV[0]))";
 
 my $res = assert($ldap->search(base => $config{'base'},
-			       filter => $filter),
+			       filter => $filter,
+			       attr => [ $attr ] ),
 		 "searching for $filter in $config{'base'}");
-my $entry = $res->entry(0);
 
-my $template = defined($ENV{'GITCONFIG_TEMPLATE'})
-                   ? $ENV{'GITCONFIG_TEMPLATE'}
-                   : ".gitconfig";
-open(my $fd, "<", $template) or die "can't open $template: $!";
-
-my $outfile;
-if ($template eq ".gitconfig") {
-    $outfile = ".gitconfig.$$";
-} else {
-    $outfile = ".gitconfig";
+foreach my $entry ($res->entry(0)) {
+    my $keyref = $entry->get_value($attr, asref => 1);
+    for (@{$keyref}) {
+	print "$_\n";
+    }
 }
 
-open(my $ofd, ">", $outfile) or die "can't open $outfile for output: $!";
+# END
 
-while (<$fd>) {
-    s/\$\{(.*?)\}/$entry->get_value($1)/gex;
-    print $ofd $_;
-}
 
-close $fd;
-close $ofd;
-
-if ($outfile ne ".gitconfig") {
-    unlink(".gitconfig")
-	or die "can't unlink .gitconfig: $1";
-    rename($outfile, ".gitconfig")
-	or die "can't rename $outfile to .gitconfig: $1";
-}
-
-$ldap->unbind;
-
-			    

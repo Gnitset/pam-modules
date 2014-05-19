@@ -1321,6 +1321,9 @@ import_public_key(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 	const char *filter_pat = gray_env_get(env, "filter");
 	const char *attr = gray_env_get(env, "pubkey-attr");
 
+	if (!gray_env_get_bool(env, "import-public-keys", 1))
+		return PAM_SUCCESS;
+	    
 	if (!filter_pat) {
 		_pam_log(LOG_ERR, "configuration variable `filter' not set");
 		return PAM_SERVICE_ERR;
@@ -1855,15 +1858,16 @@ run_initrc(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 	return rc;
 }
 
-PAM_EXTERN int
-pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
+static int
+ldaphome_main(pam_handle_t *pamh, int flags, int argc, const char **argv,
+	      const char *func)
 {
 	int retval = PAM_AUTH_ERR;
 	struct gray_env *env;
 	
 	_pam_parse(pamh, argc, argv);
 	
-	DEBUG(90,("enter pam_sm_authenticate"));
+	DEBUG(90,("enter %s", func));
 	gray_pam_init(PAM_AUTHINFO_UNAVAIL);
 	if (gray_env_read(config_file_name, &env) == 0) {
 		char *val;
@@ -1889,8 +1893,16 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 		}
 		gray_env_free(env);
 	}
-	DEBUG(90,("exit pam_sm_authenticate: %d", retval));
+	DEBUG(90,("exit %s: %d", func, retval));
 	return retval;
+}
+
+
+
+PAM_EXTERN int
+pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
+{
+	return ldaphome_main(pamh, flags, argc, argv, __FUNCTION__);
 }
 
 PAM_EXTERN int
@@ -1902,6 +1914,20 @@ pam_sm_setcred(pam_handle_t *pamh,
 	return PAM_SUCCESS;
 }
 
+PAM_EXTERN int
+pam_sm_open_session (pam_handle_t *pamh, int flags, int argc,
+                     const char **argv)
+{
+	return ldaphome_main(pamh, flags, argc, argv, __FUNCTION__);
+}
+
+PAM_EXTERN int
+pam_sm_close_session (pam_handle_t *pamh, int flags, int argc,
+		      const char **argv)
+{
+	return PAM_SUCCESS;
+}
+
 #ifdef PAM_STATIC
 
 struct pam_module _pam_ldaphome_modstruct = {
@@ -1909,8 +1935,8 @@ struct pam_module _pam_ldaphome_modstruct = {
 	pam_sm_authenticate,                 
 	pam_sm_setcred,
 	NULL,
-	NULL,
-	NULL,
+	pam_sm_open_session,
+	pam_sm_close_session,
 	NULL
 };
 

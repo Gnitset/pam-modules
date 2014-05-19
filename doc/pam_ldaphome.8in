@@ -14,7 +14,7 @@
 .\" You should have received a copy of the GNU General Public License
 .\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
 .so config.so
-.TH PAM_LDAPHOME 8 "April 4, 2014" "PAM-MODULES" "Pam-Modules User Reference"
+.TH PAM_LDAPHOME 8 "May 19, 2014" "PAM-MODULES" "Pam-Modules User Reference"
 .SH NAME
 pam_ldaphome \- create and populate user home directories
 .SH SYNOPSIS
@@ -107,6 +107,11 @@ Only handle members of the listed groups.
 Defines a LDAP filter expression which returns the user profile.  The
 \fIEXPR\fR should conform to the string representation for search
 filters as defined in RFC 4515.
+.TP
+.BI import\-public\-keys " BOOL"
+When set to \fBno\fR, disables importing public keys from LDAP.  You
+may wish to use this option if you are using \fBopenssh\fR 6.1 or
+later with \fBldappubkey\fR as \fBAuthorizedKeysCommand\fR.
 .TP
 .BI pubkey\-attr " TEXT"
 Defines the name of the attribute that keeps user's public SSH key.
@@ -203,7 +208,8 @@ the \fB\-\-enable\-debug\fR option.
 \fBaudit\fR
 Log auditing information.
 .SH MODULE TYPES PROVIDED
-.BR auth .
+.BR auth ,
+.BR session .
 .SH RETURN VALUES
 .TP
 .B PAM_SUCCESS

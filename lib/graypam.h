@@ -209,6 +209,7 @@ struct gray_env {
 };
 
 char *gray_env_get(struct gray_env *env, const char *name);
+int gray_env_get_bool(struct gray_env *env, const char *name, int dfl);
 void gray_env_free(struct gray_env *env);
 int gray_env_read(const char *file_name, struct gray_env **penv);
 
