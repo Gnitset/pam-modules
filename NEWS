@@ -1,11 +1,11 @@
-pam-modules -- history of user-visible changes. 2014-05-11
+pam-modules -- history of user-visible changes. 2014-05-20
 Copyright (C) 2001, 2004-2005, 2007-2012, 2014 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 Please send pam-modules bug reports to <bug-pam-modules@gnu.org.ua>
 
 
-Version 1.8.92, (Git)
+Version 1.8.93, (Git)
 
 * New module pam_groupmember
 
