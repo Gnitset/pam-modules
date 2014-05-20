@@ -1387,6 +1387,7 @@ dir_in_path(const char *dir, const char *path)
 
 enum create_status {
 	create_ok,
+	create_exists,
 	create_failure,
 	create_skip
 };
@@ -1430,7 +1431,8 @@ create_home_dir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 		_pam_log(LOG_ERR, "%s exists, but is not a directory",
 			 pw->pw_dir);
 		return create_failure;
-	}
+	} else
+		return create_exists;
 		
 	return create_ok;
 }
@@ -1882,6 +1884,8 @@ ldaphome_main(pam_handle_t *pamh, int flags, int argc, const char **argv,
 				retval = run_initrc(pamh, pw, env);
 				if (retval)
 					break;
+				/* fall through */
+			case create_exists:
 				retval = import_public_key(pamh, pw, env);
 				break;
 			case create_failure:
