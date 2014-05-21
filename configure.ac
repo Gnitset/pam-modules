@@ -257,6 +257,7 @@ build_groupmember=$build_groupmember])
 		
 AC_OUTPUT(Makefile
           doc/Makefile
+	  examples/Makefile
 	  lib/Makefile
 	  pam_fshadow/Makefile
           pam_regex/Makefile

@@ -15,7 +15,7 @@ pamdir=@PAMDIR@
 pam_LTLIBRARIES = @SQL_MODULES@ 
 EXTRA_LTLIBRARIES = pam_mysql.la pam_pgsql.la
 EXTRA_DIST=pam_sql.c
-AM_CPPFLAGS=-DSYSCONFDIR=\"${sysconfdir}\" 
+AM_CPPFLAGS += -DSYSCONFDIR=\"${sysconfdir}\" 
 pam_mysql_la_SOURCES = pam_mysql.c
 pam_mysql_la_LIBADD = @PAM_MISC@ @MYSQLLIBS@ ./pam_sql.lo
 pam_pgsql_la_SOURCES = pam_pgsql.c

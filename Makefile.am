@@ -38,6 +38,7 @@ endif
 SUBDIRS = \
  imprimatur\
  doc\
+ examples\
  lib\
  $(FSHADOW_DIR)\
  $(REGEX_DIR)\
@@ -48,9 +49,7 @@ SUBDIRS = \
  $(GROUPMEMBER_DIR)\
  pamck
 
-EXTRA_DIST=ChangeLog.svn examples
-dist-hook:
-	rm -rf `find $(distdir)/examples -name '*~'`
+EXTRA_DIST=ChangeLog.svn
 
 #  Name of the previous ChangeLog file.
 prev_change_log = ChangeLog.svn

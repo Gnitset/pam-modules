@@ -14,9 +14,10 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+include $(top_srcdir)/Make.rules
+
 pamdir=@PAMDIR@
 pam_LTLIBRARIES = pam_fshadow.la
 pam_fshadow_la_SOURCES = pam_fshadow.c
-AM_CPPFLAGS=-DMODULE_NAME=\"pam_fshadow\" -DSYSCONFDIR=\"${sysconfdir}\"
+AM_CPPFLAGS += -DMODULE_NAME=\"pam_fshadow\" -DSYSCONFDIR=\"${sysconfdir}\"
 
-include $(top_srcdir)/Make.rules

@@ -14,9 +14,10 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+include $(top_srcdir)/Make.rules
+
 pamdir=@PAMDIR@
 pam_LTLIBRARIES = pam_log.la
 pam_log_la_SOURCES = pam_log.c
-AM_CPPFLAGS=-DMODULE_NAME=\"pam_log\" -DSYSCONFDIR=\"${sysconfdir}\"
+AM_CPPFLAGS += -DMODULE_NAME=\"pam_log\" -DSYSCONFDIR=\"${sysconfdir}\"
 
-include $(top_srcdir)/Make.rules

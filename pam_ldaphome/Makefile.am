@@ -18,6 +18,6 @@ include $(top_srcdir)/Make.rules
 
 pamdir=@PAMDIR@
 pam_LTLIBRARIES = pam_ldaphome.la
-AM_CPPFLAGS=-DMODULE_NAME=\"pam_ldaphome\" -DSYSCONFDIR=\"${sysconfdir}\"
+AM_CPPFLAGS += -DMODULE_NAME=\"pam_ldaphome\" -DSYSCONFDIR=\"${sysconfdir}\"
 pam_ldaphome_la_SOURCES = pam_ldaphome.c
 pam_ldaphome_la_LIBADD = @PAM_MISC@ -lldap

@@ -14,10 +14,10 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+include $(top_srcdir)/Make.rules
+
 pamdir=@PAMDIR@
 PAM_REGEX = 
 pam_LTLIBRARIES = pam_regex.la
 pam_regex_la_SOURCES = pam_regex.c
-AM_CPPFLAGS=-DMODULE_NAME=\"pam_regex\" -DSYSCONFDIR=\"${sysconfdir}\"
-
-include $(top_srcdir)/Make.rules
+AM_CPPFLAGS += -DMODULE_NAME=\"pam_regex\" -DSYSCONFDIR=\"${sysconfdir}\"
