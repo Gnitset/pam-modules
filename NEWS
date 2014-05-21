@@ -5,7 +5,7 @@ See the end of file for copying conditions.
 Please send pam-modules bug reports to <bug-pam-modules@gnu.org.ua>
 
 
-Version 1.8.93, (Git)
+Version 1.9, 2014-05-21
 
 * New module pam_groupmember
 
@@ -168,7 +168,7 @@ Version 0.1
 =========================================================================
 Copyright information:
 
-Copyright (C) 2001, 2004-2005, 2007-2012 Sergey Poznyakoff
+Copyright (C) 2001, 2004-2005, 2007-2014 Sergey Poznyakoff
 
    Permission is granted to anyone to make or distribute verbatim copies
    of this document as received, in any medium, provided that the

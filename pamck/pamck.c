@@ -39,7 +39,7 @@ version()
 {
 	printf("%s (%s) %s\n", program_name, PACKAGE, PACKAGE_VERSION);
 	fputs ("\
-Copyright (C) 2009 Sergey Poznyakoff\n\
+Copyright (C) 2009-2012, 2014 Sergey Poznyakoff\n\
 \n\
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.\n\
 This is free software: you are free to change and redistribute it.\n\

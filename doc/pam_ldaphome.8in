@@ -14,7 +14,7 @@
 .\" You should have received a copy of the GNU General Public License
 .\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
 .so config.so
-.TH PAM_LDAPHOME 8 "May 19, 2014" "PAM-MODULES" "Pam-Modules User Reference"
+.TH PAM_LDAPHOME 8 "May 21, 2014" "PAM-MODULES" "Pam-Modules User Reference"
 .SH NAME
 pam_ldaphome \- create and populate user home directories
 .SH SYNOPSIS
@@ -46,27 +46,7 @@ split across several physical lines of text by ending each line but
 the last with a backslash character. 
 .PP
 Available configuration directives are:
-.TP
-.BI allow\-home\-dir " PATH"
-Lists directories in which it is allowed to create home directories.
-\fIPATH\fR is a list of directories separated by colons.  The user's
-home directory will be created only if the directory part of its name
-is listed in \fIPATH\fR.
-.TP
-.BI skel " DIR"
-Supplies the name of a \fIskeleton directory\fR.  The contents of this
-directory is copied to each newly created user home directory.  The
-file modes and permissions are retained.
-.TP
-.BI uri " ARG"
-Sets the URI of the LDAP server to consult for the user profile.
-.TP
-.BI ldap\-version " NUM"
-Sets the LDAP version to use.  Valid arguments are
-.B 2 
-and
-.B 3
-(the default).
+.SS LDAP Settings
 .TP
 .BI base " SEARCHBASE"
 Use \fISEARCHBASE\fR as starting point for searches.
@@ -81,6 +61,21 @@ password for simple authentication.
 .BI bindpwfile " FILE"
 Read password for simple authentication from \fIFILE\fR.
 .TP
+.BI filter " EXPR"
+Defines a LDAP filter expression which returns the user profile.  The
+\fIEXPR\fR should conform to the string representation for search
+filters as defined in RFC 4515.
+.TP
+.BI ldap\-version " NUM"
+Sets the LDAP version to use.  Valid arguments are
+.B 2 
+and
+.B 3
+(the default).
+.TP
+.BI pubkey\-attr " TEXT"
+Defines the name of the attribute that keeps user's public SSH key.
+.TP
 .BI tls " VAL"
 Controls whether TLS is desired or required.  If \fIVAL\fR is
 \fBno\fR (the default), TLS will not be used.  If it is \fByes\fR,
@@ -89,32 +84,15 @@ anyway if it fails.  Finally, if \fIVAL\fR is the word \fBonly\fR, the
 use of TLS becomes mandatory, and the module will not establish LDAP
 connection unless \fIStartTLS\fR succeeds.
 .TP
-.BI min\-uid " N"
-Sets the minimal UID.  For users with UIDs less than \fIN\fR,
-\fBpam_ldaphome\fR will return \fBPAM_SUCCESS\fR immediately.  This
-allows you to have a set of basic users whose credentials are kept in
-the system database and who will not be disturbed by
-\fBpam_ldaphome\fR.  See also \fBmin\-gid\fR and \fBallow\-groups\fR.
+.BI uri " ARG"
+Sets the URI of the LDAP server to consult for the user profile.
+.SS Home directory creation
 .TP
-.BI min\-gid " N"
-Sets the minimal GID.  For users with GIDs less than \fIN\fR,
-the module will return \fBPAM_SUCCESS\fR immediately.
-.TP
-\fBallow\-groups\fR \fIGROUP\fR [\fIGROUP\fR...]
-Only handle members of the listed groups.
-.TP
-.BI filter " EXPR"
-Defines a LDAP filter expression which returns the user profile.  The
-\fIEXPR\fR should conform to the string representation for search
-filters as defined in RFC 4515.
-.TP
-.BI import\-public\-keys " BOOL"
-When set to \fBno\fR, disables importing public keys from LDAP.  You
-may wish to use this option if you are using \fBopenssh\fR 6.1 or
-later with \fBldappubkey\fR as \fBAuthorizedKeysCommand\fR.
-.TP
-.BI pubkey\-attr " TEXT"
-Defines the name of the attribute that keeps user's public SSH key.
+.BI allow\-home\-dir " PATH"
+Lists directories in which it is allowed to create home directories.
+\fIPATH\fR is a list of directories separated by colons.  The user's
+home directory will be created only if the directory part of its name
+is listed in \fIPATH\fR.
 .TP
 .BI copy\-buf\-size " N"
 Sets the size of the buffer used to copy files from the skeleton
@@ -123,8 +101,11 @@ directory to the newly created home.  The default value is 16384 bytes.
 .BI home\-dir\-mode " MODE"
 Defines the file mode (octal) for creation of the user directories.
 .TP
-.BI keyfile\-mode " MODE"
-Defines the file mode (octal) for creation of authorized keys files.
+.BI skel " DIR"
+Supplies the name of a \fIskeleton directory\fR.  The contents of this
+directory is copied to each newly created user home directory.  The
+file modes and permissions are retained.
+.SS Authorized keys file control
 .TP
 .BI authorized_keys " NAME"
 Sets the pathname (relative to the home directory) for the authorized
@@ -133,6 +114,35 @@ operation, this value must be the same as the value of
 \fBAuthorizedKeysFile\fR variable in
 .BR sshd_config (5).
 Unless you change the latter, there's no need to edit it.
+.TP
+.BI import\-public\-keys " BOOL"
+When set to \fBno\fR, disables importing public keys from LDAP.  You
+may wish to use this option if you are using \fBopenssh\fR 6.2p1 or
+later with \fBldappubkey\fR as \fBAuthorizedKeysCommand\fR.
+.TP
+.BI keyfile\-mode " MODE"
+Defines the file mode (octal) for creation of authorized keys files.
+.SS Access control
+.TP
+\fBallow\-groups\fR \fIGROUP\fR [\fIGROUP\fR...]
+Only handle members of the listed groups.
+.TP
+.BI min\-gid " N"
+Sets the minimal GID.  For users with GIDs less than \fIN\fR,
+the module will return \fBPAM_SUCCESS\fR immediately.
+.TP
+.BI min\-uid " N"
+Sets the minimal UID.  For users with UIDs less than \fIN\fR,
+\fBpam_ldaphome\fR will return \fBPAM_SUCCESS\fR immediately.  This
+allows you to have a set of basic users whose credentials are kept in
+the system database and who will not be disturbed by
+\fBpam_ldaphome\fR.  See also \fBmin\-gid\fR and \fBallow\-groups\fR.
+.SS Initialization script support
+.TP
+.BI exec\-timeout " SECONDS"
+Sets maximum time the \fBinitrc\-command\fR is allowed to run.  If
+it runs longer than \fISECONDS\fR, it will be terminated with a
+\fBSIGKILL\fR, and the module will return \fBPAM_SYSTEM_ERR\fR.
 .TP
 .BI initrc\-command " COMMAND"
 Run \fICOMMAND\fR after populating the user home directory with
@@ -143,10 +153,6 @@ standard output is redirected to standard errror.
 
 The command should exit with code 0 on success.  If it exits with a
 non-zero code, PAM_SYSTEM_ERR will be reported.
-.TP
-.BI initrc-log " FILE"
-Redirects standard output and error from the
-\fBinitrc\-command\fR to \fIFILE\fR.
 .TP
 \fBinitrc\-environ\fR \fIENV\fR ...
 Modifies the environment of \fBinitrc\-command\fR.
@@ -185,6 +191,10 @@ is removed from it before assignment.
 .RE
 The \fIVALUE\fR part can be enclosed in single or double quotes, in
 which case the usual shell dequoting rules apply.
+.TP
+.BI initrc-log " FILE"
+Redirects standard output and error from the
+\fBinitrc\-command\fR to \fIFILE\fR.
 .SH OPTIONS
 .TP
 .BI config= FILE
