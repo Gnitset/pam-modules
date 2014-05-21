@@ -30,7 +30,7 @@ B<ldappubkey> I<LOGIN>
 
 Produces on the standard output public ssh keys for the user I<LOGIN>, each
 on a separate line.  The program is designed for use with B<sshd>(8) version
-6.x or higher.  Public keys are obtained from a LDAP database.  The
+6.2p1 or higher.  Public keys are obtained from a LDAP database.  The
 configuration is looked up in the following files: B</etc/ldap.conf>,
 B</etc/ldap/ldap.conf> and B</etc/openldap/ldap.conf>.  These files are
 tried in this order and the first one of them that exists is read.

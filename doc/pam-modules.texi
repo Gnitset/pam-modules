@@ -35,7 +35,9 @@
                                        SSH keys od LDAP users.
 * pam_umotd    (pam-modules)umotd      Display a user-specific MOTD.
 * pam_groupmember (pam_modules)groupmember Test group membership.
-* pamck:       (pam-modules)pamck.     Verify PAM Access.                                       
+* pamck:       (pam-modules)pamck.     Verify PAM Access.
+* usergitconfig: (pam-modules)usergitconfig.  Initialize user @file{.gitconfig} file.
+* ldappubkey:    (pam-modules)ldappubkey.     Get user's public ssh keys from the LDAP database.
 @end direntry
 @end ifinfo
 
@@ -1143,10 +1145,10 @@ The @var{query} is subject to item expansion (@pxref{item expansion}).
 @c Maintain home directories and SSH keys of LDAP users.
 @set MODULE pam_ldaphome
 The @command{pam_ldaphome} facilitates maintenance of a centralized
-LDAP user database.  It should be installed as a part of
-authentication stack.  When invoked, it creates the user home
-directory, if it does not already exist, and updates his
-@file{.ssh/authorized_keys} file with the keys from the database.
+LDAP user database.  It can be installed as a part of
+authentication or session management stack.  When invoked, it creates
+the user home directory, if it does not already exist, and ensures his
+@file{.ssh/authorized_keys} is in sync with the database.
 
 Apart from common options, this module understands only one
 implementation-specific option:
@@ -1357,6 +1359,7 @@ which case the usual shell dequoting rules apply.
 
 @menu
 * ldaphome example::
+* ldappubkey::
 * usergitconfig::
 @end menu
 
@@ -1364,10 +1367,24 @@ which case the usual shell dequoting rules apply.
 @section Example of pam_ldaphome configuration
 This example assumes you are using GNU/Linux.  The aim of this
 configuration is to allow remote access via sshd to users present only
-in the LDAP database, using ssh shared-key authentication.  The user
-public keys are kept in @samp{grayPublicKey} attribute of his LDAP
-entry.  When a user logs in for the first time, his home directory
-does not exist yet and consequently ssh is not able to verify his
+in the LDAP database, using ssh shared-key authentication.  The exact
+way of achieving this depends on the version of @command{opennsh}
+daemon in use.  The @command{openssh} version 6.2p1 introduced a
+possibility to obtain public keys by invoking an external command,
+so there are two main usage cases, as described in the subsections
+that follow.
+
+@menu
+* 5.x::         Openssh versions prior to 6.2p1.
+* 6.2p1::       Openssh versions 6.2p1 and newer.
+@end menu
+
+@node 5.x
+@subsection Openssh versions prior to 6.2p1
+
+The user public keys are kept in @samp{grayPublicKey} attribute of his
+LDAP entry.  When a user logs in for the first time, his home directory
+does not exist yet and consequently @command{sshd} is not able to verify his
 key.  Therefore it falls back to the interactive authentication (it is
 supposed, of course, that @samp{UsePAM} is set to @samp{yes} in the
 sshd configuration file).  The authentication stage is supposed to
@@ -1376,7 +1393,7 @@ with his public keys and present user with a descriptive text
 prompting him to cancel his current authentication attempt and retry
 it again.  The corresponding @file{pam.conf} section looks as follows:
 
-@subheading pam.conf
+@subsubheading pam.conf
 @example
 sshd auth [success=ok try_again=1 default=die] pam_ldaphome.so 
 sshd auth [success=done ignore=ignore default=die] pam_unix.so
@@ -1398,7 +1415,7 @@ normal system accounts to function as usual.  This is very important,
 because it will allow to access the machine even when the LDAP
 database is not available for some reason.
 
-@subheading pam_ldaphome.conf
+@subsubheading pam_ldaphome.conf
 The @command{pam_ldaphome.so} configuration handles users with uids
 and gids greater than or equal to 1000 and pertaining to the group
 @samp{remote}.  User home dirs are populated from the @file{/etc/skel}
@@ -1414,7 +1431,8 @@ filter (&(objectClass=posixAccount)(uid=$user))
 pubkey-attr grayPublicKey
 @end example
 
-@subsection Schema
+@subsubheading Schema
+@anchor{ldap-schema}
 The LDAP schema should include an attribute to keep the user public
 keys.  The author uses the following schema:
 
@@ -1435,7 +1453,7 @@ objectclass ( 1.3.6.1.4.1.9163.2.2.0 NAME 'grayAccount'
         MAY ( userPassword $ loginShell $ gecos $ grayPublicKey ) )
 @end example
 
-@subheading /etc/nsswitch.conf
+@subsubheading /etc/nsswitch.conf
 The @samp{passwd} and @samp{group} entries in
 @file{/etc/nsswitch.conf} file should be as follows:
 
@@ -1443,6 +1461,111 @@ The @samp{passwd} and @samp{group} entries in
 passwd:         files ldap
 group:          files ldap
 @end example
+
+@node 6.2p1
+@subsection Openssh versions 6.2p1 and newer
+
+@kindex AuthorizedKeysCommand
+@kindex AuthorizedKeysCommandUser
+Versions of @command{openssh} starting from 6.2p1 are able to
+read public keys from the standard output of an external program.
+This can be used to improve the configuration described in the
+previous subsection so that the user is not required to cancel
+his session upon the very first connection.  To that effect,
+@command{pam-modules} includes the utility @command{ldappubkey},
+distributed in the @file{examples} subdirectory (@pxref{ldappubkey}).
+Copy that utility to a convenient location (@file{/usr/libexec} would
+be a wise choice), and add the following two lines to your
+@file{/etc/ssh/sshd_config} file:
+
+@example
+AuthorizedKeysCommand           /usr/libexec/ldappubkeys
+AuthorizedKeysCommandUser       nobody
+@end example
+
+@noindent
+Two points should be observed.  First, the argument to
+@code{AuthorizedKeysCommand} (and all its pathname components) must be
+owned by root and be writable only for the owner.  Second, the use
+of @code{AuthorizedKeysCommandUser} statement is mandatory.  Of
+course, you can chose any suitable user (not necessarily @samp{nobody}).
+
+After restarting @command{sshd}, it will invoke @command{ldappubkeys}
+on each log in attempt with the login name of the user as its
+argument.  The utility will look up that user in the LDAP database,
+and if found, will print his piblic keys on its standard output.  The
+@command{sshd} will then read the keys and try to authorize user
+against each of them.  If none of the keys matches the private key
+supplied by the user, @command{sshd} will attempt public keys read
+from the user's @file{~/.ssh/authorized_keys} file (or another file,
+if overridden by the @code{AuthorizedKeysFile} statement in
+@file{/etc/ssh/sshd_config}).
+
+Most of the configuration described in the previous subsection remains
+in effect.  However, the authentication stack won't be invoked if
+@command{ldappubkeys} functions successfully.  The
+@command{pam_ldaphome} module must be invoked as a part of
+@samp{session} stack instead.  The following example assumes
+it is invoked at the top of the stack:
+
+@example
+sshd session [success=ignore try_again=ignore default=die] \
+   /usr/lib/security/pam_ldaphome.so
+@end example
+
+@node ldappubkey
+@section ldappubkey
+@cindex ldappubkey
+
+The @command{ldappubkey} utility is a simple Perl program which takes
+user login name as its argument and produces on the standard output
+public ssh keys for that user, each on a separate line.  The program
+is designed for use with @command{openssh} version 6.2p1 or higher.
+It is distributed in the @file{examples} subdirectory and is not
+installed by default.  The only prerequisite for its use is the
+@command{Net::LDAP} module.  @xref{6.2p1,, Use of pam_ldaphome with
+openssh version 6.2p1}, for instructions of its use.
+
+The utility looks up for its configuration in the following files:
+@file{/etc/ldap.conf}, @file{/etc/ldap/ldap.conf} and
+@file{/etc/openldap/ldap.conf}.  These files are tried in this order and
+the first one of them that exists is read.
+
+The following configuration statements are used (all keywords are
+case-insensitive):
+
+@anchor{ldap.conf statements}
+@deffn {ldap.conf} uri ldap[si]://[@var{name}[:@var{port}]] ...
+Specifies the URI of the LDAP server (or servers) to connect to.  The default
+is @samp{ldap://127.0.0.1}.
+@end deffn
+
+@deffn {ldap.conf} base @var{dn}
+Specifies the default base DN to use when performing LDAP operations.
+The base must be specified as a Distinguished Name in LDAP format.
+@end deffn
+
+@deffn {ldap.conf} binddn @var{dn}
+Specifies the default DN to bind as.
+@end deffn
+
+@deffn {ldap.conf} bindpw @var{password}
+Specifies the password to use with @code{binddn}.
+@end deffn
+
+@deffn {ldap.conf} uid @var{attr}
+Defines the name of the attribute to use instead of @code{uid}.  The
+LDAP record is searched using the following filter:
+
+@example
+(&(objectClass=posixAccount)(@var{attr}=@var{login}))
+@end example
+@end deffn
+
+@deffn {ldap.conf} publickeyattribute @var{attr}
+Name of the attribute which holds the public key.  Default is
+@samp{grayPublicKey} (@pxref{ldap-schema}).
+@end deffn
 
 @node usergitconfig
 @section usergitconfig
@@ -1458,9 +1581,11 @@ occurrence of @samp{$@{@var{attr}@}} with the value of the LDAP
 attribute @var{attr}.  Not defined attributes are replaced with
 empty strings.
 
-To use this utility with @command{pam_ldaphome}, copy it to
-some location of preference (say, @file{/usr/libexec}), and
-add the following to @command{pam_ldaphome} configuration file:
+To use this utility with @command{pam_ldaphome}, first make sure
+you have Perl @command{Net::LDAP} module installed.  Copy
+@command{usergitconfig} to some location of preference (say,
+@file{/usr/libexec}), and add the following to @command{pam_ldaphome}
+configuration file:
 
 @example
 skel /etc/skel
@@ -1480,6 +1605,9 @@ Suppose its contents is as follows:
 Then, after successful completion of @command{pam_ldaphome}, the
 user's @file{.gitconfig} file will contain his real name and email
 set properly from the database.
+
+For the @command{gituserconfig} LDAP configuration options, see
+@ref{ldap.conf statements}.
 
 @node umotd
 @chapter pam_umotd
