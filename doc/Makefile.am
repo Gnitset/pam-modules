@@ -103,7 +103,7 @@ check-sql-config:
 
 check-ldaphome-config:
 	@$(CHECK_DOCS) 'pam_ldaphome configuration keywords' \
-	   's/.*gray_env_get(.[^,]*, *"\(.[^"]*\)".*/\1/p;s/.*get_intval(.[^,]*, *"\(.[^"]*\)".*/\1/p' \
+	   's/.*gray_env_get(.[^,]*, *"\(.[^"]*\)".*/\1/p;s/.*gray_env_get_bool(.[^,]*, *"\(.[^"]*\)".*/\1/p;s/.*get_intval(.[^,]*, *"\(.[^"]*\)".*/\1/p' \
 	   's/@deffn  *{pam_ldaphome config}  *\([a-zA-Z_][a-zA-Z0-9_-]*\) .*/\1/p' \
 	   $(top_srcdir)/pam_ldaphome/pam_ldaphome.c -- \
 	   $(MAKEINFO) $(AM_MAKEINFOFLAGS) $(MAKEINFOFLAGS) -I $(srcdir) -E - \

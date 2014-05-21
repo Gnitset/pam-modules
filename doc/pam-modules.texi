@@ -121,6 +121,25 @@ SQL Authentication and Session Management.
 * sql session:: Using @acronym{SQL} modules for session management.
 * sql summary:: Summary of configuration statements.
 
+pam_ldaphome
+
+* ldaphome example::
+* ldappubkey::
+* usergitconfig::
+
+Example of pam_ldaphome configuration
+
+* 5.x::         Openssh versions prior to 6.2p1.
+* 6.2p1::       Openssh versions 6.2p1 and newer.
+
+pam_umotd
+
+* summary of pam_umotd options::
+
+pam_groupmember
+
+* summary of pam_groupmember options::
+
 @end detailmenu
 @end menu
 
@@ -1164,20 +1183,20 @@ Actual module configuration is read from the configuration file, which
 has the same syntax as described in @ref{config, SQL configuration
 file}.  The following keywords are defined:
 
-@deffn {pam_ldaphome config} allow-home-dir path
+@deffn {pam_ldaphome config} allow-home-dir @var{path}
 If present, this option controls where @command{pam_ldaphome} should
 try to create home directories.  Its value is a list of directories
 separated by colons.  The user's home directory will be created only
 if the directory part of its name is listed in @var{path}.
 @end deffn
 
-@deffn {pam_ldaphome config} skel dir
+@deffn {pam_ldaphome config} skel @var{dir}
 Supplies the name of a @dfn{skeleton directory}.  The contents of this
 directory is copied to the newly created user home directory.  The
 file modes and permissions are preserved.
 @end deffn
 
-@deffn {pam_ldaphome config} uri arg
+@deffn {pam_ldaphome config} uri @var{arg}
 Sets the URI of the LDAP server to consult for the user profile.
 Example:
 
@@ -1186,12 +1205,12 @@ uri ldap://127.0.0.1/
 @end example
 @end deffn
 
-@deffn {pam_ldaphome config} ldap-version v
+@deffn {pam_ldaphome config} ldap-version @var{v}
 Sets the LDAP version to use.  Valid values for @var{v} are @samp{2}
 and @samp{3} (the default).
 @end deffn
 
-@deffn {pam_ldaphome config} base searchbase
+@deffn {pam_ldaphome config} base @var{searchbase}
 Use @var{searchbase} as the starting point for the search instead of
 the default, e.g.:
 
@@ -1200,7 +1219,7 @@ base dc=gnu,dc=org,dc=ua
 @end example
 @end deffn
 
-@deffn {pam_ldaphome config} binddn dn
+@deffn {pam_ldaphome config} binddn @var{dn}
 Use the Distinguished Name @var{dn} to bind to the LDAP directory.
 Example:
 
@@ -1209,16 +1228,16 @@ binddn cn=Manager,dc=gnu,dc=org,dc=ua
 @end example
 @end deffn
 
-@deffn {pam_ldaphome config} bindpw password
+@deffn {pam_ldaphome config} bindpw @var{password}
 If @code{binddn} statement is used, this statement supplies the
 password for simple authentication.
 @end deffn
 
-@deffn {pam_ldaphome config} bindpwfile file
+@deffn {pam_ldaphome config} bindpwfile @var{file}
 Read password for simple authentication from @var{file}.
 @end deffn
 
-@deffn {pam_ldaphome config} tls val
+@deffn {pam_ldaphome config} tls @var{val}
 Controls whether TLS is desired or required.  If @var{val} is
 @samp{no} (the default), TLS will not be used.  If it is @samp{yes},
 the module will issue the @samp{StartTLS} command, but will continue
@@ -1227,7 +1246,7 @@ mandatory, and the module will not establish LDAP connection unless
 @samp{StartTLS} succeeds.
 @end deffn
 
-@deffn {pam_ldaphome config} min-uid n
+@deffn {pam_ldaphome config} min-uid @var{n}
 Sets the minimal UID.  For users with UIDs less than @var{n},
 @command{pam_ldaphome} returns PAM_SUCCESS immediately.  This allows
 you to have a set of basic users whose credentials are kept in the
@@ -1236,45 +1255,45 @@ system database and who will not be disturbed by
 @samp{allow-groups}.
 @end deffn
 
-@deffn {pam_ldaphome config} min-gid n
+@deffn {pam_ldaphome config} min-gid @var{n}
 Sets the minimal GID.  For users with GIDs less than @var{n},
 @command{pam_ldaphome} returns PAM_SUCCESS immediately.
 @end deffn
 
-@deffn {pam_ldaphome config} allow-groups group [group...]
+@deffn {pam_ldaphome config} allow-groups @var{group} [@var{group}...]
 Only handle members of the listed groups.
 @end deffn
 
-@deffn {pam_ldaphome config} filter expr
+@deffn {pam_ldaphome config} filter @var{expr}
 Sets the LDAP filter expression to return a user profile.  The
 @var{expr} should conform to the string representation for search
 filters as defined in RFC 4515.
 @end deffn
 
-@deffn {pam_ldaphome config} import-public-keys bool
+@deffn {pam_ldaphome config} import-public-keys @var{bool}
 When set to @samp{no}, disables importing public keys from LDAP.  You
 may wish to use this option if you are using @command{openssh} 6.1 or
 later with @command{ldappubkey} as @samp{AuthorizedKeysCommand}.
 @end deffn
 
-@deffn {pam_ldaphome config} pubkey-attr text
+@deffn {pam_ldaphome config} pubkey-attr @var{text}
 Defines the name of the attribute which holds the user public key.
 @end deffn
 
-@deffn {pam_ldaphome config} copy-buf-size n
+@deffn {pam_ldaphome config} copy-buf-size @var{n}
 Sets the size of the buffer used to copy files from the skeleton
 directory to the newly created home.  The default size is 16384 bytes.
 @end deffn
 
-@deffn {pam_ldaphome config} home-dir-mode mode
+@deffn {pam_ldaphome config} home-dir-mode @var{mode}
 Sets the mode (octal) for the created user directories.
 @end deffn
 
-@deffn {pam_ldaphome config} keyfile-mode mode
+@deffn {pam_ldaphome config} keyfile-mode @var{mode}
 Sets the mode (octal) for the created authorized keys file.
 @end deffn
 
-@deffn {pam_ldaphome config} authorized_keys name
+@deffn {pam_ldaphome config} authorized_keys @var{name}
 Sets the pathname (relative to the home directory) for the authorized
 keys file.  The default is @samp{.ssh/authorized_keys}.  For normal
 operation, this value must be the same as the value of
@@ -1287,7 +1306,7 @@ external command after initializing the user home directory.  This can
 be used to customize the files copied from the skeleton directory
 according to the user.
 
-@deffn {pam_ldaphome config} initrc-command command
+@deffn {pam_ldaphome config} initrc-command @var{command}
 Run @command{command} after populating the user home directory with
 files from the skeleton directory.
 
@@ -1301,12 +1320,18 @@ non-zero code, @command{pam_ldaphome} will report
 @samp{PAM_SYSTEM_ERR}.
 @end deffn
 
-@deffn {pam_ldaphome config} initrc-log file
+@deffn {pam_ldaphome config} exec-timeout @var{seconds}
+Sets maximum time the @command{initrc-command} is allowed to run.  If
+it runs longer than @var{seconds}, it will be terminated with a
+@samp{SIGKILL}, and the module will return PAM_SYSTEM_ERR.
+@end deffn
+
+@deffn {pam_ldaphome config} initrc-log @var{file}
 This statement redirects the standard output and error from the 
 @command{initrc-command} to @var{file}.
 @end deffn
 
-@deffn {pam_ldaphome config} initrc-environ env ...
+@deffn {pam_ldaphome config} initrc-environ @var{env} ...
 Modifies the environment of @command{initrc-command}.
 
 This statement takes one or more arguments.  Each argument can be one
@@ -1395,8 +1420,10 @@ it again.  The corresponding @file{pam.conf} section looks as follows:
 
 @subsubheading pam.conf
 @example
-sshd auth [success=ok try_again=1 default=die] pam_ldaphome.so 
-sshd auth [success=done ignore=ignore default=die] pam_unix.so
+sshd auth [success=ok try_again=1 default=die] \
+    pam_ldaphome.so 
+sshd auth [success=done ignore=ignore default=die] \
+    pam_unix.so
 sshd auth [default=die]  pam_echo.so file=/etc/ldaphome.txt
 @end example
 
@@ -1442,15 +1469,15 @@ keys.  The author uses the following schema:
 
 # Attribute Definitions
 attributetype ( 1.3.6.1.4.1.9163.2.1.0 NAME 'grayPublicKey'
-        DESC 'SSH public key'
-        EQUALITY caseExactIA5Match
-        SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
+    DESC 'SSH public key'
+    EQUALITY caseExactIA5Match
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.26 )
 # Object Class Definitions
 objectclass ( 1.3.6.1.4.1.9163.2.2.0 NAME 'grayAccount'
-        DESC 'Abstraction of an employee account'
-        SUP posixAccount AUXILIARY
-        MUST ( cn $ uid $ uidNumber $ gidNumber $ homeDirectory )
-        MAY ( userPassword $ loginShell $ gecos $ grayPublicKey ) )
+    DESC 'Abstraction of an employee account'
+    SUP posixAccount AUXILIARY
+    MUST ( cn $ uid $ uidNumber $ gidNumber $ homeDirectory )
+    MAY ( userPassword $ loginShell $ gecos $ grayPublicKey ) )
 @end example
 
 @subsubheading /etc/nsswitch.conf
@@ -1510,7 +1537,7 @@ it is invoked at the top of the stack:
 
 @example
 sshd session [success=ignore try_again=ignore default=die] \
-   /usr/lib/security/pam_ldaphome.so
+   pam_ldaphome.so
 @end example
 
 @node ldappubkey
@@ -1597,8 +1624,8 @@ Suppose its contents is as follows:
 
 @example
 [user]
-	name = $@{cn@}
-	email = $@{mail@}
+        name = $@{cn@}
+        email = $@{mail@}
 @end example
 
 @noindent

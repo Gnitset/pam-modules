@@ -1,4 +1,4 @@
-pam-modules -- history of user-visible changes. 2014-05-20
+pam-modules -- history of user-visible changes. 2014-05-21
 Copyright (C) 2001, 2004-2005, 2007-2012, 2014 Sergey Poznyakoff
 See the end of file for copying conditions.
 
@@ -19,6 +19,21 @@ per-user customization of the files copied from the skeleton dir.
 
 The examples directory contains a perl program "usergitconfig", which,
 when used as inirc-command, initializes the user's .gitconfig file.
+
+* New auxiliary utilities
+
+** ldappubkey
+
+The `ldappubkey' utility is a simple Perl program which takes user
+login name as its argument and produces on the standard output public
+ssh keys for that user, each on a separate line.  The program is
+designed for use with `openssh' version 6.2p1 or higher.
+
+** usergitconfig
+
+Customizes user's `.gitconfig' file using attributes from his LDAP
+entry.  This utility can be used with the initrc-command statement
+in pam_ldaphome.conf file.
 
 * Bugfixes
 
