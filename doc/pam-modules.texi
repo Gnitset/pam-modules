@@ -1246,6 +1246,10 @@ mandatory, and the module will not establish LDAP connection unless
 @samp{StartTLS} succeeds.
 @end deffn
 
+@deffn {pam_ldaphome config} tls-cacert @var{val}
+Full pathname to the CA certificate file.  Used if TLS is enabled.
+@end deffn
+
 @deffn {pam_ldaphome config} min-uid @var{n}
 Sets the minimal UID.  For users with UIDs less than @var{n},
 @command{pam_ldaphome} returns PAM_SUCCESS immediately.  This allows

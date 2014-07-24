@@ -406,6 +406,21 @@ ldap_connect(struct gray_env *env)
 				}
 				/* try to continue anyway */
 			}
+
+			val = gray_env_get(env, "tls-cacert");
+			if (val) {
+				rc = ldap_set_option(ld,
+						     LDAP_OPT_X_TLS_CACERTFILE,
+						     val);
+				if (rc != LDAP_SUCCESS) {
+					_pam_log(LOG_ERR,
+						 "setting of LDAP_OPT_X_TLS_CACERTFILE failed");
+					if (tls == tls_only) {
+						ldap_unbind(ld);
+						return NULL;
+					}
+				}
+			}
 		}
 	}
 	
