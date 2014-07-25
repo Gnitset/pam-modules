@@ -48,7 +48,8 @@ static char *config_file_name;
 static int ldap_debug_level;
 /* FIXME: This should be read from sshd_config */
 static char *authorized_keys_file=".ssh/authorized_keys";
-	
+static char *ldap_config_name = "/etc/ldap.conf";
+
 struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(debug),  pam_opt_long, &debug_level },
 	{ PAM_OPTSTR(debug),  pam_opt_const, &debug_level, { 1 } },
@@ -313,6 +314,7 @@ ldap_connect(struct gray_env *env)
 	int protocol = LDAP_VERSION3;
 	char *val;
 	unsigned long lval;
+	enum { tls_no, tls_yes,	tls_only } tls = tls_no;
 	
 	if (ldap_debug_level) {
 		if (ber_set_option(NULL, LBER_OPT_DEBUG_LEVEL,
@@ -371,8 +373,6 @@ ldap_connect(struct gray_env *env)
 	val = gray_env_get(env, "tls");
 		
 	if (val) {
-		enum { tls_no, tls_yes,	tls_only } tls;
-		
 		if (strcmp(val, "yes") == 0)
 			tls = tls_yes;
 		else if (strcmp(val, "no") == 0)
@@ -385,28 +385,39 @@ ldap_connect(struct gray_env *env)
 				 "assuming \"no\"");
 			tls = tls_no;
 		}
-
-		if (tls != tls_no) {
-			rc = ldap_start_tls_s(ld, NULL, NULL);
-			if (rc != LDAP_SUCCESS) {
-				char *msg = NULL;
-				ldap_get_option(ld,
-						LDAP_OPT_DIAGNOSTIC_MESSAGE,
-						(void*)&msg);
-				_pam_log(LOG_ERR,
-					 "ldap_start_tls failed: %s",
-					 ldap_err2string(rc));
-				_pam_log(LOG_ERR,
-					 "TLS diagnostics: %s", msg);
-				ldap_memfree(msg);
-
-				if (tls == tls_only) {
-					ldap_unbind(ld);
-					return NULL;
-				}
-				/* try to continue anyway */
+	} else {
+		val = gray_env_get(env, "ssl");
+		if (!val)
+			tls = tls_no;
+		else if (strcmp(val, "on") == 0)
+			tls = tls_only;
+		else if (strcmp(val, "start_tls") == 0)
+			tls = tls_only;
+		else
+			tls = tls_no;
+		/* FIXME:  "tls-reqcert" */
+	}
+	
+	if (tls != tls_no) {
+		rc = ldap_start_tls_s(ld, NULL, NULL);
+		if (rc != LDAP_SUCCESS) {
+			char *msg = NULL;
+			ldap_get_option(ld,
+					LDAP_OPT_DIAGNOSTIC_MESSAGE,
+					(void*)&msg);
+			_pam_log(LOG_ERR,
+				 "ldap_start_tls failed: %s",
+				 ldap_err2string(rc));
+			_pam_log(LOG_ERR,
+				 "TLS diagnostics: %s", msg);
+			ldap_memfree(msg);
+			
+			if (tls == tls_only) {
+				ldap_unbind(ld);
+				return NULL;
 			}
-
+			/* try to continue anyway */
+		} else {
 			val = gray_env_get(env, "tls-cacert");
 			if (val) {
 				rc = ldap_set_option(ld,
@@ -552,7 +563,7 @@ ldap_bind(LDAP *ld, struct gray_env *env)
 	    || (matched && matched[0])
 	    || (info && info[0])
 	    || refs) {
-		/* FIXME: Use debug output for that */
+
 		DEBUG(2,("ldap_bind: %s (%d)%s",
 			 ldap_err2string(err), err, msgbuf));
 
@@ -1890,6 +1901,20 @@ ldaphome_main(pam_handle_t *pamh, int flags, int argc, const char **argv,
 		char *val;
 		struct passwd *pw;
 
+		if (val = gray_env_get(env, "ldap-config")) {
+			if (strcmp(val, "none") == 0)
+				ldap_config_name = NULL;
+			else
+				ldap_config_name = val;
+		}
+		if (ldap_config_name) {
+			static char *map[] = { "A-Z_", "a-z-" };
+			struct gray_env *tmp;
+			
+			gray_env_read_tr(ldap_config_name, &tmp, map);
+			gray_env_merge(&env, &tmp);
+		}
+		
 		if (val = gray_env_get(env, "authorized_keys"))
 			authorized_keys_file = val;
 		

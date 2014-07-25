@@ -1179,36 +1179,45 @@ Read configuration from @var{file}.  Default is
 @file{pam_ldaphome.conf} in @var{sysconfdir}.
 @end table
 
-Actual module configuration is read from the configuration file, which
-has the same syntax as described in @ref{config, SQL configuration
-file}.  The following keywords are defined:
+Actual module configuration is read from the configuration file.
 
-@deffn {pam_ldaphome config} allow-home-dir @var{path}
-If present, this option controls where @command{pam_ldaphome} should
-try to create home directories.  Its value is a list of directories
-separated by colons.  The user's home directory will be created only
-if the directory part of its name is listed in @var{path}.
-@end deffn
+@menu
+* ldaphome config::
+* ldaphome example::
+* ldappubkey::
+* usergitconfig::
+@end menu
 
-@deffn {pam_ldaphome config} skel @var{dir}
-Supplies the name of a @dfn{skeleton directory}.  The contents of this
-directory is copied to the newly created user home directory.  The
-file modes and permissions are preserved.
-@end deffn
+@node ldaphome config
+@section Configuration file for @command{pam_ldaphome}
 
-@deffn {pam_ldaphome config} uri @var{arg}
-Sets the URI of the LDAP server to consult for the user profile.
-Example:
+@command{Pam_ldaphome} reads its configuration from two files: the
+configuration file supplied with the @command{config} command line
+option and the system-wide LDAP configuration file
+@file{/etc/ldap.conf}.
 
-@example
-uri ldap://127.0.0.1/
-@end example
-@end deffn
+The syntax of the former is described in @ref{config, SQL configuration
+file}.  Allowed keywords are discussed below.
 
-@deffn {pam_ldaphome config} ldap-version @var{v}
-Sets the LDAP version to use.  Valid values for @var{v} are @samp{2}
-and @samp{3} (the default).
-@end deffn
+The syntax of the @file{/etc/ldap.conf} configuration file is
+described in @ref{ldap.conf,,LDAP configuration file,ldap.conf(5),
+ldap.conf(5) manpage}.  Its parsing can be suppressed using the
+@command{ldap-config} statement (see below).
+
+From @file{/etc/ldap.conf}, the following statements are used:
+@samp{base}, @samp{binddn}, @samp{bindpw}, @samp{tls_cacert},
+@samp{uri}.  The @samp{ssl} statement is understood if its value is
+@samp{start_tls} or @samp{off}.  Other values are silently ignored.
+
+In general, all statements defined below can appear in both files.
+However, since @file{/etc/ldap.conf} is read by other system utilities
+as well, we do not recomment using @command{pam_ldaphome}-specific
+keywords in it.
+
+The values read from @command{pam_ldaphome} configuration file
+override those obtained from the standard LDAP configuration file.
+
+@subheading LDAP configuration
 
 @deffn {pam_ldaphome config} base @var{searchbase}
 Use @var{searchbase} as the starting point for the search instead of
@@ -1237,6 +1246,27 @@ password for simple authentication.
 Read password for simple authentication from @var{file}.
 @end deffn
 
+@deffn {pam_ldaphome config} filter @var{expr}
+Sets the LDAP filter expression to return a user profile.  The
+@var{expr} should conform to the string representation for search
+filters as defined in RFC 4515.
+@end deffn
+
+@deffn {pam_ldaphome config} ldap-config @var{file}
+Read LDAP configuration from @var{file} (default --
+@file{/etc/ldap.conf}).  Special value @samp{none} disables this
+feature.
+@end deffn
+
+@deffn {pam_ldaphome config} ldap-version @var{v}
+Sets the LDAP version to use.  Valid values for @var{v} are @samp{2}
+and @samp{3} (the default).
+@end deffn
+
+@deffn {pam_ldaphome config} pubkey-attr @var{text}
+Defines the name of the attribute which holds the user public key.
+@end deffn
+
 @deffn {pam_ldaphome config} tls @var{val}
 Controls whether TLS is desired or required.  If @var{val} is
 @samp{no} (the default), TLS will not be used.  If it is @samp{yes},
@@ -1247,41 +1277,27 @@ mandatory, and the module will not establish LDAP connection unless
 @end deffn
 
 @deffn {pam_ldaphome config} tls-cacert @var{val}
+@deffnx {pam_ldaphome config} tls_cacert @var{val}
 Full pathname to the CA certificate file.  Used if TLS is enabled.
+The second form (@samp{tls_cacert}) is for use in
+@file{/etc/ldap.conf} file.
 @end deffn
 
-@deffn {pam_ldaphome config} min-uid @var{n}
-Sets the minimal UID.  For users with UIDs less than @var{n},
-@command{pam_ldaphome} returns PAM_SUCCESS immediately.  This allows
-you to have a set of basic users whose credentials are kept in the
-system database and who will not be disturbed by
-@command{pam_ldaphome}.  See also @samp{min-gid} and
-@samp{allow-groups}.
+@deffn {pam_ldaphome config} uri @var{arg}
+Sets the URI of the LDAP server to consult for the user profile.
+Example:
+
+@example
+uri ldap://127.0.0.1/
+@end example
 @end deffn
 
-@deffn {pam_ldaphome config} min-gid @var{n}
-Sets the minimal GID.  For users with GIDs less than @var{n},
-@command{pam_ldaphome} returns PAM_SUCCESS immediately.
-@end deffn
-
-@deffn {pam_ldaphome config} allow-groups @var{group} [@var{group}...]
-Only handle members of the listed groups.
-@end deffn
-
-@deffn {pam_ldaphome config} filter @var{expr}
-Sets the LDAP filter expression to return a user profile.  The
-@var{expr} should conform to the string representation for search
-filters as defined in RFC 4515.
-@end deffn
-
-@deffn {pam_ldaphome config} import-public-keys @var{bool}
-When set to @samp{no}, disables importing public keys from LDAP.  You
-may wish to use this option if you are using @command{openssh} 6.1 or
-later with @command{ldappubkey} as @samp{AuthorizedKeysCommand}.
-@end deffn
-
-@deffn {pam_ldaphome config} pubkey-attr @var{text}
-Defines the name of the attribute which holds the user public key.
+@subheading Home directory creation
+@deffn {pam_ldaphome config} allow-home-dir @var{path}
+If present, this option controls where @command{pam_ldaphome} should
+try to create home directories.  Its value is a list of directories
+separated by colons.  The user's home directory will be created only
+if the directory part of its name is listed in @var{path}.
 @end deffn
 
 @deffn {pam_ldaphome config} copy-buf-size @var{n}
@@ -1293,10 +1309,13 @@ directory to the newly created home.  The default size is 16384 bytes.
 Sets the mode (octal) for the created user directories.
 @end deffn
 
-@deffn {pam_ldaphome config} keyfile-mode @var{mode}
-Sets the mode (octal) for the created authorized keys file.
+@deffn {pam_ldaphome config} skel @var{dir}
+Supplies the name of a @dfn{skeleton directory}.  The contents of this
+directory is copied to the newly created user home directory.  The
+file modes and permissions are preserved.
 @end deffn
 
+@subheading Authorized keys file
 @deffn {pam_ldaphome config} authorized_keys @var{name}
 Sets the pathname (relative to the home directory) for the authorized
 keys file.  The default is @samp{.ssh/authorized_keys}.  For normal
@@ -1305,10 +1324,46 @@ operation, this value must be the same as the value of
 change the latter, there's no need to edit it.
 @end deffn
 
+@deffn {pam_ldaphome config} import-public-keys @var{bool}
+When set to @samp{no}, disables importing public keys from LDAP.  You
+may wish to use this option if you are using @command{openssh} 6.1 or
+later with @command{ldappubkey} as @samp{AuthorizedKeysCommand}.
+@end deffn
+
+@deffn {pam_ldaphome config} keyfile-mode @var{mode}
+Sets the mode (octal) for the created authorized keys file.
+@end deffn
+
+@subheading Access control
+@deffn {pam_ldaphome config} allow-groups @var{group} [@var{group}...]
+Only handle members of the listed groups.
+@end deffn
+
+@deffn {pam_ldaphome config} min-gid @var{n}
+Sets the minimal GID.  For users with GIDs less than @var{n},
+@command{pam_ldaphome} returns PAM_SUCCESS immediately.
+@end deffn
+
+@deffn {pam_ldaphome config} min-uid @var{n}
+Sets the minimal UID.  For users with UIDs less than @var{n},
+@command{pam_ldaphome} returns PAM_SUCCESS immediately.  This allows
+you to have a set of basic users whose credentials are kept in the
+system database and who will not be disturbed by
+@command{pam_ldaphome}.  See also @samp{min-gid} and
+@samp{allow-groups}.
+@end deffn
+
+@subheading Initialization script
 The following statements instruct @command{pam_ldaphome} to invoke an
 external command after initializing the user home directory.  This can
 be used to customize the files copied from the skeleton directory
 according to the user.
+
+@deffn {pam_ldaphome config} exec-timeout @var{seconds}
+Sets maximum time the @command{initrc-command} is allowed to run.  If
+it runs longer than @var{seconds}, it will be terminated with a
+@samp{SIGKILL}, and the module will return PAM_SYSTEM_ERR.
+@end deffn
 
 @deffn {pam_ldaphome config} initrc-command @var{command}
 Run @command{command} after populating the user home directory with
@@ -1322,12 +1377,6 @@ standard errror.
 The command should exit with code 0 on success.  If it exits with a
 non-zero code, @command{pam_ldaphome} will report
 @samp{PAM_SYSTEM_ERR}.
-@end deffn
-
-@deffn {pam_ldaphome config} exec-timeout @var{seconds}
-Sets maximum time the @command{initrc-command} is allowed to run.  If
-it runs longer than @var{seconds}, it will be terminated with a
-@samp{SIGKILL}, and the module will return PAM_SYSTEM_ERR.
 @end deffn
 
 @deffn {pam_ldaphome config} initrc-log @var{file}
@@ -1385,12 +1434,6 @@ before assignment.
 The @var{value} part can be enclosed in single or double quotes, in
 which case the usual shell dequoting rules apply.
 @end deffn
-
-@menu
-* ldaphome example::
-* ldappubkey::
-* usergitconfig::
-@end menu
 
 @node ldaphome example
 @section Example of pam_ldaphome configuration

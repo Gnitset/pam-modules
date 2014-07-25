@@ -17,15 +17,15 @@
 #include <graypam.h>
 
 void
-gray_escape_string (gray_slist_t slist, const char *str, size_t len)
+gray_escape_string(gray_slist_t slist, const char *str, size_t len)
 {
-	const unsigned char *p;
+	const char *p;
 #define ESCAPABLE_CHAR "\\'\""
 #define FLUSH() \
- gray_slist_append(slist, str, p - (const unsigned char *)str); \
+ gray_slist_append(slist, str, p - str); \
  str = p;
 	
-	for (p = (const unsigned char *) str; p < str + len; p++) {
+	for (p = str; p < str + len; p++) {
 		if (strchr(ESCAPABLE_CHAR, *p)) {
 			FLUSH();
 			str++;

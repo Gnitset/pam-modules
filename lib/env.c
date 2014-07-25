@@ -45,8 +45,39 @@ gray_env_free(struct gray_env *env)
 	}
 }
 
+static void
+tr(char *input, char **map)
+{
+	unsigned char *s = (unsigned char*) input;
+
+	for (; *s; s++) {
+		unsigned char *f = (unsigned char *)map[0];
+		unsigned char *t = (unsigned char *)map[1];
+		for (; *f && *t; f++, t++) {
+			if (f > (unsigned char *)map[0]
+			    && *f == '-' && *t == '-'
+			    && f[1] && t[1]) {
+				int a = f[-1];
+				int d = f[1] - a;
+
+				if ((d > 0
+				     && a < *s && *s <= a + d)
+				    || (d < 0
+					&& (a + d <= *s && *s < a))) {
+					*s = t[-1] + *s - a;
+					break;
+				}
+				++f; ++t;
+			} else if (*f == *s) {
+				*s = *t;
+				break;
+			}
+		}
+	}
+}
+
 int
-gray_env_read(const char *file_name, struct gray_env **penv)
+gray_env_read_tr(const char *file_name, struct gray_env **penv, char **trmap)
 {
 	FILE *fp;
 	char *p;
@@ -63,7 +94,6 @@ gray_env_read(const char *file_name, struct gray_env **penv)
 		return 1;
 	}
 
-	config_env = NULL;
 	while (p = fgets(buf, sizeof buf, fp)) {
 		int len;
 		struct gray_env *env;
@@ -147,6 +177,8 @@ gray_env_read(const char *file_name, struct gray_env **penv)
 			;
 		if (*p)
 			*p++ = 0;
+		if (trmap)
+			tr(env->name, trmap);
 		for (; *p && isspace(*p); p++)
 			;
 		if (!*p) {
@@ -165,6 +197,28 @@ gray_env_read(const char *file_name, struct gray_env **penv)
 	fclose(fp);
 	*penv = config_env;
 	return rc;
+}
+
+int
+gray_env_read(const char *file_name, struct gray_env **penv)
+{
+	return gray_env_read_tr(file_name, penv, NULL);
+}
+
+void
+gray_env_merge(struct gray_env **pa, struct gray_env **pb)
+{
+	if (!*pa)
+		*pa = *pb;
+	else if (!*pb)
+		return;
+	else {
+		struct gray_env *a;
+		for (a = *pa; a->next; a = a->next)
+			;
+		a->next = *pb;
+	}
+	*pb = NULL;
 }
 
 int

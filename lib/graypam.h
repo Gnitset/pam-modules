@@ -212,6 +212,8 @@ char *gray_env_get(struct gray_env *env, const char *name);
 int gray_env_get_bool(struct gray_env *env, const char *name, int dfl);
 void gray_env_free(struct gray_env *env);
 int gray_env_read(const char *file_name, struct gray_env **penv);
+int gray_env_read_tr(const char *file_name, struct gray_env **penv, char **tr);
+void gray_env_merge(struct gray_env **pa, struct gray_env **pb);
 
 int gray_boolean_true_p(const char *value);
 

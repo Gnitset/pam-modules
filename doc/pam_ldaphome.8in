@@ -14,7 +14,7 @@
 .\" You should have received a copy of the GNU General Public License
 .\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
 .so config.so
-.TH PAM_LDAPHOME 8 "July 24, 2014" "PAM-MODULES" "Pam-Modules User Reference"
+.TH PAM_LDAPHOME 8 "July 25, 2014" "PAM-MODULES" "Pam-Modules User Reference"
 .SH NAME
 pam_ldaphome \- create and populate user home directories
 .SH SYNOPSIS
@@ -43,7 +43,21 @@ The configuration is kept in the file
 The file is a usual UNIX-style configuration file with
 comments introduced by the \fB#\fR character.  Long statements can be
 split across several physical lines of text by ending each line but
-the last with a backslash character. 
+the last with a backslash character.
+.PP
+The system-wide configuration file
+.B /etc/ldap.conf
+is parsed after processing the main configuration file.  In general,
+all statements defined below can appear in both files.  However, since
+.B /etc/ldap.conf
+is read by other system utilities as well, we do not recomment using
+.BR pam_ldaphome -specific 
+keywords in it.
+.PP
+The values from
+.B \*(ET/pam_ldaphome.conf 
+override those obtained from
+.BR /etc/ldap.conf .
 .PP
 Available configuration directives are:
 .SS LDAP Settings
@@ -66,6 +80,11 @@ Defines a LDAP filter expression which returns the user profile.  The
 \fIEXPR\fR should conform to the string representation for search
 filters as defined in RFC 4515.
 .TP
+.BI ldap\-config " FILE"
+Read LDAP configuration from \fIFILE\fR (default --
+\fB/etc/ldap.conf\fR).  Special value \fBnone\fR disables reading
+this file.
+.TP
 .BI ldap\-version " NUM"
 Sets the LDAP version to use.  Valid arguments are
 .B 2 
@@ -86,6 +105,11 @@ connection unless \fIStartTLS\fR succeeds.
 .TP
 .BI tls-cacert " VAL"
 Full pathname to the CA certificate file.  Used if TLS is enabled.
+The form
+.B tls_cacert
+is also understood (for use in
+.B /etc/ldap.conf
+file).
 .TP
 .BI uri " ARG"
 Sets the URI of the LDAP server to consult for the user profile.
