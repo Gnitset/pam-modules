@@ -63,6 +63,39 @@ Specifies the password to use with B<binddn>.
 Name of the attribute to use instead of B<uid>.  The LDAP record is searched
 using the filter B<(&(objectClass=posixAccount)(I<ATTR>=I<LOGIN>))>.
 
+=item B<ssl start_tls>
+
+Use TLS
+
+=item B<tls_cacert> I<FILE>
+
+Specifies the file that contains certificates for all of the Certificate
+Authorities the client will recognize. 
+
+=item B<tls_cacertdir> I<DIR>
+
+Path of a directory that contains Certificate Authority certificates in
+separate individual files.  The B<tls_cacert> statement takes precedence
+over B<tls_cacertdir>.
+
+=item B<tls_cert> I<FILE>
+    
+Specifies the file that contains the client certificate.
+    
+=item B<tls_key> I<FILE>
+
+Specifies the file that contains the private key that matches the
+certificate stored in the B<tls_cert> file.    
+
+=item B<tls_cipher_suite> I<SPEC>
+
+Specifies acceptable cipher suite and preference order.    
+
+=item B<tls_reqcert> I<LEVEL>
+
+Specifies what checks to perform on server certificates in a TLS session.
+I<LEVEL> is one of B<never>, B<allow>, B<try>, B<demand> or B<hard>.
+    
 =item B<publickeyattribute> I<ATTR>
 
 Name of the attribute which holds the public key.  Default is B<grayPublicKey>.
@@ -138,8 +171,11 @@ die "bad number of arguments; try perldoc $0 for more info"
     unless ($#ARGV == 0);
 
 ## Read configuration
-foreach my $file ("/etc/ldap.conf", "/etc/ldap/ldap.conf",
-		  "/etc/openldap/ldap.conf") {
+my @config_files = ("/etc/ldap.conf", "/etc/ldap/ldap.conf",
+		    "/etc/openldap/ldap.conf");
+unshift @config_files, $ENV{LDAP_CONF} if defined($ENV{LDAP_CONF});
+
+foreach my $file (@config_files) {
     if (-e $file) {
 	read_config_file($file);
 	last;
@@ -148,6 +184,34 @@ foreach my $file ("/etc/ldap.conf", "/etc/ldap/ldap.conf",
 
 my $ldap = Net::LDAP->new($config{'uri'})
     or die("Unable to connect to LDAP server $config{'uri'}: $!");
+
+if ($config{ssl} eq 'start_tls') {
+    my %args;
+    
+    $args{capath} = $config{tls_cacertdir}
+        if (defined($config{tls_cacertdir}));
+    $args{cafile} = $config{tls_cacert}
+        if (defined($config{tls_cacert}));
+    if ($config{tls_reqcert} eq 'none') {
+	$args{verify} = 'never';
+    } elsif ($config{tls_reqcert} eq 'allow') {
+	$args{verify} = 'optional';
+    } elsif ($config{tls_reqcert} eq 'demand'
+	     or $config{tls_reqcert} eq 'hard') {
+	$args{verify} = 'require';
+    } elsif ($config{tls_reqcert} eq 'try') {
+	$args{verify} = 'optional'; # FIXME: That's wrong
+    }
+    $args{clientcert} = $config{tls_cert}
+        if (defined($config{tls_cert}));
+    $args{clientkey} = $config{tls_key}
+        if (defined($config{tls_key}));
+    $args{ciphers} = $config{tls_cipher_suite}
+        if (defined($config{tls_cipher_suite}));
+    
+    assert($ldap->start_tls, "TLS negotiation"); 
+}
+
 my @bindargs = ();
 if (defined($config{'binddn'})) {
     push(@bindargs, $config{'binddn'});
