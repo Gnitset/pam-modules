@@ -34,6 +34,8 @@ on a separate line.  The program is designed for use with B<sshd>(8) version
 configuration is looked up in the following files: B</etc/ldap.conf>,
 B</etc/ldap/ldap.conf> and B</etc/openldap/ldap.conf>.  These files are
 tried in this order and the first one of them that exists is read.
+If the environment variable B<LDAP_CONF> is defined, the file it points
+to is tried first.    
 
 The following configuration statements are used (all keywords are
 case-insensitive):
@@ -116,6 +118,20 @@ Show detailed help page.
     
 =back    
     
+=head1 ENVIRONMENT
+
+=over 4
+
+=item B<LDAP_CONF>
+
+If defined, names the alternative configuration file to read.
+
+=item B<GITCONFIG_TEMPLATE>
+
+Name of the template file to use instead of the default B<.gitconfig>.
+    
+=back    
+
 =head1 SEE ALSO
 
 B<sshd>(8), B<sshd_config>(5), B<ldap.conf>(5).
