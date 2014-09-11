@@ -713,17 +713,27 @@ get_pubkeys(LDAP *ld, const char *base, const char *filter, const char *attr)
 }
 
 static int
-check_groups(int gc, char **gv, const char *username)
+check_groups(int gc, char **gv, const char *username, gid_t gid)
 {
 	int i;
-	
+	struct group *gp;
+	char *pgname;
+
+	gp = getgrgid(gid);
+	pgname = gp ? gray_strdup(gp->gr_name) : NULL;
 	for (i = 0; i < gc; i++) {
-		struct group *gp = getgrnam(gv[i]);
+		if (strcmp(gv[i], pgname) == 0) {
+			free(pgname);
+			return 0;
+		}
+		gp = getgrnam(gv[i]);
 		if (gp) {
 			char **p;
 			for (p = gp->gr_mem; *p; p++)
-				if (strcmp(username, *p) == 0)
+				if (strcmp(username, *p) == 0) {
+					free(pgname);
 					return 0;
+				}
 		}
 	}
 	return 1;
@@ -779,7 +789,7 @@ check_user_groups(pam_handle_t *pamh, struct gray_env *env,
 			*retval = PAM_AUTH_ERR;
 			return 1;
 		}
-		rc = check_groups(gc, gv, username);
+		rc = check_groups(gc, gv, username, pw->pw_gid);
 		argcv_free(gc, gv);
 		if (rc) {
 			DEBUG(10, ("ignoring user %s: not in allowed group list",
