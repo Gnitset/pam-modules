@@ -1252,17 +1252,195 @@ populate_homedir(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env)
 	return rc;
 }
 
+/* Operations on public key files */
+
+struct pubkeyfile {
+	char *file_name;   /* Name of the file */
+	int fd;            /* File descriptor */
+	char *base;        /* File contents */
+	size_t size;       /* Size of base */
+	char **lnv;        /* File contents parsed into nul-terminated lines */
+	size_t lnc;        /* Number of lines in lnv */
+	size_t lnm;        /* Max. capacity of lnv */ 
+};
+
+/* Open public key file NAME.  Return 0 on success.  On error, issue a
+   diagnostic message and return -1. */
+static int
+pubkeyfile_open(struct pubkeyfile *pkb, char *name)
+{
+	memset(pkb, 0, sizeof *pkb);
+	pkb->fd = open(name, O_CREAT|O_RDWR, 0666);
+	if (pkb->fd == -1) {
+		_pam_log(LOG_ERR, "can't open %s: %s",
+			 name, strerror(errno));
+		return -1;
+	}
+	pkb->file_name = gray_strdup(name);
+	return 0;
+}
+
+/* Read in the contents of the open public key file PKB. */
+static int
+pubkeyfile_read(struct pubkeyfile *pkb)
+{
+	struct stat st;
+	char *p;
+	size_t i;
+	
+	if (fstat(pkb->fd, &st)) {
+		_pam_log(LOG_ERR, "fstat %s: %s",
+			 pkb->file_name, strerror(errno));
+		return -1;
+	}
+	pkb->size = st.st_size;
+	pkb->base = gray_malloc(st.st_size + 1);
+	if (full_read(pkb->fd, pkb->file_name, pkb->base, pkb->size)) {
+		_pam_log(LOG_ERR, "fread %s: %s",
+			 pkb->file_name, strerror(errno));
+		return -1;
+	}
+	pkb->base[pkb->size] = 0;
+	pkb->lnc = 0;
+	for (p = pkb->base; *p; p++)
+		if (*p == '\n')
+			++pkb->lnc;
+	pkb->lnm = pkb->lnc + 1;
+	pkb->lnv = gray_calloc(pkb->lnm, sizeof(pkb->lnv[0]));
+	
+	i = 0;
+	for (p = pkb->base; *p; p++) {
+		if (p == pkb->base || p[-1] == 0)
+			pkb->lnv[i++] = p;
+		if (*p == '\n')
+			*p = 0;
+	}
+	pkb->lnv[i] = NULL;
+	return 0;
+}
+
+/* Open the public key file NAME and read its contents. */
+static int
+pubkeyfile_init(struct pubkeyfile *pkb, char *name)
+{
+	if (pubkeyfile_open(pkb, name))
+		return -1;
+	return pubkeyfile_read(pkb);
+}
+
+/* Write data from lnv into the public key file, overwriting its current
+   content. */
+static int
+pubkeyfile_write(struct pubkeyfile *pkb)
+{
+	int i;
+	
+	if (lseek(pkb->fd, 0, SEEK_SET)) {
+		_pam_log(LOG_ERR, "lseek %s: %s",
+			 pkb->file_name, strerror(errno));
+		return -1;
+	}
+	if (ftruncate(pkb->fd, 0)) {
+		_pam_log(LOG_ERR, "ftruncate %s: %s",
+			 pkb->file_name, strerror(errno));
+		return -1;
+	}
+	
+	for (i = 0; i < pkb->lnc; i++) {
+		if (pkb->lnv[i]) {
+			static char newline = '\n';
+			size_t len = strlen(pkb->lnv[i]);
+			if (write(pkb->fd, pkb->lnv[i], len) != len
+			    || write(pkb->fd, &newline, 1) != 1) {
+				_pam_log(LOG_ERR, "error writing %s: %s",
+					 pkb->file_name, strerror(errno));
+				return -1;
+			}
+		}
+	}
+	return 0;
+}
+
+/* Remove COUNT lines starting from position POS in PKB. */
+static void
+pubkeyfile_remove_lines(struct pubkeyfile *pkb, int pos, int count)
+{
+	if (count == 0)
+		return;
+	if (pos > pkb->lnc) {
+		_pam_log(LOG_ERR, "%s:%d: INTERNAL ERROR: pos out of range",
+			 __FILE__, __LINE__);
+		abort();
+	}
+	if (pos + count > pkb->lnc) {
+		_pam_log(LOG_ERR, "%s:%d: INTERNAL ERROR: count out of range",
+			 __FILE__, __LINE__);
+		abort();
+	}
+	memmove(pkb->lnv + pos, pkb->lnv + pos + count,
+		(pkb->lnc - pos - count + 1) * sizeof(pkb->lnv[0]));
+	pkb->lnc -= count;
+}
+
+/* Allocate COUNT lines starting from position POS in PKB, preserving
+   the existing data. */
+static void
+pubkeyfile_alloc_lines(struct pubkeyfile *pkb, size_t pos, size_t count)
+{
+	if (pos > pkb->lnc) {
+		_pam_log(LOG_ERR, "%s:%d: INTERNAL ERROR: pos out of range",
+			 __FILE__, __LINE__);
+		abort();
+	}
+	if (pkb->lnc + count + 1 > pkb->lnm) {
+		pkb->lnm += count;
+		pkb->lnv = gray_realloc(pkb->lnv,
+					pkb->lnm * sizeof(pkb->lnv[0]));
+	}
+	memmove(pkb->lnv + pos + count, pkb->lnv + pos,
+		(pkb->lnc - pos + 1) * sizeof(pkb->lnv[0]));
+	pkb->lnc += count;
+}
+
+/* Insert lines from LV in position POS in the file PKB, shifting down
+   existing lines as necessary. */
+void
+pubkeyfile_insert_lines(struct pubkeyfile *pkb, size_t pos, char **lv)
+{
+	size_t i;
+	size_t lc;
+	
+	for (lc = 0; lv[lc]; lc++)
+		;
+
+        pubkeyfile_alloc_lines(pkb, pos, lc);
+
+	for (i = 0; i < lc; i++)
+		pkb->lnv[pos + i] = lv[i];
+}
+
+/* Close the public key file */
+void
+pubkeyfile_close(struct pubkeyfile *pkb)
+{
+	close(pkb->fd);
+	free(pkb->file_name);
+	free(pkb->base);
+	free(pkb->lnv);
+}
+
+
 static int
 store_pubkeys(char **keys, struct passwd *pw, struct gray_env *env)
 {
-	FILE *fp;
-	int c;
+	int rc;
 	char *file_name;
 	size_t homelen, pathlen, len;
-	int retval, i;
+	int retval, i, j;
 	int update = 0;
 	int oldmask;
 	unsigned long mode;
+	struct pubkeyfile pkf;
 	
 	homelen = strlen(pw->pw_dir);
 	pathlen = strlen(authorized_keys_file);
@@ -1285,66 +1463,65 @@ store_pubkeys(char **keys, struct passwd *pw, struct gray_env *env)
 		oldmask = umask(0666 ^ (mode & 0777));
 	}
 	
-	fp = fopen(file_name, "r+");
-	if (!fp && create_interdir(file_name, pw) == 0) {
-		fp = fopen(file_name, "w");
-		update = 1; 
-	}
+	if (access(file_name, R_OK)
+	    && create_interdir(file_name, pw) == 0) {
+		update = 1;
+		i = 0;
+	} 
 
+	rc = pubkeyfile_init(&pkf, file_name);
+	
 	if (oldmask != -1)
 		umask(oldmask);
 	
-	if (!fp) {
-		_pam_log(LOG_EMERG, "cannot open file %s: %s",
-			 file_name, strerror(errno));
+	if (rc) {
 		free(file_name);
 		return PAM_SERVICE_ERR;
 	}
-	if (fchown(fileno(fp), pw->pw_uid, pw->pw_gid))
+	if (fchown(pkf.fd, pw->pw_uid, pw->pw_gid))
 		_pam_log(LOG_ERR, "chown %s: %s",
 			 file_name, strerror(errno));
 
 	if (!update) {
-		i = 0;
-		do {
-			const char *kp = keys[i++];
+		j = 0;
+		for (i = 0; i < pkf.lnc; i++) {
+			char *kp;
+			char *p = pkf.lnv[i];
+			if (*p == '#') {
+				if (strcmp(p + 1, ":end") == 0) 
+					break;
+				continue;
+			}
+			if (update)
+				continue;
+			if (*p == 0)
+				continue;
+			kp = keys[j++];
+			
 			if (!kp) {
-				if (getc(fp) != EOF) {
-					DEBUG(2, ("some keys deleted"));
-					update = 1;
-				}
-				break;
-			}
-			while (*kp && (c = getc(fp)) != EOF && c == *kp)
-				kp++;
-			if (*kp) {
-				DEBUG(2, ("key %d mismatch", i));
+				DEBUG(2, ("less keys in the database"));
 				update = 1;
-				break;
-			}
-		} while (c != EOF && (c = getc(fp)) == '\n');
-
-		if (update) {
-			rewind(fp);
-			if (ftruncate(fileno(fp), 0)) {
-				_pam_log(LOG_ERR, "truncate %s: %s",
-					 file_name, strerror(errno));
-				free(file_name);
-				return PAM_SERVICE_ERR;
+			} else if (strcmp(p, kp)) {
+				DEBUG(2, ("key %d mismatch", j));
+				update = 1;
 			}
 		}
-		free(file_name);
+		if (!update && keys[j]) {
+			DEBUG(2, ("more keys in the database"));
+			update = 1;
+		}
 	}
 	
 	if (update) {
-		for (i = 0; keys[i]; i++) {
-			fwrite(keys[i], strlen(keys[i]), 1, fp);
-			fputc('\n', fp);
-		}
+		pubkeyfile_remove_lines(&pkf, 0, i);
+		pubkeyfile_insert_lines(&pkf, 0, keys);
+		pubkeyfile_write(&pkf);
 		retval = PAM_TRY_AGAIN;
 	} else
 		retval = PAM_SUCCESS;
-	fclose(fp);
+	pubkeyfile_close(&pkf);
+	free(file_name);
+	
 	return retval;
 }
 
