@@ -1483,12 +1483,14 @@ store_pubkeys(char **keys, struct passwd *pw, struct gray_env *env)
 			 file_name, strerror(errno));
 
 	if (!update) {
+		char *boundary = gray_env_get(env, "user-keys-boundary");
+	
 		j = 0;
 		for (i = 0; i < pkf.lnc; i++) {
 			char *kp;
 			char *p = pkf.lnv[i];
 			if (*p == '#') {
-				if (strcmp(p + 1, ":end") == 0) 
+				if (boundary && strcmp(p + 1, boundary) == 0) 
 					break;
 				continue;
 			}
