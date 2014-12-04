@@ -123,7 +123,7 @@ It is available only if the package was configured with
 the \fB\-\-enable\-debug\fR option.
 .TP
 \fBaudit\fR
-Log auditing information.
+Log full debugging information (equivalent to \fBdebug=100\fR).
 .SH MODULE TYPES PROVIDED
 .BR auth ,
 .BR session ,

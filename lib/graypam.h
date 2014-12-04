@@ -141,11 +141,9 @@ int gray_converse(pam_handle_t *pamh, int nargs,
 
 /* Command line parsing */
 #define CNTL_DEBUG        0x0001
-#define CNTL_AUDIT        0x0002
-#define CNTL_WAITDEBUG    0x0004
+#define CNTL_WAITDEBUG    0x0002
 
 #define DEBUG(m,c) if (debug_level>=(m)) _pam_debug c
-#define AUDIT(c) if (cntl_flags&CNTL_AUDIT) _pam_debug c
 
 enum pam_opt_type {
 	pam_opt_null,

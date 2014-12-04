@@ -170,6 +170,10 @@ information will be logged via @code{syslog} channel
 authentication credentials.  In particular, user password is displayed
 on debugging level 100.
 
+@opindex audit, common option
+@item audit
+Log full debugging information (equivalent to @code{debug=100}).
+
 @opindex waitdebug, common option
 @opindex enable-debug, @option{--enable-debug}, @command{configure} option
 @item waitdebug[=@var{interval}]

@@ -55,7 +55,7 @@ static int domain_index = 2;
 struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(debug), pam_opt_long, &debug_level },
 	{ PAM_OPTSTR(debug), pam_opt_const, &debug_level, { 1 } },
-	{ PAM_OPTSTR(audit), pam_opt_bitmask, &cntl_flags, { CNTL_AUDIT } },
+	{ PAM_OPTSTR(audit), pam_opt_const, &debug_level, { 100 } },
 	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, { 0 },
 	  gray_wait_debug_fun },
 	{ PAM_OPTSTR(use_authtok), pam_opt_bitmask, &cntl_flags,
