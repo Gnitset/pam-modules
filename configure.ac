@@ -63,10 +63,8 @@ AC_CHECK_HEADERS(security/pam_appl.h security/pam_modules.h,
                  :,
 		 AC_MSG_ERROR([Required PAM header files not found]))
 AC_CHECK_HEADERS(fcntl.h syslog.h unistd.h crypt.h security/_pam_aconf.h \
-                 security/pam_misc.h security/pam_ext.h termios.h)
-AC_CHECK_HEADER(shadow.h,
-                [],
-                [build_fshadow=no])
+                 security/pam_misc.h security/pam_ext.h termios.h \
+                 shadow.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -79,19 +77,10 @@ AC_CHECK_MEMBERS([struct spwd.sp_expire], , ,
     [ #include <shadow.h> ])
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS(strerror tcgetattr)
+AC_CHECK_FUNCS(strerror tcgetattr fgetpwent)
 
 
-PM_ENABLE(fshadow,[
- AC_CHECK_FUNC(fgetpwent,
-               [build_fshadow=yes],
-               [if $build_fshadow = yes; then
-	          AC_MSG_ERROR([cannot build requested pam_fgetpwent, because the fgetpwent function is not available])
-		else
-	          build_fshadow=no
-		fi])
-])	       
-
+PM_ENABLE(fshadow)
 PM_ENABLE(log)
 PM_ENABLE(regex)
 PM_ENABLE(groupmember)

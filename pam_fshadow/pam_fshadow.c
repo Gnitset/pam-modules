@@ -36,6 +36,65 @@ extern char *crypt(const char *, const char *);
 
 #include <security/pam_modules.h>
 
+#if !HAVE_FGETPWENT
+static struct passwd *
+fgetpwent(FILE *fp)
+{
+	static char *buffer;
+	static size_t buflen;
+	static struct passwd pwbuf;
+	size_t pos = 0;
+	int c;
+	size_t off[6];
+	int i = 0;
+	
+	while ((c = fgetc(fp)) != EOF) {
+		if (pos == buflen) {
+			char *nb;
+			size_t ns;
+			
+			if (buflen == 0)
+				ns = 128;
+			else {
+				ns = ns * 2;
+				if (ns < buflen) {
+					errno = ENOMEM;
+					return NULL;
+				}
+			}
+			nb = realloc(buffer, ns);
+			if (!nb)
+				return NULL;
+			buffer = nb;
+			buflen = ns;
+		}
+		if (c == '\n') {
+			buffer[pos++] = 0;
+			break;
+		}
+		if (c == ':') {
+			buffer[pos++] = 0;
+			if (i < sizeof(off)/sizeof(off[0]))
+				off[i++] = pos;
+		} else
+			buffer[pos++] = c;
+	}
+
+	if (pos == 0)
+		return NULL;
+	
+	pwbuf.pw_name   = buffer;
+	pwbuf.pw_passwd = buffer + off[0];
+	pwbuf.pw_uid    = strtoul(buffer + off[1], NULL, 10);
+	pwbuf.pw_gid    = strtoul(buffer + off[2], NULL, 10);
+	pwbuf.pw_gecos  = buffer + off[3];
+	pwbuf.pw_dir    = buffer + off[4];
+	pwbuf.pw_shell  = buffer + off[5];
+
+	return &pwbuf;
+}
+#endif
+
 #define CNTL_AUTHTOK       0x0010 
 #define CNTL_PASSWD        0x0020
 #define CNTL_SHADOW        0x0040
@@ -251,7 +310,7 @@ verify_user_acct(const char *confdir, const char *username, char **pwd)
 	if (fp) {
 		struct passwd *pw;
 		
-		while ((pw = fgetpwent (fp)) != NULL) {
+		while ((pw = fgetpwent(fp)) != NULL) {
 			if (strcmp (pw->pw_name, username) == 0)
 				break;
 		}
