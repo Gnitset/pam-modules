@@ -1,4 +1,4 @@
-pam-modules -- history of user-visible changes. 2014-07-25
+pam-modules -- history of user-visible changes. 2015-01-28
 Copyright (C) 2001, 2004-2005, 2007-2012, 2014 Sergey Poznyakoff
 See the end of file for copying conditions.
 
@@ -10,6 +10,11 @@ Version 1.9.90 (Git)
 * pam_ldaphome reads LDAP configuration from /etc/ldap.conf
 
 This is in addition to its regular configuration file.
+
+* pam_ldaphome runs inirc-command with user privileges
+
+To run the command with root privileges, the configuration
+variable initrc-root must be set to true.
 
 
 Version 1.9, 2014-05-21

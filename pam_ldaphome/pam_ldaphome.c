@@ -1921,6 +1921,51 @@ env_setup(char *envstr)
 }
 
 static int
+runas(struct passwd *pw)
+{
+	gid_t *sgv = NULL;
+	size_t sgc = 0, sgm = 0;
+	struct group *gr;
+
+	setgrent();
+	while ((gr = getgrent ())) {
+		char **p;
+		if (gr->gr_gid == pw->pw_gid)
+			continue;
+		for (p = gr->gr_mem; *p; p++) {
+			if (strcmp (*p, pw->pw_name) == 0) {
+				if (sgc == sgm)
+					sgv = gray_2nrealloc(sgv, &sgm,
+							     sizeof(sgv[0]));
+				sgv[sgc++] = gr->gr_gid;
+			}
+		}
+	}
+	endgrent();
+
+	if (sgc) {
+		if (setgroups(sgc, sgv)) {
+			_pam_log(LOG_ERR, "setgroups: %s", strerror(errno));
+			free(sgv);
+			return 1;
+		}
+		free(sgv);
+	}
+
+	if (setgid(pw->pw_gid)) {
+		_pam_log(LOG_ERR, "setgid(%lu): %s",
+			 (unsigned long) pw->pw_gid, strerror(errno));
+		return 1;
+	}
+	if (setuid(pw->pw_uid)) {
+		_pam_log(LOG_ERR, "setuid(%lu): %s",
+			 (unsigned long) pw->pw_uid, strerror(errno));
+		return 1;
+	}
+	return 0;
+}
+
+static int
 run_prog(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env,
 	 const char *command, const char *logfile)
 {
@@ -1952,11 +1997,6 @@ run_prog(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env,
 		/* child */
 		char *argv[3];
 
-		if (chdir(pw->pw_dir)) {
-			_pam_log(LOG_ERR, "chdir: %s", strerror(errno));
-			_exit(127);
-		}
-		
 		if (dup2(p[1], 1) == -1) {
 			_pam_log(LOG_ERR, "dup2: %s", strerror(errno));
 			_exit(127);
@@ -1975,6 +2015,20 @@ run_prog(pam_handle_t *pamh, struct passwd *pw, struct gray_env *env,
 			}
 		} else
 			dup2(1, 2);
+
+		if (chdir(pw->pw_dir)) {
+			_pam_log(LOG_ERR, "chdir: %s", strerror(errno));
+			_exit(127);
+		}
+
+		if (gray_env_get_bool(env, "initrc-root", 0))
+			setenv("PAM_LDAPHOME_USER", pw->pw_name, 1);
+		else if (runas(pw)) {
+			_pam_log(LOG_ERR, "cannot switch to privileges of %s",
+				pw->pw_name);
+			_exit(127);
+		}
+		
 		argv[0] = (char*) command;
 		argv[1] = pw->pw_name;
 		argv[2] = NULL;
@@ -2139,17 +2193,14 @@ pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv)
 }
 
 PAM_EXTERN int
-pam_sm_setcred(pam_handle_t *pamh,
-	       int flags,
-	       int argc,
-	       const char **argv)
+pam_sm_setcred(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
 	return PAM_SUCCESS;
 }
 
 PAM_EXTERN int
 pam_sm_open_session (pam_handle_t *pamh, int flags, int argc,
-                     const char **argv)
+		     const char **argv)
 {
 	return ldaphome_main(pamh, flags, argc, argv, __FUNCTION__);
 }

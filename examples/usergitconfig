@@ -127,7 +127,7 @@ Example B<.gitconfig> file:
 
 If defined, names the alternative configuration file to read.
 
-=item GITCONFIG_TEMPLATE    
+=item B<GITCONFIG_TEMPLATE>
 
 Name of the template file to use instead of the default B<.gitconfig>.
     

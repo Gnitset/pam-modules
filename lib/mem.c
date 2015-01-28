@@ -62,6 +62,24 @@ gray_realloc(void *ptr, size_t size)
 	return ptr;
 }
 
+void *
+gray_2nrealloc(void *ptr, size_t *pcount, size_t elsiz)
+{
+	size_t count = *pcount;
+
+	if (!ptr) {
+		if (!count) 
+			count = *pcount = 16;
+		return gray_calloc(count, elsiz);
+	}
+	if ((size_t)-1 / 2 / elsiz <= count)
+		gray_raise("Not enough memory");
+	count *= 2;
+	*pcount = count;
+	return gray_realloc(ptr, count * elsiz);
+}
+	
+
 char *
 gray_strdup(const char *str)
 {

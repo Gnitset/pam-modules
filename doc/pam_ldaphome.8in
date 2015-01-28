@@ -14,7 +14,7 @@
 .\" You should have received a copy of the GNU General Public License
 .\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
 .so config.so
-.TH PAM_LDAPHOME 8 "July 25, 2014" "PAM-MODULES" "Pam-Modules User Reference"
+.TH PAM_LDAPHOME 8 "January 28, 2015" "PAM-MODULES" "Pam-Modules User Reference"
 .SH NAME
 pam_ldaphome \- create and populate user home directories
 .SH SYNOPSIS
@@ -103,7 +103,7 @@ anyway if it fails.  Finally, if \fIVAL\fR is the word \fBonly\fR, the
 use of TLS becomes mandatory, and the module will not establish LDAP
 connection unless \fIStartTLS\fR succeeds.
 .TP
-.BI tls-cacert " VAL"
+.BI tls\-cacert " VAL"
 Full pathname to the CA certificate file.  Used if TLS is enabled.
 The form
 .B tls_cacert
@@ -176,7 +176,9 @@ Run \fICOMMAND\fR after populating the user home directory with
 files from the skeleton directory.  The user login name is passed to
 \fICOMMAND\fR as its argument.  Before invoking, the current working
 directory is changed to the user home, standard input is closed, and
-standard output is redirected to standard errror.
+standard output is redirected to standard errror.  The command is run
+with the current user privileges, unless the variable
+\fBinitrc\-root\fR is set to \fBtrue\fR. 
 
 The command should exit with code 0 on success.  If it exits with a
 non-zero code, PAM_SYSTEM_ERR will be reported.
@@ -219,9 +221,15 @@ is removed from it before assignment.
 The \fIVALUE\fR part can be enclosed in single or double quotes, in
 which case the usual shell dequoting rules apply.
 .TP
-.BI initrc-log " FILE"
+.BI initrc\-log " FILE"
 Redirects standard output and error from the
 \fBinitrc\-command\fR to \fIFILE\fR.
+.TP
+.BI initrc\-root " BOOL"
+When set to \fBtrue\fR, \fBinitrc\-command\fR will be run with
+root privileges.  In this case, the environment variable
+\fBPAM_LDAPHOME_USER\fR will be initialized to the name of the
+user who is trying to log in.
 .SH OPTIONS
 .TP
 .BI config= FILE
@@ -232,7 +240,7 @@ Read configuration from \fIFILE\fR instead of
 .ad
 .hy
 .TP
-\fBdebug\fR\fB=\fINUMBER\fR]
+\fBdebug\fR\fB=\fINUMBER\fR
 Set debugging level (0 <= \fINUMBER\fR <= 100).
 .TP
 \fBwaitdebug\fR

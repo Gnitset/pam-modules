@@ -94,6 +94,7 @@ void *gray_malloc(size_t size);
 void *gray_zalloc(size_t size);
 void *gray_calloc(size_t count, size_t size);
 void *gray_realloc(void *ptr, size_t size);
+void *gray_2nrealloc(void *ptr, size_t *pcount, size_t elsiz);
 char *gray_strdup(const char *str);
 
 void gray_pam_delete(char *x);

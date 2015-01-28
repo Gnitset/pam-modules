@@ -1378,9 +1378,19 @@ invoking, the current working directory is changed to the user home,
 standard input is closed, and standard output is redirected to
 standard errror.
 
+The command is run under the current user privileges, unless the
+variable @option{initrc-root} is set to true.
+
 The command should exit with code 0 on success.  If it exits with a
 non-zero code, @command{pam_ldaphome} will report
 @samp{PAM_SYSTEM_ERR}.
+@end deffn
+
+@deffn {pam_ldaphome config} initrc-root @var{bool}
+When set to @code{true}, @command{initrc-command} will be run with
+root privileges.  In this case, the environment variable
+@env{PAM_LDAPHOME_USER} will be initialized to the name of the
+user who is trying to log in.
 @end deffn
 
 @deffn {pam_ldaphome config} initrc-log @var{file}

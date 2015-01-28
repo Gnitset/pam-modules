@@ -70,6 +70,8 @@ fgetpwent(FILE *fp)
 		}
 		if (c == '\n') {
 			buffer[pos++] = 0;
+			if (i != sizeof(off)/sizeof(off[0]))
+			  continue;
 			break;
 		}
 		if (c == ':') {
