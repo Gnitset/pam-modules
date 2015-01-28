@@ -1,5 +1,5 @@
 /* This file is part of pam_modules.
-   Copyright (C) 2006-2008, 2010-2012, 2014 Sergey Poznyakoff.
+   Copyright (C) 2006-2008, 2010-2012, 2014-2015 Sergey Poznyakoff.
    (using my implementation for the GNU tar).
 
    This program is free software; you can redistribute it and/or modify it

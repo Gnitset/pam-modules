@@ -1,5 +1,5 @@
 pam-modules -- history of user-visible changes. 2015-01-28
-Copyright (C) 2001, 2004-2005, 2007-2012, 2014 Sergey Poznyakoff
+Copyright (C) 2001, 2004-2005, 2007-2012, 2015 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 Please send pam-modules bug reports to <bug-pam-modules@gnu.org.ua>
@@ -180,7 +180,7 @@ Version 0.1
 =========================================================================
 Copyright information:
 
-Copyright (C) 2001, 2004-2005, 2007-2014 Sergey Poznyakoff
+Copyright (C) 2001, 2004-2005, 2007-2015 Sergey Poznyakoff
 
    Permission is granted to anyone to make or distribute verbatim copies
    of this document as received, in any medium, provided that the
