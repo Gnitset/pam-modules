@@ -1,4 +1,4 @@
-pam-modules -- history of user-visible changes. 2015-01-28
+pam-modules -- history of user-visible changes. 2015-01-30
 Copyright (C) 2001, 2004-2005, 2007-2012, 2015 Sergey Poznyakoff
 See the end of file for copying conditions.
 
@@ -16,6 +16,22 @@ This is in addition to its regular configuration file.
 To run the command with root privileges, the configuration
 variable initrc-root must be set to true.
 
+* New pam_ldaphome variable: user-keys-boundary
+
+User key files can contain both keys managed by pam_ldaphome and
+added by the user.  These two groups of keys must be separated by
+a special comment line, which informs pam_ldaphome that all keys
+below it must be retained.
+
+This feature is enabled by the user-keys-boundary configuration
+setting.  Its value defines a string which, when used  after a
+'#' character, forms the delimiting comment.  E.g. if the
+configuration file contains:
+
+  user-keys-boundary :user
+
+then the line '#:user' can be used to delimit ldap-synchronized
+and user-specific keys.
 
 Version 1.9, 2014-05-21
 

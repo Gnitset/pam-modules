@@ -1338,6 +1338,25 @@ later with @command{ldappubkey} as @samp{AuthorizedKeysCommand}.
 Sets the mode (octal) for the created authorized keys file.
 @end deffn
 
+@deffn {pam_ldaphome config} user-keys-boundary @var{string}
+User key files can contain both keys managed by @command{pam_ldaphome}
+and added by the user.  These two groups of keys must be separated by
+a special comment line, which informs the module that all keys
+below it must be retained.
+
+This feature is enabled by the @code{user-keys-boundary} setting.
+The delimiting comment is formed as @samp{#@var{string}}.  E.g. if the
+configuration file contains:
+
+@example
+user-keys-boundary :user-defined
+@end example
+
+@noindent
+then the line @samp{#:user-defined} can be used to delimit
+ldap-synchronized and user-specific keys.
+@end deffn
+
 @subheading Access control
 @deffn {pam_ldaphome config} allow-groups @var{group} [@var{group}...]
 Only handle members of the listed groups.

@@ -14,7 +14,7 @@
 .\" You should have received a copy of the GNU General Public License
 .\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
 .so config.so
-.TH PAM_LDAPHOME 8 "January 28, 2015" "PAM-MODULES" "Pam-Modules User Reference"
+.TH PAM_LDAPHOME 8 "January 30, 2015" "PAM-MODULES" "Pam-Modules User Reference"
 .SH NAME
 pam_ldaphome \- create and populate user home directories
 .SH SYNOPSIS
@@ -149,6 +149,19 @@ later with \fBldappubkey\fR as \fBAuthorizedKeysCommand\fR.
 .TP
 .BI keyfile\-mode " MODE"
 Defines the file mode (octal) for creation of authorized keys files.
+.TP
+.BI user\-keys\-boundary " STRING"
+User key files can contain both keys managed by \fBpam_ldaphome\fR and
+added by the user.  These two groups of keys must be separated by
+a special comment line, which informs the module that all keys
+below it must be retained.
+
+This feature is enabled by the \fBuser\-keys\-boundary\fR setting.
+The delimiting comment is formed by \fB#\fR character immediately
+followed by \fISTRING\fR.  E.g. if the configuration file contains
+.BR "user\-keys\-boundary :user-defined" ,
+then the line \fB#:user-defined\fR can be used to delimit ldap-synchronized
+and user-specific keys.
 .SS Access control
 .TP
 \fBallow\-groups\fR \fIGROUP\fR [\fIGROUP\fR...]
