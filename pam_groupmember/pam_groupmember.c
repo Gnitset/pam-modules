@@ -40,7 +40,6 @@
 const char *sense_choice[] = { "allow", "deny", NULL };
 
 static int sense;
-static int cntl_flags;
 static long debug_level;
 static char *groups;
 

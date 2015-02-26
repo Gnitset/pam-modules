@@ -1215,7 +1215,7 @@ From @file{/etc/ldap.conf}, the following statements are used:
 
 In general, all statements defined below can appear in both files.
 However, since @file{/etc/ldap.conf} is read by other system utilities
-as well, we do not recomment using @command{pam_ldaphome}-specific
+as well, we do not recommend using @command{pam_ldaphome}-specific
 keywords in it.
 
 The values read from @command{pam_ldaphome} configuration file

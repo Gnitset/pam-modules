@@ -18,7 +18,6 @@
 
 
 /* Command line parsing */
-static int cntl_flags;
 static long debug_level;
 
 static int xargc;

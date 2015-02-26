@@ -628,6 +628,10 @@ get_ldap_attrs(LDAP *ld, LDAPMessage *msg, const char *attr)
 	struct berval **values;
 	
 	rc = ldap_get_dn_ber(ld, msg, &ber, &bv);
+	if (rc != LDAP_SUCCESS) {
+		_pam_log(LOG_ERR, "ldap_get_dn_ber: %s", ldap_err2string(rc));
+		return NULL;
+	}
 	ufn = ldap_dn2ufn(bv.bv_val);
 	DEBUG(2, ("INFO: %s", ufn));
 	ldap_memfree(ufn);

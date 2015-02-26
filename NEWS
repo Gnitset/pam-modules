@@ -1,11 +1,11 @@
-pam-modules -- history of user-visible changes. 2015-01-30
+pam-modules -- history of user-visible changes. 2015-02-26
 Copyright (C) 2001, 2004-2005, 2007-2012, 2015 Sergey Poznyakoff
 See the end of file for copying conditions.
 
 Please send pam-modules bug reports to <bug-pam-modules@gnu.org.ua>
 
 
-Version 1.9.90 (Git)
+Version 2.0, 2015-02-26
 
 * pam_ldaphome reads LDAP configuration from /etc/ldap.conf
 
@@ -32,6 +32,14 @@ configuration file contains:
 
 then the line '#:user' can be used to delimit ldap-synchronized
 and user-specific keys.
+
+* audit option
+
+All modules now support 'audit' option, which is equivalent to
+debug=100, i.e. it enables logging maximum debugging output.
+
+* pam_fshadow is built on all systems
+
 
 Version 1.9, 2014-05-21
 

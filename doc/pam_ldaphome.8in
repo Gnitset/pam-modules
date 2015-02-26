@@ -14,7 +14,7 @@
 .\" You should have received a copy of the GNU General Public License
 .\" along with PAM-Modules.  If not, see <http://www.gnu.org/licenses/>.
 .so config.so
-.TH PAM_LDAPHOME 8 "January 30, 2015" "PAM-MODULES" "Pam-Modules User Reference"
+.TH PAM_LDAPHOME 8 "February 26, 2015" "PAM-MODULES" "Pam-Modules User Reference"
 .SH NAME
 pam_ldaphome \- create and populate user home directories
 .SH SYNOPSIS
@@ -50,7 +50,7 @@ The system-wide configuration file
 is parsed after processing the main configuration file.  In general,
 all statements defined below can appear in both files.  However, since
 .B /etc/ldap.conf
-is read by other system utilities as well, we do not recomment using
+is read by other system utilities as well, we do not recommend using
 .BR pam_ldaphome -specific 
 keywords in it.
 .PP

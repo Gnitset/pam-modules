@@ -43,7 +43,6 @@
 const char *sense_choice[] = { "allow", "deny", NULL };
 
 static int sense;
-static int cntl_flags;
 static long debug_level;
 static const char *regex = NULL;
 static int regex_flags = REG_NOSUB|REG_EXTENDED;
@@ -56,20 +55,21 @@ struct pam_opt pam_opt[] = {
 	{ PAM_OPTSTR(audit), pam_opt_const, &debug_level, { 100 } },
 	{ PAM_OPTSTR(waitdebug), pam_opt_null, NULL, { 0 },
 	  gray_wait_debug_fun },
-	{ PAM_OPTSTR(sense), pam_opt_enum, &sense, { sense_choice } },
+	{ PAM_OPTSTR(sense), pam_opt_enum, &sense,
+	  { .enumstr = sense_choice } },
 	{ PAM_OPTSTR(transform), pam_opt_string, &transform },
 	{ PAM_OPTSTR(user), pam_opt_string, &user_name },
 	{ PAM_OPTSTR(regex), pam_opt_string, &regex },
 	{ PAM_OPTSTR(extended), pam_opt_bitmask, &regex_flags,
-	  { REG_EXTENDED } },
+	  { .value = REG_EXTENDED } },
 	{ PAM_OPTSTR(basic), pam_opt_bitmask_rev, &regex_flags,
-	  { REG_EXTENDED } },
+	  { .value = REG_EXTENDED } },
 	{ PAM_OPTSTR(icase), pam_opt_bitmask, &regex_flags,
-	  { REG_ICASE } },
+	  { .value = REG_ICASE } },
 	{ PAM_OPTSTR(ignore-case), pam_opt_bitmask, &regex_flags,
-	  { REG_ICASE } },
+	  { .value = REG_ICASE } },
 	{ PAM_OPTSTR(case), pam_opt_bitmask_rev, &regex_flags,
-	  { REG_ICASE } },
+	  { .value = REG_ICASE } },
 	
 	{ NULL }
 };
