@@ -79,7 +79,7 @@ check-log-options:
 	   '/@set MODULE pam_log/,/@set MODULE/{s/@value{MODULE}/pam_log/g;there;:here;s/@opindex *\([^@,]*\),.*@command{pam_log}.*/\1/;t lab;b;: lab;{s/^-//;s/^no//;p;}}' \
 	   $(top_srcdir)/pam_log/*.c -- \
 	   $(MAKEINFO) $(AM_MAKEINFOFLAGS) $(MAKEINFOFLAGS) -I $(srcdir) -E - \
-		$(info_TEXINFOS) ; 
+		$(info_TEXINFOS) ;
 
 
 check-all-options:
@@ -99,7 +99,7 @@ check-sql-config:
 	   's/@kwindex *\([^@,]*\).*/\1/p' \
 	   $(top_srcdir)/pam_sql/*.c -- \
 	   $(MAKEINFO) $(AM_MAKEINFOFLAGS) $(MAKEINFOFLAGS) -I $(srcdir) -E - \
-		$(info_TEXINFOS) 
+		$(info_TEXINFOS)
 
 check-ldaphome-config:
 	@$(CHECK_DOCS) 'pam_ldaphome configuration keywords' \
@@ -107,7 +107,7 @@ check-ldaphome-config:
 	   's/@deffn  *{pam_ldaphome config}  *\([a-zA-Z_][a-zA-Z0-9_-]*\) .*/\1/p' \
 	   $(top_srcdir)/pam_ldaphome/pam_ldaphome.c -- \
 	   $(MAKEINFO) $(AM_MAKEINFOFLAGS) $(MAKEINFOFLAGS) -I $(srcdir) -E - \
-		$(info_TEXINFOS) 
+		$(info_TEXINFOS)
 
 
 check-options: \
@@ -117,7 +117,7 @@ check-options: \
 
 all-check-docs: imprimatur-basic-checks check-options check-sql-config
 
-check-docs: 
+check-docs:
 	$(MAKE) -k all-check-docs
 #
 
@@ -131,9 +131,10 @@ final: imprimatur-final
 # Just call `make RENDITION=PROOF [target]' if you want PROOF rendition.
 RENDITION = DISTRIB
 
-GENDOCS=gendocs.sh
+GENDOCS=$(srcdir)/gendocs.sh
+EXTRA_DIST += gendocs.sh
 
-TEXI2DVI=texi2dvi -t '@set $(RENDITION)' -E
+TEXI2DVI=texi2dvi -t '@set $(RENDITION)' -I $(top_srcdir)/imprimatur
 
 # Make sure you set TEXINPUTS.
 # TEXINPUTS=/usr/share/texmf/pdftex/plain/misc/ is ok for most distributions
@@ -142,7 +143,7 @@ manual:
 	TEXINPUTS=$(srcdir):$(top_srcdir)/build-aux:$(TEXINPUTS) \
 	 MAKEINFO="$(MAKEINFO) $(MAKEINFOFLAGS) $(AM_MAKEINFOFLAGS)" \
 	 TEXI2DVI="$(TEXI2DVI) -t @finalout" \
-	 $(GENDOCS) --texi2html $(PACKAGE) '$(PACKAGE_NAME) manual'
+	 $(GENDOCS) --no-copy-images $(PACKAGE) '$(PACKAGE_NAME) manual'
 
 manual.tar.bz2: manual
 	tar cfj manual.tar.bz2 manual
