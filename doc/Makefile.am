@@ -131,7 +131,7 @@ final: imprimatur-final
 # Just call `make RENDITION=PROOF [target]' if you want PROOF rendition.
 RENDITION = DISTRIB
 
-GENDOCS=$(srcdir)/gendocs.sh
+GENDOCS=$(srcdir)/gendocs.sh --no-copy-images --html '--init-file=$(abs_srcdir)/html.init'
 EXTRA_DIST += gendocs.sh
 
 TEXI2DVI=texi2dvi -t '@set $(RENDITION)' -I $(top_srcdir)/imprimatur
