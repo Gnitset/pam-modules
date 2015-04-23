@@ -149,7 +149,7 @@ my @gray_buttons = (\&gray_document_title, ' ',
 		    'FastBack', ' ', 'Up', ' ', 'FastForward', ' ',
 		    'Contents', 'Index' );
 
-set_from_init_file('TOP_BUTTONS', \@gray_buttons);
+set_from_init_file('TOP_BUTTONS', undef);
 set_from_init_file('SECTION_BUTTONS', \@gray_buttons);
 set_from_init_file('CHAPTER_BUTTONS', \@gray_buttons);
 set_from_init_file('NODE_FOOTER_BUTTONS', \@gray_buttons);

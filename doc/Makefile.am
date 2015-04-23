@@ -143,7 +143,7 @@ manual:
 	TEXINPUTS=$(srcdir):$(top_srcdir)/build-aux:$(TEXINPUTS) \
 	 MAKEINFO="$(MAKEINFO) $(MAKEINFOFLAGS) $(AM_MAKEINFOFLAGS)" \
 	 TEXI2DVI="$(TEXI2DVI) -t @finalout" \
-	 $(GENDOCS) --no-copy-images $(PACKAGE) '$(PACKAGE_NAME) manual'
+	 $(GENDOCS) $(PACKAGE) '$(PACKAGE_NAME) manual'
 
 manual.tar.bz2: manual
 	tar cfj manual.tar.bz2 manual
