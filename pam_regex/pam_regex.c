@@ -140,6 +140,7 @@ pam_sm_authenticate(pam_handle_t *pamh,
 			_pam_log(LOG_ERR, "retval %d", retval);
 			return PAM_AUTHINFO_UNAVAIL;
 		}
+                retval = PAM_IGNORE;
 	}
 
 	if (regex) {

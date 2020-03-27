@@ -126,7 +126,7 @@ Convert the user name to lower case and remove anything starting from
 the \fB@\fR character:
 .PP
 .EX
-auth  required  pam_regex.so extended transform=s/.*/\\L&/g;s/@.*// 
+auth  optional  pam_regex.so extended transform=s/.*/\\L&/g;s/@.*// 
 .EE
 .SH NOTE
 This manpage is a short description of \fBpam_regex\fR.  For a detailed
